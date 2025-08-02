@@ -1,23 +1,78 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 
 export default function HomeScreen() {
   const [message, setMessage] = useState('');
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [chatHistory, setChatHistory] = useState<Array<{message: string, isBot: boolean}>>([]);
+  const [userId] = useState(1); // Default user ID for demo
 
-  const handleSendMessage = () => {
+  console.log('HomeScreen rendering with isLoading:', isLoading, 'response:', response);
+
+  // Test backend connection on component mount
+  useEffect(() => {
+    const testBackendConnection = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/');
+        if (response.ok) {
+          console.log('Backend connection successful');
+        } else {
+          console.error('Backend connection failed');
+        }
+      } catch (error) {
+        console.error('Backend connection error:', error);
+        Alert.alert('Connection Error', 'Unable to connect to the travel assistant. Please check your internet connection.');
+      }
+    };
+
+    testBackendConnection();
+  }, []);
+
+  const handleSendMessage = async () => {
     if (!message.trim()) return;
     
+    const userMessage = message.trim();
+    setMessage('');
     setIsLoading(true);
-    setResponse('');
     
-    // Simulate API call delay
-    setTimeout(() => {
-      setResponse('Working on your query...');
+    // Add user message to chat history
+    setChatHistory(prev => [...prev, { message: userMessage, isBot: false }]);
+    
+    try {
+      const response = await fetch('http://localhost:8000/chat/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          user_id: userId,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const botResponse = result.response_text || result.bot_response || 'I received your message but had trouble processing it.';
+        
+        // Add bot response to chat history
+        setChatHistory(prev => [...prev, { message: botResponse, isBot: true }]);
+        setResponse(botResponse);
+      } else {
+        const errorText = await response.text();
+        console.error('Chat API error:', response.status, errorText);
+        const errorMessage = 'Sorry, I encountered an error. Please try again.';
+        setChatHistory(prev => [...prev, { message: errorMessage, isBot: true }]);
+        setResponse(errorMessage);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage = 'Sorry, I\'m having trouble connecting right now. Please check your internet connection.';
+      setChatHistory(prev => [...prev, { message: errorMessage, isBot: true }]);
+      setResponse(errorMessage);
+    } finally {
       setIsLoading(false);
-      setMessage('');
-    }, 1000);
+    }
   };
 
   return (
@@ -39,6 +94,44 @@ export default function HomeScreen() {
           </Text>
           
           <View style={styles.chatContainer}>
+            {/* Chat History */}
+            <ScrollView style={styles.chatHistory} showsVerticalScrollIndicator={false}>
+              {chatHistory.length === 0 && (
+                <View style={styles.welcomeMessage}>
+                  <Text style={styles.welcomeText}>
+                    Hi! I'm your AI travel assistant. I can help you with:
+                  </Text>
+                  <Text style={styles.welcomeBullet}>• Travel recommendations</Text>
+                  <Text style={styles.welcomeBullet}>• Destination information</Text>
+                  <Text style={styles.welcomeBullet}>• Travel planning tips</Text>
+                  <Text style={styles.welcomeBullet}>• Budget advice</Text>
+                  <Text style={styles.welcomeText}>
+                    Just ask me anything!
+                  </Text>
+                </View>
+              )}
+              
+              {chatHistory.map((chat, index) => (
+                <View key={index} style={[styles.messageContainer, chat.isBot ? styles.botMessage : styles.userMessage]}>
+                  <View style={[styles.messageBubble, chat.isBot ? styles.botBubble : styles.userBubble]}>
+                    <Text style={[styles.messageText, chat.isBot ? styles.botText : styles.userText]}>
+                      {chat.message}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+              
+              {isLoading && (
+                <View style={[styles.messageContainer, styles.botMessage]}>
+                  <View style={[styles.messageBubble, styles.botBubble]}>
+                    <Text style={[styles.messageText, styles.botText, styles.typingText]}>
+                      Thinking...
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+            
             <View style={styles.inputContainer}>
               <TextInput
                 value={message}
@@ -54,16 +147,10 @@ export default function HomeScreen() {
                 disabled={!message.trim() || isLoading}
               >
                 <Text style={styles.sendButtonText}>
-                  {isLoading ? '...' : 'Send'}
+                  {isLoading ? 'Sending' : 'Send'}
                 </Text>
               </TouchableOpacity>
             </View>
-            
-            {response && (
-              <View style={styles.responseContainer}>
-                <Text style={styles.responseText}>{response}</Text>
-              </View>
-            )}
           </View>
         </View>
         
@@ -191,6 +278,62 @@ const styles = StyleSheet.create({
   chatContainer: {
     gap: 12,
   },
+  chatHistory: {
+    maxHeight: 300,
+    marginBottom: 12,
+  },
+  welcomeMessage: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  welcomeText: {
+    fontSize: 16,
+    color: '#ccc',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 24,
+  },
+  welcomeBullet: {
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  messageContainer: {
+    marginBottom: 12,
+  },
+  userMessage: {
+    alignItems: 'flex-end',
+  },
+  botMessage: {
+    alignItems: 'flex-start',
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    padding: 12,
+    borderRadius: 16,
+  },
+  userBubble: {
+    backgroundColor: '#6366f1',
+  },
+  botBubble: {
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  messageText: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  userText: {
+    color: 'white',
+  },
+  botText: {
+    color: '#ccc',
+  },
+  typingText: {
+    fontStyle: 'italic',
+  },
   inputContainer: {
     flexDirection: 'row',
     gap: 8,
@@ -230,21 +373,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 14,
     letterSpacing: 0.5,
-  },
-  responseContainer: {
-    backgroundColor: '#1a1a1a',
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#6366f1',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  responseText: {
-    fontSize: 14,
-    color: '#ccc',
-    fontStyle: 'italic',
-    fontWeight: '500',
   },
   flowSection: {
     marginBottom: 32,

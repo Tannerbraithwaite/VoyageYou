@@ -7,7 +7,7 @@ export default function ProfileScreen() {
   const [travelStyle, setTravelStyle] = useState('solo');
   const [budget, setBudget] = useState('moderate');
   const [interests, setInterests] = useState(['art', 'food', 'culture']);
-  const [additionalInfo, setAdditionalInfo] = useState('I prefer boutique hotels over chains, love trying local street food, and always pack light. I\'m comfortable with public transportation and enjoy getting lost in new cities.');
+  const [additionalInfo, setAdditionalInfo] = useState('I prefer boutique hotels over chains, love trying local street food, and always pack light. I am comfortable with public transportation and enjoy getting lost in new cities.');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(''); // 'success', 'error', or ''
   const [isLoading, setIsLoading] = useState(true);
@@ -62,27 +62,27 @@ export default function ProfileScreen() {
   };
 
   const travelStyles = [
-    { id: 'solo', label: 'Solo Traveler', icon: '👤' },
-    { id: 'couple', label: 'Couple', icon: '💑' },
-    { id: 'family', label: 'Family', icon: '👨‍👩‍👧‍👦' },
-    { id: 'group', label: 'Group', icon: '👥' },
+    { id: 'solo', label: 'Solo Traveler', icon: 'S' },
+    { id: 'couple', label: 'Couple', icon: 'C' },
+    { id: 'family', label: 'Family', icon: 'F' },
+    { id: 'group', label: 'Group', icon: 'G' },
   ];
 
   const budgetLevels = [
-    { id: 'budget', label: 'Budget', icon: '💰' },
-    { id: 'moderate', label: 'Moderate', icon: '💳' },
-    { id: 'luxury', label: 'Luxury', icon: '💎' },
+    { id: 'budget', label: 'Budget', icon: '$' },
+    { id: 'moderate', label: 'Moderate', icon: 'M' },
+    { id: 'luxury', label: 'Luxury', icon: 'L' },
   ];
 
   const interestOptions = [
-    { id: 'art', label: 'Art & Museums', icon: '🎨' },
-    { id: 'food', label: 'Food & Dining', icon: '🍽️' },
-    { id: 'culture', label: 'Culture & History', icon: '🏛️' },
-    { id: 'nature', label: 'Nature & Outdoors', icon: '🌲' },
-    { id: 'adventure', label: 'Adventure', icon: '🏔️' },
-    { id: 'relaxation', label: 'Relaxation', icon: '🧘' },
-    { id: 'shopping', label: 'Shopping', icon: '🛍️' },
-    { id: 'nightlife', label: 'Nightlife', icon: '🌙' },
+    { id: 'art', label: 'Art & Museums', icon: 'A' },
+    { id: 'food', label: 'Food & Dining', icon: 'F' },
+    { id: 'culture', label: 'Culture & History', icon: 'C' },
+    { id: 'nature', label: 'Nature & Outdoors', icon: 'N' },
+    { id: 'adventure', label: 'Adventure', icon: 'A' },
+    { id: 'relaxation', label: 'Relaxation', icon: 'R' },
+    { id: 'shopping', label: 'Shopping', icon: 'S' },
+    { id: 'nightlife', label: 'Nightlife', icon: 'N' },
   ];
 
   const toggleInterest = (interestId: string) => {
@@ -175,13 +175,18 @@ export default function ProfileScreen() {
     }
   };
 
+  console.log('Profile component rendering with interests:', interests);
+  console.log('Interest options:', interestOptions);
+  console.log('Travel styles:', travelStyles);
+  console.log('Budget levels:', budgetLevels);
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Your Profile</Text>
       
       {isLoading && (
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading your profile...</Text>
+          <Text style={styles.loadingText}>Loading your profile</Text>
         </View>
       )}
 
@@ -202,48 +207,54 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Travel Style</Text>
         <View style={styles.optionsContainer}>
-          {travelStyles.map((style) => (
-            <TouchableOpacity
-              key={style.id}
-              style={[
-                styles.optionButton,
-                travelStyle === style.id && styles.selectedOption
-              ]}
-              onPress={() => setTravelStyle(style.id)}
-            >
-              <Text style={styles.optionIcon}>{style.icon}</Text>
-              <Text style={[
-                styles.optionText,
-                travelStyle === style.id && styles.selectedOptionText
-              ]}>
-                {style.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {travelStyles.map((style) => {
+            console.log('Rendering travel style:', style);
+            return (
+              <TouchableOpacity
+                key={style.id}
+                style={[
+                  styles.optionButton,
+                  travelStyle === style.id && styles.selectedOption
+                ]}
+                onPress={() => setTravelStyle(style.id)}
+              >
+                <Text style={styles.optionIcon}>{style.icon}</Text>
+                <Text style={[
+                  styles.optionText,
+                  travelStyle === style.id && styles.selectedOptionText
+                ]}>
+                  {style.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Budget Level</Text>
         <View style={styles.optionsContainer}>
-          {budgetLevels.map((level) => (
-            <TouchableOpacity
-              key={level.id}
-              style={[
-                styles.optionButton,
-                budget === level.id && styles.selectedOption
-              ]}
-              onPress={() => setBudget(level.id)}
-            >
-              <Text style={styles.optionIcon}>{level.icon}</Text>
-              <Text style={[
-                styles.optionText,
-                budget === level.id && styles.selectedOptionText
-              ]}>
-                {level.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {budgetLevels.map((level) => {
+            console.log('Rendering budget level:', level);
+            return (
+              <TouchableOpacity
+                key={level.id}
+                style={[
+                  styles.optionButton,
+                  budget === level.id && styles.selectedOption
+                ]}
+                onPress={() => setBudget(level.id)}
+              >
+                <Text style={styles.optionIcon}>{level.icon}</Text>
+                <Text style={[
+                  styles.optionText,
+                  budget === level.id && styles.selectedOptionText
+                ]}>
+                  {level.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
@@ -251,24 +262,32 @@ export default function ProfileScreen() {
         <Text style={styles.sectionTitle}>Interests</Text>
         <Text style={styles.sectionSubtitle}>Select all that apply</Text>
         <View style={styles.interestsContainer}>
-          {interestOptions.map((interest) => (
-            <TouchableOpacity
-              key={interest.id}
-              style={[
-                styles.interestButton,
-                interests.includes(interest.id) && styles.selectedInterest
-              ]}
-              onPress={() => toggleInterest(interest.id)}
-            >
-              <Text style={styles.interestIcon}>{interest.icon}</Text>
-              <Text style={[
-                styles.interestText,
-                interests.includes(interest.id) && styles.selectedInterestText
-              ]}>
-                {interest.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {interests.filter(id => interestOptions.some(opt => opt.id === id)).map((interestId) => {
+            const interest = interestOptions.find(opt => opt.id === interestId);
+            console.log('Rendering interest:', interestId, 'found:', interest);
+            if (!interest) {
+              console.log('Interest not found, skipping:', interestId);
+              return null;
+            }
+            return (
+              <TouchableOpacity
+                key={interest.id}
+                style={[
+                  styles.interestButton,
+                  interests.includes(interest.id) && styles.selectedInterest
+                ]}
+                onPress={() => toggleInterest(interest.id)}
+              >
+                <Text style={styles.interestIcon}>{interest.icon}</Text>
+                <Text style={[
+                  styles.interestText,
+                  interests.includes(interest.id) && styles.selectedInterestText
+                ]}>
+                  {interest.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
@@ -288,7 +307,7 @@ export default function ProfileScreen() {
           />
         </View>
         <Text style={styles.helpText}>
-          💡 This helps our AI understand your unique travel style and provide better recommendations
+          This helps our AI understand your unique travel style and provide better recommendations
         </Text>
       </View>
 
@@ -298,20 +317,20 @@ export default function ProfileScreen() {
         disabled={isSaving}
       >
         <Text style={styles.saveButtonText}>
-          {isSaving ? 'Saving...' : 'Save Profile'}
+          {isSaving ? 'Saving' : 'Save Profile'}
         </Text>
       </TouchableOpacity>
 
       {/* Status indicator */}
       {saveStatus === 'success' && (
         <View style={styles.statusContainer}>
-          <Text style={styles.successText}>✅ Profile saved successfully!</Text>
+          <Text style={styles.successText}>Profile saved successfully!</Text>
         </View>
       )}
       
       {saveStatus === 'error' && (
         <View style={styles.statusContainer}>
-          <Text style={styles.errorText}>❌ Failed to save profile</Text>
+          <Text style={styles.errorText}>Failed to save profile</Text>
         </View>
       )}
 

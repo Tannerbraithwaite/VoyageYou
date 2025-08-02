@@ -3,6 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 import uvicorn
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from database import get_db, create_tables, UserInterest, Flight, Hotel
 from schemas import (
@@ -10,9 +15,10 @@ from schemas import (
     TripCreate, Trip, TripResponse,
     ActivityCreate, Activity, ActivityUpdate,
     ItineraryRequest, ItineraryResponse,
-    Recommendation, LoginRequest, LoginResponse
+    Recommendation, LoginRequest, LoginResponse,
+    ChatRequest, ChatResponse, ChatMessage
 )
-from services import UserService, TripService, ActivityService, ItineraryService, RecommendationService
+from services import UserService, TripService, ActivityService, ItineraryService, RecommendationService, ChatbotService
 
 # Create FastAPI app
 app = FastAPI(
@@ -32,7 +38,7 @@ app.add_middleware(
 
 # Create database tables on startup
 @app.on_event("startup")
-async def startup_event():
+def startup_event():
     create_tables()
 
 # Health check endpoint
@@ -233,6 +239,35 @@ def get_suggestions():
             {"type": "trip", "name": "Art City Tour", "reason": "You like art"},
         ]
     }
+
+# Chatbot endpoints
+@app.post("/chat/", response_model=ChatResponse)
+def chat_with_bot(chat_request: ChatRequest, db: Session = Depends(get_db)):
+    """Chat with the AI travel assistant"""
+    # Get OpenAI API key from environment variable
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=500, 
+            detail="OpenAI API key not configured. Please set the OPENAI_API_KEY environment variable with your API key."
+        )
+    
+    try:
+        result = ChatbotService.process_message(db, chat_request.user_id, chat_request.message, api_key)
+        
+        return ChatResponse(
+            message=chat_request.message,
+            bot_response=result["response_text"],
+            created_at=result["bot_response"].created_at
+        )
+    except Exception as e:
+        print(f"Error in chat endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing chat message: {str(e)}")
+
+@app.get("/users/{user_id}/chat/history/", response_model=List[ChatMessage])
+def get_chat_history(user_id: int, limit: int = 20, db: Session = Depends(get_db)):
+    """Get chat history for a user"""
+    return ChatbotService.get_chat_history(db, user_id, limit)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

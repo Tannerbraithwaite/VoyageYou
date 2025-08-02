@@ -1,6 +1,7 @@
 from database import SessionLocal, User, UserInterest, Trip, Activity, Flight, Hotel, Recommendation
 from datetime import datetime, timedelta
 import random
+import hashlib
 
 def seed_database():
     """Seed the database with sample data"""
@@ -12,22 +13,25 @@ def seed_database():
             User(
                 name="Sarah Johnson",
                 email="sarah.johnson@email.com",
+                password=hashlib.sha256("password123".encode()).hexdigest(),
                 travel_style="solo",
-                budget_level="moderate",
+                budget_range="moderate",
                 additional_info="I prefer boutique hotels over chains, love trying local street food, and always pack light. I'm comfortable with public transportation and enjoy getting lost in new cities."
             ),
             User(
                 name="Mike Chen",
                 email="mike.chen@email.com",
+                password=hashlib.sha256("password123".encode()).hexdigest(),
                 travel_style="couple",
-                budget_level="luxury",
+                budget_range="luxury",
                 additional_info="We love luxury experiences and fine dining. Prefer private tours and high-end accommodations."
             ),
             User(
                 name="Emma Rodriguez",
                 email="emma.rodriguez@email.com",
+                password=hashlib.sha256("password123".encode()).hexdigest(),
                 travel_style="family",
-                budget_level="moderate",
+                budget_range="moderate",
                 additional_info="Traveling with two kids (8 and 12). Need family-friendly activities and spacious accommodations."
             )
         ]

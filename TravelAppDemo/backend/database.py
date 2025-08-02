@@ -143,6 +143,16 @@ class Recommendation(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    message = Column(Text)
+    is_bot = Column(Boolean, default=False)
+    response = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 # Database dependency
 def get_db():
     db = SessionLocal()

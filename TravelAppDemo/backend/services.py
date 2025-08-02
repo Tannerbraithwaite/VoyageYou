@@ -1,10 +1,12 @@
 from sqlalchemy.orm import Session
-from database import User, UserInterest, Trip, Activity, Flight, Hotel, Recommendation
+from database import User, UserInterest, Trip, Activity, Flight, Hotel, Recommendation, ChatMessage
 from schemas import UserCreate, TripCreate, ActivityCreate, FlightCreate, HotelCreate
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 import random
 import hashlib
+import openai
+import os
 
 class UserService:
     @staticmethod
@@ -146,7 +148,7 @@ class ItineraryService:
         trip = TripService.create_trip(db, trip_data, user_id)
         
         # Generate activities based on destination and user preferences
-        activities = ItineraryService._generate_activities(destination, duration, interests, user.travel_style, user.budget_level)
+        activities = ItineraryService._generate_activities(destination, duration, interests, user.travel_style, user.budget_range)
         
         # Create activities in database
         total_cost = 0
@@ -357,3 +359,115 @@ class RecommendationService:
             Recommendation.user_id == user_id,
             Recommendation.is_active == True
         ).all()
+
+class ChatbotService:
+    @staticmethod
+    def setup_openai(api_key: str):
+        """Setup OpenAI client with API key"""
+        openai.api_key = api_key
+    
+    @staticmethod
+    def get_chat_history(db: Session, user_id: int, limit: int = 10) -> List[ChatMessage]:
+        """Get recent chat history for a user"""
+        return db.query(ChatMessage).filter(
+            ChatMessage.user_id == user_id
+        ).order_by(ChatMessage.created_at.desc()).limit(limit).all()
+    
+    @staticmethod
+    def save_user_message(db: Session, user_id: int, message: str) -> ChatMessage:
+        """Save a user message to the database"""
+        chat_message = ChatMessage(
+            user_id=user_id,
+            message=message,
+            is_bot=False
+        )
+        db.add(chat_message)
+        db.commit()
+        db.refresh(chat_message)
+        return chat_message
+    
+    @staticmethod
+    def save_bot_response(db: Session, user_id: int, response: str) -> ChatMessage:
+        """Save a bot response to the database"""
+        chat_message = ChatMessage(
+            user_id=user_id,
+            message="",
+            is_bot=True,
+            response=response
+        )
+        db.add(chat_message)
+        db.commit()
+        db.refresh(chat_message)
+        return chat_message
+    
+    @staticmethod
+    def generate_response(db: Session, user_id: int, message: str, api_key: str) -> str:
+        """Generate a response using OpenAI API"""
+        try:
+            # Setup OpenAI
+            ChatbotService.setup_openai(api_key)
+            
+            # Get user profile for context
+            user = UserService.get_user(db, user_id)
+            if not user:
+                return "I'm sorry, I couldn't find your profile. Please try logging in again."
+            
+            # Get user's travel preferences and history
+            user_interests = db.query(UserInterest).filter(UserInterest.user_id == user_id).all()
+            user_trips = TripService.get_user_trips(db, user_id)
+            
+            # Build context for the AI
+            context = f"""
+            You are a helpful travel assistant for a user with the following profile:
+            - Name: {user.name}
+            - Travel Style: {user.travel_style}
+            - Budget Range: {user.budget_range}
+            - Additional Info: {user.additional_info}
+            - Interests: {', '.join([interest.interest for interest in user_interests])}
+            - Previous Trips: {len(user_trips)} trips
+            
+            The user is asking: {message}
+            
+            Please provide a helpful, friendly response that takes into account their travel preferences and history. 
+            Keep responses concise but informative. If they're asking about travel planning, offer specific suggestions 
+            based on their profile.
+            """
+            
+            # Call OpenAI API
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful travel assistant. Provide friendly, informative responses about travel planning, destinations, and travel tips."},
+                    {"role": "user", "content": context}
+                ],
+                max_tokens=300,
+                temperature=0.7
+            )
+            
+            return response.choices[0].message.content.strip()
+            
+        except Exception as e:
+            print(f"Error generating chatbot response: {e}")
+            # Provide helpful fallback responses when API is unavailable
+            if "quota" in str(e).lower() or "billing" in str(e).lower():
+                return "I'm currently experiencing high demand. Here are some travel tips based on your profile:\n\n• As a solo traveler with moderate budget, consider destinations like Portugal, Thailand, or Mexico\n• For art lovers, Florence and Barcelona are excellent choices\n• For food enthusiasts, try Tokyo, Bangkok, or Istanbul\n\nWould you like me to help you plan a specific trip?"
+            else:
+                return "I'm sorry, I'm having trouble processing your request right now. Please try again later."
+    
+    @staticmethod
+    def process_message(db: Session, user_id: int, message: str, api_key: str) -> Dict[str, Any]:
+        """Process a user message and return bot response"""
+        # Save user message
+        user_message = ChatbotService.save_user_message(db, user_id, message)
+        
+        # Generate bot response
+        bot_response = ChatbotService.generate_response(db, user_id, message, api_key)
+        
+        # Save bot response
+        bot_message = ChatbotService.save_bot_response(db, user_id, bot_response)
+        
+        return {
+            "user_message": user_message,
+            "bot_response": bot_message,
+            "response_text": bot_response
+        }

@@ -240,4 +240,30 @@ class AlternativeActivity(BaseModel):
 
 class ActivityAlternativesResponse(BaseModel):
     current_activity: Activity
-    alternatives: List[AlternativeActivity] 
+    alternatives: List[AlternativeActivity]
+
+# Chatbot schemas
+class ChatMessageBase(BaseModel):
+    message: str
+    user_id: int
+
+class ChatMessageCreate(ChatMessageBase):
+    pass
+
+class ChatMessage(ChatMessageBase):
+    id: int
+    is_bot: bool
+    created_at: datetime
+    response: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ChatRequest(BaseModel):
+    message: str
+    user_id: int
+
+class ChatResponse(BaseModel):
+    message: str
+    bot_response: str
+    created_at: datetime 
