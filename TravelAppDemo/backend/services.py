@@ -416,30 +416,28 @@ class ChatbotService:
             user_interests = db.query(UserInterest).filter(UserInterest.user_id == user_id).all()
             user_trips = TripService.get_user_trips(db, user_id)
             
-            # Build context for the AI
-            context = f"""
-            You are a helpful travel assistant for a user with the following profile:
-            - Name: {user.name}
-            - Travel Style: {user.travel_style}
-            - Budget Range: {user.budget_range}
-            - Additional Info: {user.additional_info}
-            - Interests: {', '.join([interest.interest for interest in user_interests])}
-            - Previous Trips: {len(user_trips)} trips
+            # Build personalized system message
+            interests_list = ', '.join([interest.interest for interest in user_interests]) if user_interests else "general travel"
+            previous_trips_info = f"with {len(user_trips)} previous trips" if user_trips else "as a new traveler"
             
-            The user is asking: {message}
-            
-            Please provide a helpful, friendly response that takes into account their travel preferences and history. 
-            Keep responses concise but informative. If they're asking about travel planning, offer specific suggestions 
-            based on their profile.
-            """
+            system_message = f"""You are a helpful travel planner who focuses on personalized and specific recommendations. 
+
+The traveller you are planning for enjoys travelling like this:
+- Travel Style: {user.travel_style}
+- Budget Range: {user.budget_range}
+- Interests: {interests_list}
+- Profile: {previous_trips_info}
+- Additional Preferences: {user.additional_info if user.additional_info else "No specific preferences noted"}
+
+You should find them flights, hotels, and activities for their itinerary. Your message should be concise and contain only information about the trip. Remember your focus is on personalization. Your suggestions should be specific. Ie. "dinner at XYZ cafe" not "dinner at a cafe"."""
             
             # Call OpenAI API using the new v1.0.0+ format
             client = openai.OpenAI(api_key=api_key)
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a helpful travel assistant. Provide friendly, informative responses about travel planning, destinations, and travel tips."},
-                    {"role": "user", "content": context}
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": message}
                 ],
                 max_tokens=300,
                 temperature=0.7
