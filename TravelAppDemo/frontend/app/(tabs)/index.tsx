@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { router } from 'expo-router';
 
 export default function HomeScreen() {
   const [message, setMessage] = useState('');
@@ -75,6 +76,10 @@ export default function HomeScreen() {
     }
   };
 
+  const handleAcceptSchedule = () => {
+    router.push('/(tabs)/explore');
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -117,6 +122,23 @@ export default function HomeScreen() {
                     <Text style={[styles.messageText, chat.isBot ? styles.botText : styles.userText]}>
                       {chat.message}
                     </Text>
+                    {chat.isBot && (
+                      chat.message.toLowerCase().includes('paris') || 
+                      chat.message.toLowerCase().includes('trip') || 
+                      chat.message.toLowerCase().includes('itinerary') ||
+                      chat.message.toLowerCase().includes('schedule') ||
+                      chat.message.toLowerCase().includes('plan') ||
+                      chat.message.toLowerCase().includes('recommend')
+                    ) && (
+                      <TouchableOpacity
+                        style={styles.acceptScheduleButton}
+                        onPress={handleAcceptSchedule}
+                      >
+                        <Text style={styles.acceptScheduleButtonText}>
+                          Accept Schedule
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               ))}
@@ -333,6 +355,25 @@ const styles = StyleSheet.create({
   },
   typingText: {
     fontStyle: 'italic',
+  },
+  acceptScheduleButton: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  acceptScheduleButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   inputContainer: {
     flexDirection: 'row',
