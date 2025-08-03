@@ -54,7 +54,7 @@ export default function ScheduleScreen() {
         { time: '20:00', activity: 'Farewell Dinner', price: 75, type: 'estimated' as const },
       ]
     }
-  ];
+  ]);
 
   const alternativeActivities: Record<string, AlternativeActivity[]> = {
     'City Walking Tour': [
