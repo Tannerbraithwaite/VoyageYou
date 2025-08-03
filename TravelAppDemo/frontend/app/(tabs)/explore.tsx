@@ -20,8 +20,7 @@ export default function ScheduleScreen() {
   const [showAlternatives, setShowAlternatives] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
-
-  const schedule = [
+  const [schedule, setSchedule] = useState([
     {
       day: 1,
       date: 'July 15, 2024',
@@ -219,10 +218,33 @@ export default function ScheduleScreen() {
   };
 
   const handleSelectAlternative = (alternative: AlternativeActivity) => {
-    console.log(`Selected alternative: ${alternative.name} for ${selectedActivity?.activity}`);
-    // In a real app, this would update the schedule
+    if (!selectedActivity) return;
+    
+    // Update the schedule with the selected alternative
+    setSchedule(prevSchedule => 
+      prevSchedule.map(day => ({
+        ...day,
+        activities: day.activities.map(activity => 
+          activity === selectedActivity 
+            ? { ...activity, activity: alternative.name, price: alternative.price, type: alternative.type }
+            : activity
+        )
+      }))
+    );
+    
+    console.log(`Selected alternative: ${alternative.name} for ${selectedActivity.activity}`);
     setShowAlternatives(false);
     setSelectedActivity(null);
+  };
+
+  const handleDeleteActivity = (dayIndex: number, activityIndex: number) => {
+    setSchedule(prevSchedule => 
+      prevSchedule.map((day, dayIdx) => 
+        dayIdx === dayIndex 
+          ? { ...day, activities: day.activities.filter((_, actIdx) => actIdx !== activityIndex) }
+          : day
+      )
+    );
   };
 
   return (
@@ -301,31 +323,38 @@ export default function ScheduleScreen() {
                     <Text style={styles.time}>{activity.time}</Text>
                   </View>
                   <View style={styles.activityContent}>
-                    <Text style={styles.activityText}>{activity.activity}</Text>
-                    <View style={styles.activityDetails}>
-                      {activity.price > 0 && (
-                        <Text style={styles.priceText}>${activity.price}</Text>
-                      )}
-                      <View style={[
-                        styles.typeBadge,
-                        activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge
-                      ]}>
-                        <Text style={[
-                          styles.typeText,
-                          activity.type === 'bookable' ? styles.bookableText : styles.estimatedText
+                    <TouchableOpacity 
+                      style={styles.activityClickable}
+                      onPress={() => alternativeActivities[activity.activity] && handleChangeActivity(activity)}
+                      disabled={!alternativeActivities[activity.activity]}
+                    >
+                      <Text style={styles.activityText}>{activity.activity}</Text>
+                      <View style={styles.activityDetails}>
+                        {activity.price > 0 && (
+                          <Text style={styles.priceText}>${activity.price}</Text>
+                        )}
+                        <View style={[
+                          styles.typeBadge,
+                          activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge
                         ]}>
-                          {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
-                        </Text>
+                          <Text style={[
+                            styles.typeText,
+                            activity.type === 'bookable' ? styles.bookableText : styles.estimatedText
+                          ]}>
+                            {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
-                    {alternativeActivities[activity.activity] && (
-                      <TouchableOpacity 
-                        style={styles.changeActivityButton}
-                        onPress={() => handleChangeActivity(activity)}
-                      >
-                        <Text style={styles.changeActivityText}>Change Activity</Text>
-                      </TouchableOpacity>
-                    )}
+                      {alternativeActivities[activity.activity] && (
+                        <Text style={styles.changeActivityHint}>Tap to change</Text>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteActivity(day.day - 1, index)}
+                    >
+                      <Text style={styles.deleteButtonText}>✕</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               ))}
@@ -694,6 +723,8 @@ const styles = StyleSheet.create({
   activityContent: {
     flex: 1,
     marginLeft: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   activityText: {
     fontSize: 14,
@@ -738,6 +769,35 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#ccc',
     fontWeight: '600',
+  },
+  activityClickable: {
+    flex: 1,
+    paddingVertical: 4,
+  },
+  changeActivityHint: {
+    fontSize: 11,
+    color: '#6366f1',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  deleteButton: {
+    backgroundColor: '#dc2626',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+    shadowColor: '#dc2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   totalContainer: {
     margin: 16,
