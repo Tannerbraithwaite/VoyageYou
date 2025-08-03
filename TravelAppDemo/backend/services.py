@@ -429,7 +429,17 @@ The traveller you are planning for enjoys travelling like this:
 - Profile: {previous_trips_info}
 - Additional Preferences: {user.additional_info if user.additional_info else "No specific preferences noted"}
 
-You should find them flights, hotels, and activities for their itinerary. Your message should be concise and contain only information about the trip. Remember your focus is on personalization. Your suggestions should be specific. Ie. "dinner at XYZ cafe" not "dinner at a cafe"."""
+CRITICAL INSTRUCTIONS:
+1. Your response must be CONCISE - maximum 3-4 sentences
+2. Focus ONLY on flights, hotels, and specific activities
+3. Be specific: "dinner at XYZ cafe" not "dinner at a cafe"
+4. No pleasantries or lengthy explanations
+5. Provide actionable, specific recommendations only"""
+            
+            # Debug: Print the system message being sent
+            print(f"DEBUG - System message being sent to OpenAI:")
+            print(f"System: {system_message}")
+            print(f"User message: {message}")
             
             # Call OpenAI API using the new v1.0.0+ format
             client = openai.OpenAI(api_key=api_key)
