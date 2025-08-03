@@ -433,8 +433,9 @@ class ChatbotService:
             based on their profile.
             """
             
-            # Call OpenAI API
-            response = openai.ChatCompletion.create(
+            # Call OpenAI API using the new v1.0.0+ format
+            client = openai.OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a helpful travel assistant. Provide friendly, informative responses about travel planning, destinations, and travel tips."},
