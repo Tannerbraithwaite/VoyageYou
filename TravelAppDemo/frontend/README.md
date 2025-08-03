@@ -1,50 +1,96 @@
-# Welcome to your Expo app 👋
+# Travel App Frontend
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native/Expo app for travel planning and recommendations.
 
-## Get started
+## Project Structure
 
-1. Install dependencies
+```
+frontend/
+├── app/                    # Expo Router file-based routing
+│   ├── (tabs)/           # Tab navigation screens
+│   ├── auth/             # Authentication screens
+│   ├── _layout.tsx       # Root layout
+│   └── index.tsx         # Home screen
+├── components/            # Reusable UI components
+│   ├── ui/               # Platform-specific UI components
+│   └── index.ts          # Component exports
+├── constants/             # App constants and configuration
+│   ├── Colors.ts         # Color definitions
+│   └── index.ts          # Constants exports
+├── hooks/                 # Custom React hooks
+│   ├── useColorScheme.ts
+│   ├── useThemeColor.ts
+│   └── index.ts          # Hook exports
+├── services/              # API and external service integrations
+│   └── index.ts          # Service layer
+├── types/                 # TypeScript type definitions
+│   └── index.ts          # Type exports
+├── utils/                 # Utility functions
+│   └── index.ts          # Utility exports
+├── assets/                # Static assets
+│   ├── images/           # Image assets
+│   └── fonts/            # Font files
+└── scripts/              # Build and utility scripts
+```
 
+## Key Features
+
+- **Expo Router**: Modern file-based routing
+- **TypeScript**: Full type safety
+- **Component Organization**: Clean separation with index files for easy imports
+- **Service Layer**: Centralized API calls and external integrations
+- **Utility Functions**: Reusable helper functions
+- **Type Definitions**: Centralized TypeScript interfaces
+
+## Getting Started
+
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Start the app
-
+2. Start the development server:
    ```bash
-   npx expo start
+   npm start
    ```
 
-In the output, you'll find options to open the app in a
+3. Run on specific platforms:
+   ```bash
+   npm run ios
+   npm run android
+   npm run web
+   ```
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Import Patterns
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+With the new structure, you can import components and utilities more cleanly:
 
-## Get a fresh project
+```typescript
+// Import components
+import { TravelChatbot, ThemedText } from '@/components';
 
-When you're ready, run:
+// Import hooks
+import { useColorScheme, useThemeColor } from '@/hooks';
 
-```bash
-npm run reset-project
+// Import utilities
+import { formatPrice, debounce } from '@/utils';
+
+// Import services
+import { TravelService, ChatService } from '@/services';
+
+// Import types
+import { TravelDestination, User } from '@/types';
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Environment Variables
 
-## Learn more
+Create a `.env` file in the frontend directory:
 
-To learn more about developing your project with Expo, look at the following resources:
+```
+EXPO_PUBLIC_API_URL=http://localhost:8000
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Development
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- **Linting**: `npm run lint`
+- **Reset Project**: `npm run reset-project`
