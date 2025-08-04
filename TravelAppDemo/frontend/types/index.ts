@@ -30,6 +30,12 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+export interface TripDates {
+  startDate: Date | null;
+  endDate: Date | null;
+  isFlexible: boolean;
+}
+
 export interface ThemeColors {
   primary: string;
   secondary: string;

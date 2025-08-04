@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 from typing import List
 import uvicorn
@@ -9,16 +10,18 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from database import get_db, create_tables, UserInterest, Flight, Hotel
+from database import get_db, create_tables, UserInterest, Flight, Hotel, User
+import schemas
 from schemas import (
-    UserCreate, User, UserUpdate, UserProfileResponse,
+    UserCreate, UserUpdate, UserProfileResponse,
     TripCreate, Trip, TripResponse,
     ActivityCreate, Activity, ActivityUpdate,
     ItineraryRequest, ItineraryResponse,
-    Recommendation, LoginRequest, LoginResponse,
+    Recommendation, LoginRequest, LoginResponse, TokenResponse, RefreshTokenRequest,
     ChatRequest, ChatResponse, ChatMessage
 )
 from services import UserService, TripService, ActivityService, ItineraryService, RecommendationService, ChatbotService
+from auth import AuthService
 
 # Create FastAPI app
 app = FastAPI(
@@ -30,7 +33,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_origins=["http://localhost:8081", "http://localhost:8082", "http://localhost:3000", "http://localhost:19006"],  # Common Expo/React Native ports
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,31 +51,170 @@ async def root():
 
 # Authentication endpoints
 @app.post("/auth/login", response_model=LoginResponse)
-def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+def login(login_data: LoginRequest, response: Response, db: Session = Depends(get_db)):
     """Login user with email and password"""
-    user = UserService.authenticate_user(db, login_data.email, login_data.password)
+    user = AuthService.authenticate_user(db, login_data.email, login_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    return LoginResponse(user=user, message="Login successful")
+    
+    # Create tokens
+    access_token = AuthService.create_access_token(data={"sub": str(user.id)})
+    refresh_token = AuthService.create_refresh_token(data={"sub": str(user.id)})
+    
+    # Set secure HTTP-only cookies
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=1800  # 30 minutes
+    )
+    
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=604800  # 7 days
+    )
+    
+    return LoginResponse(
+        user=user,
+        message="Login successful",
+        access_token=access_token,
+        refresh_token=refresh_token
+    )
 
 @app.post("/auth/signup", response_model=LoginResponse)
-def signup(user_data: UserCreate, db: Session = Depends(get_db)):
+def signup(user_data: UserCreate, response: Response, db: Session = Depends(get_db)):
     """Create a new user account"""
     # Check if user already exists
     existing_user = UserService.get_user_by_email(db, user_data.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="User with this email already exists")
     
+    # Hash the password before creating user
+    hashed_password = AuthService.get_password_hash(user_data.password)
+    user_data.password = hashed_password
+    
     user = UserService.create_user(db, user_data)
-    return LoginResponse(user=user, message="Account created successfully")
+    
+    # Create tokens
+    access_token = AuthService.create_access_token(data={"sub": str(user.id)})
+    refresh_token = AuthService.create_refresh_token(data={"sub": str(user.id)})
+    
+    # Set secure HTTP-only cookies
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=1800  # 30 minutes
+    )
+    
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=604800  # 7 days
+    )
+    
+    return LoginResponse(
+        user=user,
+        message="Account created successfully",
+        access_token=access_token,
+        refresh_token=refresh_token
+    )
+
+@app.post("/auth/refresh", response_model=TokenResponse)
+def refresh_token(request: Request, response: Response):
+    """Refresh access token using refresh token from cookies"""
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="No refresh token found")
+    
+    try:
+        access_token = AuthService.refresh_access_token(refresh_token)
+        
+        # Set new access token cookie
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=False,  # Set to True in production with HTTPS
+            samesite="lax",
+            max_age=1800  # 30 minutes
+        )
+        
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token
+        )
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+@app.post("/auth/logout")
+def logout(response: Response):
+    """Logout user by clearing cookies"""
+    response.delete_cookie("access_token", httponly=True, secure=False, samesite="lax")
+    response.delete_cookie("refresh_token", httponly=True, secure=False, samesite="lax")
+    return {"message": "Logged out successfully"}
+
+def get_current_user_from_cookies(request: Request, db: Session = Depends(get_db)) -> User:
+    """Get current user from cookies"""
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    try:
+        payload = AuthService.verify_token(access_token)
+        user_id_str = payload.get("sub")
+        if user_id_str is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        user_id = int(user_id_str)
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return user
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+@app.get("/auth/me", response_model=schemas.User)
+def get_current_user(current_user: User = Depends(get_current_user_from_cookies)):
+    """Get current user information"""
+    return current_user
 
 # User endpoints
-@app.post("/users/", response_model=User, status_code=status.HTTP_201_CREATED)
+@app.post("/users/", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     """Create a new user"""
     return UserService.create_user(db, user)
 
-@app.get("/users/{user_id}", response_model=User)
+@app.get("/users/{user_id}", response_model=schemas.User)
 def get_user(user_id: int, db: Session = Depends(get_db)):
     """Get user by ID"""
     user = UserService.get_user(db, user_id)
@@ -80,7 +222,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-@app.put("/users/{user_id}", response_model=User)
+@app.put("/users/{user_id}", response_model=schemas.User)
 def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
     """Update user profile"""
     user = UserService.update_user(db, user_id, user_update.dict(exclude_unset=True))

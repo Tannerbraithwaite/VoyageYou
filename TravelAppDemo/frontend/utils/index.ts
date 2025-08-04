@@ -22,6 +22,25 @@ export const formatDate = (date: Date): string => {
 };
 
 /**
+ * Format a date for chat context (more detailed)
+ */
+export const formatDateForChat = (date: Date): string => {
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
+/**
+ * Calculate trip duration in days
+ */
+export const calculateTripDuration = (startDate: Date, endDate: Date): number => {
+  return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+/**
  * Calculate distance between two coordinates
  */
 export const calculateDistance = (

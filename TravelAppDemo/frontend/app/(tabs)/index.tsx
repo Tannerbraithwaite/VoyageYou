@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
+import { DatePicker } from '@/components';
+import { TripDates } from '@/types';
+import { formatDateForChat, calculateTripDuration } from '@/utils';
 
 export default function HomeScreen() {
   const [message, setMessage] = useState('');
@@ -8,6 +11,11 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<Array<{message: string, isBot: boolean}>>([]);
   const [userId] = useState(1); // Default user ID for demo
+  const [tripDates, setTripDates] = useState<TripDates>({
+    startDate: null,
+    endDate: null,
+    isFlexible: false,
+  });
 
   console.log('HomeScreen rendering with isLoading:', isLoading, 'response:', response);
 
@@ -40,6 +48,21 @@ export default function HomeScreen() {
     // Add user message to chat history
     setChatHistory(prev => [...prev, { message: userMessage, isBot: false }]);
     
+    // Prepare the message with trip dates context
+    let enhancedMessage = userMessage;
+    if (tripDates.startDate && tripDates.endDate) {
+      const startDateStr = formatDateForChat(tripDates.startDate);
+      const endDateStr = formatDateForChat(tripDates.endDate);
+      const duration = calculateTripDuration(tripDates.startDate, tripDates.endDate);
+      
+      let dateContext = `Trip Dates: ${startDateStr} to ${endDateStr} (${duration} days)`;
+      if (tripDates.isFlexible) {
+        dateContext += ' - Flexible with dates';
+      }
+      
+      enhancedMessage = `${dateContext}\n\nUser Request: ${userMessage}`;
+    }
+    
     try {
       const response = await fetch('http://localhost:8000/chat/', {
         method: 'POST',
@@ -47,7 +70,7 @@ export default function HomeScreen() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: userMessage,
+          message: enhancedMessage,
           user_id: userId,
         }),
       });
@@ -92,6 +115,11 @@ export default function HomeScreen() {
           Describe your dream trip, get a personalized itinerary, discover local events and tickets, and receive recommendations tailored to your travel style.
         </Text>
         
+        <DatePicker
+          tripDates={tripDates}
+          onDatesChange={setTripDates}
+        />
+        
         <View style={styles.chatSection}>
           <Text style={styles.sectionTitle}>Try Our AI Assistant</Text>
           <Text style={styles.chatDescription}>
@@ -111,7 +139,10 @@ export default function HomeScreen() {
                   <Text style={styles.welcomeBullet}>• Travel planning tips</Text>
                   <Text style={styles.welcomeBullet}>• Budget advice</Text>
                   <Text style={styles.welcomeText}>
-                    Just ask me anything!
+                    {tripDates.startDate && tripDates.endDate 
+                      ? `I'll use your trip dates (${tripDates.startDate.toLocaleDateString()} - ${tripDates.endDate.toLocaleDateString()})${tripDates.isFlexible ? ' with flexible options' : ''} to provide personalized recommendations!`
+                      : 'Set your trip dates above for personalized recommendations!'
+                    }
                   </Text>
                 </View>
               )}
@@ -158,7 +189,10 @@ export default function HomeScreen() {
               <TextInput
                 value={message}
                 onChangeText={setMessage}
-                placeholder="e.g., 'I want to visit Paris for 3 days'"
+                placeholder={tripDates.startDate && tripDates.endDate 
+                  ? "e.g., 'I want to visit Paris' (dates already set)"
+                  : "e.g., 'I want to visit Paris for 3 days'"
+                }
                 placeholderTextColor="#666"
                 style={styles.textInput}
                 multiline
@@ -184,14 +218,24 @@ export default function HomeScreen() {
                 <Text style={styles.stepNumberText}>1</Text>
               </View>
               <View style={styles.stepContent}>
-                <Text style={styles.stepTitle}>Describe your trip</Text>
-                <Text style={styles.stepDescription}>in natural language ("3 days in Paris, love art and food")</Text>
+                <Text style={styles.stepTitle}>Set your trip dates</Text>
+                <Text style={styles.stepDescription}>select your start and end dates for personalized planning</Text>
               </View>
             </View>
             
             <View style={styles.step}>
               <View style={styles.stepNumber}>
                 <Text style={styles.stepNumberText}>2</Text>
+              </View>
+              <View style={styles.stepContent}>
+                <Text style={styles.stepTitle}>Describe your trip</Text>
+                <Text style={styles.stepDescription}>in natural language ("I want to visit Paris, love art and food")</Text>
+              </View>
+            </View>
+            
+            <View style={styles.step}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>3</Text>
               </View>
               <View style={styles.stepContent}>
                 <Text style={styles.stepTitle}>Get your itinerary</Text>
@@ -201,7 +245,7 @@ export default function HomeScreen() {
             
             <View style={styles.step}>
               <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>3</Text>
+                <Text style={styles.stepNumberText}>4</Text>
               </View>
               <View style={styles.stepContent}>
                 <Text style={styles.stepTitle}>Browse events & tickets</Text>
@@ -211,7 +255,7 @@ export default function HomeScreen() {
             
             <View style={styles.step}>
               <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>4</Text>
+                <Text style={styles.stepNumberText}>5</Text>
               </View>
               <View style={styles.stepContent}>
                 <Text style={styles.stepTitle}>Personalize your profile</Text>
@@ -221,7 +265,7 @@ export default function HomeScreen() {
             
             <View style={styles.step}>
               <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>5</Text>
+                <Text style={styles.stepNumberText}>6</Text>
               </View>
               <View style={styles.stepContent}>
                 <Text style={styles.stepTitle}>Get suggestions</Text>

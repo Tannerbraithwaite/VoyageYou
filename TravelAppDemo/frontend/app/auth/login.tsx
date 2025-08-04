@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
+import authService from '@/services/auth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -18,39 +19,20 @@ export default function LoginScreen() {
     console.log('Attempting login with:', { email: email.trim() });
     
     try {
-      const response = await fetch('http://localhost:8000/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          password: password
-        })
-      });
-
-      console.log('Response status:', response.status);
-      const data = await response.json();
-      console.log('Response data:', data);
-
-      if (response.ok) {
-        // Store user data (in a real app, you'd store a JWT token)
-        console.log('Login successful:', data);
-        console.log('Navigating to main app...');
-        try {
-          router.push('/(tabs)');
-        } catch (error) {
-          console.error('Navigation error:', error);
-          // Fallback navigation
-          router.push('/(tabs)');
-        }
-      } else {
-        console.log('Login failed:', data);
-        Alert.alert('Error', data.detail || 'Login failed. Please check your credentials.');
+      const data = await authService.login(email.trim(), password, rememberMe);
+      console.log('Login successful:', data);
+      
+      // Navigate to main app
+      try {
+        router.push('/(tabs)');
+      } catch (error) {
+        console.error('Navigation error:', error);
+        // Fallback navigation
+        router.push('/(tabs)');
       }
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Error', 'Network error. Please try again.');
+      Alert.alert('Error', error instanceof Error ? error.message : 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }

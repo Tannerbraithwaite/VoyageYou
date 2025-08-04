@@ -2,6 +2,9 @@
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
+// Export auth service
+export { default as authService } from './auth';
+
 /**
  * API service for travel-related operations
  */

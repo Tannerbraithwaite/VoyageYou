@@ -2,6 +2,7 @@
 export { default as TravelChatbot } from './TravelChatbot';
 export { default as SimpleChatbot } from './SimpleChatbot';
 export { default as Collapsible } from './Collapsible';
+export { default as DatePicker } from './DatePicker';
 export { default as ExternalLink } from './ExternalLink';
 export { default as HapticTab } from './HapticTab';
 export { default as HelloWave } from './HelloWave';

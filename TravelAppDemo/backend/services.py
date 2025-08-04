@@ -11,13 +11,11 @@ import os
 class UserService:
     @staticmethod
     def create_user(db: Session, user_data: UserCreate) -> User:
-        # Hash the password
-        hashed_password = hashlib.sha256(user_data.password.encode()).hexdigest()
-        
+        # Password is already hashed in the auth endpoint
         db_user = User(
             name=user_data.name,
             email=user_data.email,
-            password=hashed_password,
+            password=user_data.password,  # Already hashed
             travel_style=user_data.travel_style,
             budget_range=user_data.budget_range,
             additional_info=user_data.additional_info
@@ -37,8 +35,10 @@ class UserService:
     
     @staticmethod
     def authenticate_user(db: Session, email: str, password: str) -> User:
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        return db.query(User).filter(User.email == email, User.password == hashed_password).first()
+        # This method is now handled by AuthService.authenticate_user
+        # Keeping for backward compatibility but it's not used
+        from auth import AuthService
+        return AuthService.authenticate_user(db, email, password)
     
     @staticmethod
     def update_user(db: Session, user_id: int, user_data: dict) -> User:
@@ -420,21 +420,21 @@ class ChatbotService:
             interests_list = ', '.join([interest.interest for interest in user_interests]) if user_interests else "general travel"
             previous_trips_info = f"with {len(user_trips)} previous trips" if user_trips else "as a new traveler"
             
-            system_message = f"""You are a helpful travel planner who focuses on personalized and specific recommendations. 
+            system_message = f"""You are a travel itinerary planner. Create complete day-by-day itineraries.
 
-The traveller you are planning for enjoys travelling like this:
-- Travel Style: {user.travel_style}
-- Budget Range: {user.budget_range}
+Traveler Profile:
+- Style: {user.travel_style}
+- Budget: {user.budget_range}
 - Interests: {interests_list}
-- Profile: {previous_trips_info}
-- Additional Preferences: {user.additional_info if user.additional_info else "No specific preferences noted"}
+- Experience: {previous_trips_info}
+- Preferences: {user.additional_info if user.additional_info else "Standard preferences"}
 
-CRITICAL INSTRUCTIONS:
-1. Your response must be CONCISE - maximum 3-4 sentences
-2. Focus ONLY on flights, hotels, and specific activities
-3. Be specific: "dinner at XYZ cafe" not "dinner at a cafe"
-4. No pleasantries or lengthy explanations
-5. Provide actionable, specific recommendations only"""
+INSTRUCTIONS:
+1. Provide complete day-by-day itinerary
+2. Include specific venues, restaurants, attractions
+3. Add flight/hotel recommendations if requested
+4. Be concise - no pleasantries or explanations
+5. Format: Day 1: [morning activity] → [lunch venue] → [afternoon activity] → [dinner venue]"""
             
             # Debug: Print the system message being sent
             print(f"DEBUG - System message being sent to OpenAI:")
@@ -449,7 +449,7 @@ CRITICAL INSTRUCTIONS:
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": message}
                 ],
-                max_tokens=300,
+                max_tokens=800,
                 temperature=0.7
             )
             
