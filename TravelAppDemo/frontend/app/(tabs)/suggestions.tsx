@@ -1,7 +1,12 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
+import { router } from 'expo-router';
+import { createTripPrompt, TripRecommendation } from '@/utils';
 
 export default function SuggestionsScreen() {
+  const [isPlanning, setIsPlanning] = useState(false);
+  const [planningDestination, setPlanningDestination] = useState('');
+  
   const personalizedRecommendations = [
     {
       id: 1,
@@ -77,68 +82,187 @@ export default function SuggestionsScreen() {
     'Traditional/authentic experiences appeal to you most'
   ];
 
-  return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Your Next Adventure</Text>
-        <Text style={styles.subtitle}>AI-curated destinations just for you</Text>
-      </View>
+  const handlePlanTrip = async (recommendation: TripRecommendation) => {
+    const tripPrompt = createTripPrompt(recommendation);
+    
+    console.log('🎯 Planning trip to:', recommendation.destination);
+    console.log('📝 Trip prompt:', tripPrompt);
+    
+    // Start planning state
+    setIsPlanning(true);
+    setPlanningDestination(recommendation.destination);
+    
+    try {
+      // Call the LLM directly
+      const response = await fetch('http://localhost:8000/chat/enhanced/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: tripPrompt,
+          user_id: 1, // Default user ID for demo
+        }),
+      });
 
-      <View style={styles.insightsSection}>
-        <Text style={styles.sectionTitle}>Your Travel DNA</Text>
-        {userInsights.map((insight, index) => (
-          <View key={index} style={styles.insightItem}>
-            <Text style={styles.insightText}>• {insight}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.recommendationsSection}>
-        <Text style={styles.sectionTitle}>Destinations You'll Love</Text>
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ LLM response received:', result);
         
-        {personalizedRecommendations.map((recommendation) => (
-          <View key={recommendation.id} style={styles.recommendationCard}>
-            <View style={styles.recommendationHeader}>
-              <View style={styles.destinationInfo}>
-                <Text style={styles.destinationName}>{recommendation.destination}</Text>
-                <Text style={styles.destinationDetails}>
-                  {recommendation.duration} • ${recommendation.estimatedCost}
-                </Text>
-              </View>
-              <View style={styles.confidenceBadge}>
-                <Text style={styles.confidenceText}>{recommendation.confidence}%</Text>
-              </View>
-            </View>
+        // Store the itinerary data in sessionStorage
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('currentItinerary', JSON.stringify(result));
+        }
+        
+        // Navigate to the home page (now integrated with scheduling)
+        router.push('/(tabs)/');
+      } else {
+        console.error('❌ LLM API error:', response.status);
+        // Fallback to regular chat endpoint
+        const fallbackResponse = await fetch('http://localhost:8000/chat/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: tripPrompt,
+            user_id: 1,
+          }),
+        });
 
-            <Text style={styles.reasonText}>{recommendation.reason}</Text>
-            
-            <View style={styles.whyYoullLoveSection}>
-              <Text style={styles.whyYoullLoveTitle}>Why You'll Love It:</Text>
-              <Text style={styles.whyYoullLoveText}>{recommendation.whyYoullLoveIt}</Text>
-            </View>
+        if (fallbackResponse.ok) {
+          const fallbackResult = await fallbackResponse.json();
+          console.log('✅ Fallback response received:', fallbackResult);
+          
+          // Store a simplified itinerary
+          const simplifiedItinerary = {
+            destination: recommendation.destination,
+            duration: recommendation.duration,
+            description: `Trip to ${recommendation.destination}`,
+            flights: [],
+            hotel: {
+              name: 'Hotel TBD',
+              address: 'Address TBD',
+              check_in: 'TBD',
+              check_out: 'TBD',
+              room_type: 'Standard',
+              price: 150,
+              total_nights: parseInt(recommendation.duration.split(' ')[0])
+            },
+            schedule: [],
+            total_cost: recommendation.estimatedCost,
+            bookable_cost: recommendation.estimatedCost * 0.6,
+            estimated_cost: recommendation.estimatedCost * 0.4
+          };
+          
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('currentItinerary', JSON.stringify(simplifiedItinerary));
+          }
+          
+          router.push('/(tabs)/');
+        } else {
+          console.error('❌ Both API endpoints failed');
+          alert('Sorry, I encountered an error while planning your trip. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error planning trip:', error);
+      alert('Sorry, I encountered an error while planning your trip. Please try again.');
+    } finally {
+      setIsPlanning(false);
+      setPlanningDestination('');
+    }
+  };
 
-            <View style={styles.highlightsSection}>
-              <Text style={styles.highlightsTitle}>Top Activities:</Text>
-              {recommendation.highlights.map((highlight, index) => (
-                <View key={index} style={styles.highlightItem}>
-                  <Text style={styles.highlightText}>• {highlight}</Text>
+  return (
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Your Next Adventure</Text>
+          <Text style={styles.subtitle}>AI-powered recommendations based on your preferences</Text>
+        </View>
+
+        <View style={styles.insightsSection}>
+          <Text style={styles.sectionTitle}>Your Travel Profile</Text>
+          {userInsights.map((insight, index) => (
+            <View key={index} style={styles.insightItem}>
+              <Text style={styles.insightText}>• {insight}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.recommendationsSection}>
+          <Text style={styles.sectionTitle}>Personalized Recommendations</Text>
+          {personalizedRecommendations.map((recommendation) => (
+            <View key={recommendation.id} style={styles.recommendationCard}>
+              <View style={styles.recommendationHeader}>
+                <View style={styles.destinationInfo}>
+                  <Text style={styles.destinationName}>{recommendation.destination}</Text>
+                  <Text style={styles.destinationDetails}>
+                    {recommendation.duration} • ${recommendation.estimatedCost} • {recommendation.confidence}% match
+                  </Text>
                 </View>
-              ))}
+                <View style={styles.confidenceBadge}>
+                  <Text style={styles.confidenceText}>{recommendation.confidence}%</Text>
+                </View>
+              </View>
+
+              <Text style={styles.reasonText}>{recommendation.reason}</Text>
+
+              <View style={styles.whyYoullLoveSection}>
+                <Text style={styles.whyYoullLoveTitle}>Why You'll Love It</Text>
+                <Text style={styles.whyYoullLoveText}>{recommendation.whyYoullLoveIt}</Text>
+              </View>
+
+              <View style={styles.highlightsSection}>
+                <Text style={styles.highlightsTitle}>Top Highlights</Text>
+                {recommendation.highlights.map((highlight, index) => (
+                  <View key={index} style={styles.highlightItem}>
+                    <Text style={styles.highlightText}>• {highlight}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={styles.planTripButton}
+                onPress={() => handlePlanTrip(recommendation)}
+              >
+                <Text style={styles.planTripButtonText}>Plan This Trip</Text>
+              </TouchableOpacity>
             </View>
+          ))}
+        </View>
 
-            <TouchableOpacity style={styles.planTripButton}>
-              <Text style={styles.planTripButtonText}>Plan This Trip</Text>
-            </TouchableOpacity>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            💡 These recommendations get smarter as you rate more activities!
+          </Text>
+        </View>
+      </ScrollView>
+      
+      {/* Planning Modal */}
+      <Modal
+        visible={isPlanning}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.planningModal}>
+            <ActivityIndicator size="large" color="#6366f1" />
+            <Text style={styles.planningTitle}>Planning Your Trip</Text>
+            <Text style={styles.planningSubtitle}>
+              Creating a detailed itinerary for {planningDestination}...
+            </Text>
+            <Text style={styles.planningDetails}>
+              🤖 AI is analyzing your preferences{'\n'}
+              📅 Building day-by-day schedule{'\n'}
+              💰 Calculating costs and booking options{'\n'}
+              🎯 Finding the best activities and alternatives
+            </Text>
           </View>
-        ))}
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          💡 These recommendations get smarter as you rate more activities!
-        </Text>
-      </View>
-    </ScrollView>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -146,6 +270,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0a0a0a',
+  },
+  scrollView: {
+    flex: 1,
   },
   header: {
     padding: 24,
@@ -327,5 +454,48 @@ const styles = StyleSheet.create({
     color: '#ccc',
     textAlign: 'center',
     fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  planningModal: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 20,
+    padding: 32,
+    margin: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  planningTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: 'white',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  planningSubtitle: {
+    fontSize: 16,
+    color: '#ccc',
+    marginBottom: 20,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  planningDetails: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '400',
   },
 }); 

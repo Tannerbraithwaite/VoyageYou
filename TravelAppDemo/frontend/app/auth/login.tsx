@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import authService from '@/services/auth';
+import oauthService from '@/services/oauth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -40,6 +43,42 @@ export default function LoginScreen() {
 
   const handleForgotPassword = () => {
     Alert.alert('Forgot Password', 'Password reset functionality would be implemented here');
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const user = await oauthService.signInWithGoogle();
+      if (user) {
+        console.log('Google sign-in successful:', user);
+        router.push('/(tabs)');
+      } else {
+        Alert.alert('Error', 'Google sign-in failed');
+      }
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      Alert.alert('Error', 'Google sign-in failed');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setIsAppleLoading(true);
+    try {
+      const user = await oauthService.signInWithApple();
+      if (user) {
+        console.log('Apple sign-in successful:', user);
+        router.push('/(tabs)');
+      } else {
+        Alert.alert('Error', 'Apple sign-in failed');
+      }
+    } catch (error) {
+      console.error('Apple sign-in error:', error);
+      Alert.alert('Error', 'Apple sign-in failed');
+    } finally {
+      setIsAppleLoading(false);
+    }
   };
 
   return (
@@ -111,12 +150,24 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Continue with Google</Text>
+          <TouchableOpacity 
+            style={[styles.socialButton, isGoogleLoading && styles.socialButtonDisabled]} 
+            onPress={handleGoogleSignIn}
+            disabled={isGoogleLoading}
+          >
+            <Text style={styles.socialButtonText}>
+              {isGoogleLoading ? 'Signing in with Google...' : 'Continue with Google'}
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Continue with Apple</Text>
+          <TouchableOpacity 
+            style={[styles.socialButton, isAppleLoading && styles.socialButtonDisabled]} 
+            onPress={handleAppleSignIn}
+            disabled={isAppleLoading}
+          >
+            <Text style={styles.socialButtonText}>
+              {isAppleLoading ? 'Signing in with Apple...' : 'Continue with Apple'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -266,6 +317,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  socialButtonDisabled: {
+    opacity: 0.6,
   },
   footer: {
     flexDirection: 'row',

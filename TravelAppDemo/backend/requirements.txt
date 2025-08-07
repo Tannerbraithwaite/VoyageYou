@@ -8,3 +8,7 @@ passlib[bcrypt]
 python-dotenv
 alembic
 openai
+pytest
+pytest-asyncio
+httpx
+pytest-cov

@@ -49,16 +49,9 @@ export default function SignupScreen() {
       const data = await response.json();
 
       if (response.ok) {
-        // Store user data (in a real app, you'd store a JWT token)
         console.log('Signup successful:', data);
-        console.log('Navigating to profile page...');
-        try {
-          // Redirect to profile page to complete profile setup
-          router.push('/(tabs)/profile');
-        } catch (error) {
-          console.error('Navigation error:', error);
-          router.push('/(tabs)/profile');
-        }
+        // Navigate to email verification page
+        router.push(`/auth/verify-email?email=${encodeURIComponent(email.trim())}`);
       } else {
         Alert.alert('Error', data.detail || 'Signup failed. Please try again.');
       }

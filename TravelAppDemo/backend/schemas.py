@@ -33,6 +33,23 @@ class TokenResponse(BaseModel):
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
+class OAuthRequest(BaseModel):
+    id_token: str
+    provider: str  # "google" or "apple"
+
+class SignupRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+
+class VerificationRequest(BaseModel):
+    token: str
+
+class SignupResponse(BaseModel):
+    message: str
+    user_id: int
+    email: str
+
 # User schemas
 class UserBase(BaseModel):
     name: str
@@ -60,7 +77,7 @@ class User(UserBase):
         from_attributes = True
 
 # Update forward references
-LoginResponse.model_rebuild()
+# Note: model_rebuild() is not needed in newer Pydantic versions
 
 # Interest schemas
 class UserInterestBase(BaseModel):
@@ -277,4 +294,49 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     message: str
     bot_response: str
-    created_at: datetime 
+    created_at: datetime
+
+# Enhanced Itinerary schemas for LLM integration
+class ItineraryActivity(BaseModel):
+    name: str
+    time: str
+    price: float
+    type: str  # "bookable" or "estimated"
+    description: Optional[str] = None
+    alternatives: Optional[List['ItineraryActivity']] = None
+
+class ItineraryDay(BaseModel):
+    day: int
+    date: str
+    activities: List[ItineraryActivity]
+
+class FlightInfo(BaseModel):
+    airline: str
+    flight: str
+    departure: str
+    time: str
+    price: float
+    type: str  # "outbound" or "return"
+
+class HotelInfo(BaseModel):
+    name: str
+    address: str
+    check_in: str
+    check_out: str
+    room_type: str
+    price: float
+    total_nights: int
+
+class EnhancedItineraryResponse(BaseModel):
+    destination: str
+    duration: str
+    description: str
+    flights: List[FlightInfo]
+    hotel: HotelInfo
+    schedule: List[ItineraryDay]
+    total_cost: float
+    bookable_cost: float
+    estimated_cost: float
+
+# Update forward references
+# Note: model_rebuild() is not needed in newer Pydantic versions 

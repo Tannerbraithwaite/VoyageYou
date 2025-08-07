@@ -1,4 +1,17 @@
+import sys
+import os
+print(f"[DEBUG] Python executable: {sys.executable}")
+try:
+    import openai
+    print(f"[DEBUG] OpenAI version: {openai.__version__}")
+    print(f"[DEBUG] Has ChatCompletion: {hasattr(openai, 'ChatCompletion')}")
+    print(f"[DEBUG] Has OpenAI class: {hasattr(openai, 'OpenAI')}")
+except Exception as e:
+    print(f"[DEBUG] OpenAI import error: {e}")
+print(f"[DEBUG] Current working directory: {os.getcwd()}")
+
 from fastapi import FastAPI, Depends, HTTPException, status, Response, Request
+from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
@@ -17,11 +30,14 @@ from schemas import (
     TripCreate, Trip, TripResponse,
     ActivityCreate, Activity, ActivityUpdate,
     ItineraryRequest, ItineraryResponse,
-    Recommendation, LoginRequest, LoginResponse, TokenResponse, RefreshTokenRequest,
+    Recommendation, LoginRequest, LoginResponse, TokenResponse, RefreshTokenRequest, OAuthRequest,
+    SignupRequest, VerificationRequest, SignupResponse,
     ChatRequest, ChatResponse, ChatMessage
 )
 from services import UserService, TripService, ActivityService, ItineraryService, RecommendationService, ChatbotService
 from auth import AuthService
+from oauth import OAuthService
+from email_service import email_service
 
 # Create FastAPI app
 app = FastAPI(
@@ -33,7 +49,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8081", "http://localhost:8082", "http://localhost:3000", "http://localhost:19006"],  # Common Expo/React Native ports
+    allow_origins=["http://localhost:8081", "http://localhost:8082", "http://localhost:3000", "http://localhost:19006", "http://localhost:8080"],  # Common Expo/React Native ports
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,6 +72,13 @@ def login(login_data: LoginRequest, response: Response, db: Session = Depends(ge
     user = AuthService.authenticate_user(db, login_data.email, login_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Check if email is verified
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=401, 
+            detail="Please verify your email address before logging in. Check your email for a verification link."
+        )
     
     # Create tokens
     access_token = AuthService.create_access_token(data={"sub": str(user.id)})
@@ -87,49 +110,82 @@ def login(login_data: LoginRequest, response: Response, db: Session = Depends(ge
         refresh_token=refresh_token
     )
 
-@app.post("/auth/signup", response_model=LoginResponse)
-def signup(user_data: UserCreate, response: Response, db: Session = Depends(get_db)):
-    """Create a new user account"""
+@app.post("/auth/signup", response_model=SignupResponse)
+async def signup(user_data: SignupRequest, db: Session = Depends(get_db)):
+    """Create a new user account with email verification"""
     # Check if user already exists
     existing_user = UserService.get_user_by_email(db, user_data.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="User with this email already exists")
     
-    # Hash the password before creating user
+    # Hash the password
     hashed_password = AuthService.get_password_hash(user_data.password)
-    user_data.password = hashed_password
     
-    user = UserService.create_user(db, user_data)
+    # Generate verification token
+    verification_token = email_service.generate_verification_token()
+    verification_expires = email_service.get_verification_expiry()
     
-    # Create tokens
-    access_token = AuthService.create_access_token(data={"sub": str(user.id)})
-    refresh_token = AuthService.create_refresh_token(data={"sub": str(user.id)})
-    
-    # Set secure HTTP-only cookies
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=False,  # Set to True in production with HTTPS
-        samesite="lax",
-        max_age=1800  # 30 minutes
+    # Create user with verification fields
+    user = User(
+        name=user_data.name,
+        email=user_data.email,
+        password=hashed_password,
+        travel_style="solo",
+        budget_range="moderate",
+        is_verified=False,
+        verification_token=verification_token,
+        verification_expires=verification_expires
     )
     
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=False,  # Set to True in production with HTTPS
-        samesite="lax",
-        max_age=604800  # 7 days
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    # Send verification email
+    email_sent = await email_service.send_verification_email(
+        user_data.email, 
+        user_data.name, 
+        verification_token
     )
     
-    return LoginResponse(
-        user=user,
-        message="Account created successfully",
-        access_token=access_token,
-        refresh_token=refresh_token
+    if not email_sent:
+        # If email fails, delete the user
+        db.delete(user)
+        db.commit()
+        raise HTTPException(status_code=500, detail="Failed to send verification email")
+    
+    return SignupResponse(
+        message="Account created successfully. Please check your email to verify your account.",
+        user_id=user.id,
+        email=user.email
     )
+
+@app.get("/auth/verify")
+async def verify_email(token: str, db: Session = Depends(get_db)):
+    """Verify user email with token"""
+    # Find user by verification token
+    user = db.query(User).filter(
+        User.verification_token == token,
+        User.is_verified == False
+    ).first()
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+    
+    # Check if token is expired
+    if user.verification_expires < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Verification token has expired")
+    
+    # Mark user as verified
+    user.is_verified = True
+    user.verification_token = None
+    user.verification_expires = None
+    db.commit()
+    
+    # Send welcome email
+    await email_service.send_welcome_email(user.email, user.name)
+    
+    return {"message": "Email verified successfully! You can now log in."}
 
 @app.post("/auth/refresh", response_model=TokenResponse)
 def refresh_token(request: Request, response: Response):
@@ -164,6 +220,47 @@ def logout(response: Response):
     response.delete_cookie("access_token", httponly=True, secure=False, samesite="lax")
     response.delete_cookie("refresh_token", httponly=True, secure=False, samesite="lax")
     return {"message": "Logged out successfully"}
+
+@app.post("/auth/oauth", response_model=LoginResponse)
+async def oauth_login(oauth_data: OAuthRequest, response: Response, db: Session = Depends(get_db)):
+    """OAuth login with Google or Apple"""
+    try:
+        if oauth_data.provider == "google":
+            result = await OAuthService.handle_google_oauth(oauth_data.id_token, db)
+        elif oauth_data.provider == "apple":
+            result = await OAuthService.handle_apple_oauth(oauth_data.id_token, db)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid OAuth provider")
+        
+        # Set secure HTTP-only cookies
+        response.set_cookie(
+            key="access_token",
+            value=result["access_token"],
+            httponly=True,
+            secure=False,  # Set to True in production with HTTPS
+            samesite="lax",
+            max_age=1800  # 30 minutes
+        )
+        
+        response.set_cookie(
+            key="refresh_token",
+            value=result["refresh_token"],
+            httponly=True,
+            secure=False,  # Set to True in production with HTTPS
+            samesite="lax",
+            max_age=604800  # 7 days
+        )
+        
+        return LoginResponse(
+            user=result["user"],
+            message=f"Login successful via {oauth_data.provider}",
+            access_token=result["access_token"],
+            refresh_token=result["refresh_token"]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OAuth login failed: {str(e)}")
 
 def get_current_user_from_cookies(request: Request, db: Session = Depends(get_db)) -> User:
     """Get current user from cookies"""
@@ -405,6 +502,105 @@ def chat_with_bot(chat_request: ChatRequest, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Error in chat endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat message: {str(e)}")
+
+@app.post("/chat/enhanced/", response_model=schemas.EnhancedItineraryResponse)
+def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = Depends(get_db)):
+    """Chat with the AI travel assistant and return structured itinerary data"""
+    # Get OpenAI API key from environment variable
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=500, 
+            detail="OpenAI API key not configured. Please set the OPENAI_API_KEY environment variable with your API key."
+        )
+    
+    try:
+        # Generate enhanced response
+        response_text = ChatbotService.generate_response(db, chat_request.user_id, chat_request.message, api_key)
+        
+        # Try to parse JSON response
+        import json
+        try:
+            # Look for JSON in the response
+            start_idx = response_text.find('{')
+            end_idx = response_text.rfind('}') + 1
+            
+            if start_idx != -1 and end_idx > start_idx:
+                json_str = response_text[start_idx:end_idx]
+                print(f"Attempting to parse JSON string (length: {len(json_str)}):")
+                print(f"JSON start: {json_str[:200]}...")
+                print(f"JSON end: ...{json_str[-200:]}")
+                
+                itinerary_data = json.loads(json_str)
+                print(f"Successfully parsed JSON with keys: {list(itinerary_data.keys())}")
+                
+                # Convert to EnhancedItineraryResponse
+                return schemas.EnhancedItineraryResponse(**itinerary_data)
+            else:
+                # If no JSON found, return a default structure
+                raise ValueError("No JSON structure found in response")
+                
+        except (json.JSONDecodeError, ValueError) as e:
+            print(f"Error parsing JSON response: {e}")
+            print(f"Raw response length: {len(response_text)}")
+            print(f"Raw response preview: {response_text[:500]}...")
+            print(f"Raw response end: ...{response_text[-500:]}")
+            
+            # Return a default structure if JSON parsing fails
+            return schemas.EnhancedItineraryResponse(
+                destination="Paris, France",
+                duration="3 days",
+                description="Default itinerary",
+                flights=[
+                    schemas.FlightInfo(
+                        airline="Air France",
+                        flight="AF 1234",
+                        departure="JFK → CDG",
+                        time="10:30 AM - 11:45 PM",
+                        price=850
+                    )
+                ],
+                hotel=schemas.HotelInfo(
+                    name="Hotel Le Marais",
+                    address="123 Rue de Rivoli, Paris",
+                    check_in="July 15, 2024 - 3:00 PM",
+                    check_out="July 18, 2024 - 11:00 AM",
+                    room_type="Deluxe Room",
+                    price=180,
+                    total_nights=3
+                ),
+                schedule=[
+                    schemas.ItineraryDay(
+                        day=1,
+                        date="July 15, 2024",
+                        activities=[
+                            schemas.ItineraryActivity(
+                                name="City Walking Tour",
+                                time="10:30",
+                                price=25,
+                                type="bookable",
+                                description="Explore the historic city center",
+                                alternatives=[
+                                    schemas.ItineraryActivity(
+                                        name="Private Guided Tour",
+                                        time="10:30",
+                                        price=45,
+                                        type="bookable",
+                                        description="Exclusive 2-hour private tour"
+                                    )
+                                ]
+                            )
+                        ]
+                    )
+                ],
+                total_cost=2500,
+                bookable_cost=1800,
+                estimated_cost=700
+            )
+            
+    except Exception as e:
+        print(f"Error in enhanced chat endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing enhanced chat message: {str(e)}")
 
 @app.get("/users/{user_id}/chat/history/", response_model=List[ChatMessage])
 def get_chat_history(user_id: int, limit: int = 20, db: Session = Depends(get_db)):

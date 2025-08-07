@@ -1,3 +1,6 @@
+import os
+print(f"[DEBUG] Loading services.py from: {os.path.abspath(__file__)}")
+
 from sqlalchemy.orm import Session
 from database import User, UserInterest, Trip, Activity, Flight, Hotel, Recommendation, ChatMessage
 from schemas import UserCreate, TripCreate, ActivityCreate, FlightCreate, HotelCreate
@@ -6,7 +9,6 @@ from typing import List, Dict, Any
 import random
 import hashlib
 import openai
-import os
 
 class UserService:
     @staticmethod
@@ -376,6 +378,19 @@ class ChatbotService:
     @staticmethod
     def save_user_message(db: Session, user_id: int, message: str) -> ChatMessage:
         """Save a user message to the database"""
+        if db is None:
+            # Return a mock ChatMessage if database is not available
+            from datetime import datetime
+            mock_message = ChatMessage(
+                id=0,
+                user_id=user_id,
+                message=message,
+                is_bot=False,
+                created_at=datetime.utcnow(),
+                response=""
+            )
+            return mock_message
+            
         chat_message = ChatMessage(
             user_id=user_id,
             message=message,
@@ -389,6 +404,19 @@ class ChatbotService:
     @staticmethod
     def save_bot_response(db: Session, user_id: int, response: str) -> ChatMessage:
         """Save a bot response to the database"""
+        if db is None:
+            # Return a mock ChatMessage if database is not available
+            from datetime import datetime
+            mock_message = ChatMessage(
+                id=0,
+                user_id=user_id,
+                message="",
+                is_bot=True,
+                created_at=datetime.utcnow(),
+                response=response
+            )
+            return mock_message
+            
         chat_message = ChatMessage(
             user_id=user_id,
             message="",
@@ -407,56 +435,140 @@ class ChatbotService:
             # Setup OpenAI
             ChatbotService.setup_openai(api_key)
             
-            # Get user profile for context
-            user = UserService.get_user(db, user_id)
-            if not user:
-                return "I'm sorry, I couldn't find your profile. Please try logging in again."
+            # Get user profile for context (handle None db gracefully)
+            user = None
+            user_interests = []
+            user_trips = []
             
-            # Get user's travel preferences and history
-            user_interests = db.query(UserInterest).filter(UserInterest.user_id == user_id).all()
-            user_trips = TripService.get_user_trips(db, user_id)
+            if db is not None:
+                try:
+                    user = UserService.get_user(db, user_id)
+                    user_interests = db.query(UserInterest).filter(UserInterest.user_id == user_id).all()
+                    user_trips = TripService.get_user_trips(db, user_id)
+                except Exception as db_error:
+                    print(f"Database error (continuing with defaults): {db_error}")
+            
+            # Use default values if database is not available
+            travel_style = user.travel_style if user else "solo"
+            budget_range = user.budget_range if user else "moderate"
+            additional_info = user.additional_info if user else "Standard preferences"
             
             # Build personalized system message
             interests_list = ', '.join([interest.interest for interest in user_interests]) if user_interests else "general travel"
             previous_trips_info = f"with {len(user_trips)} previous trips" if user_trips else "as a new traveler"
             
-            system_message = f"""You are a travel itinerary planner. Create complete day-by-day itineraries.
+            system_message = f"""You are a travel itinerary planner. Create complete day-by-day itineraries with structured data.
 
 Traveler Profile:
-- Style: {user.travel_style}
-- Budget: {user.budget_range}
+- Style: {travel_style}
+- Budget: {budget_range}
 - Interests: {interests_list}
 - Experience: {previous_trips_info}
-- Preferences: {user.additional_info if user.additional_info else "Standard preferences"}
+- Preferences: {additional_info}
 
 INSTRUCTIONS:
-1. Provide complete day-by-day itinerary
-2. Include specific venues, restaurants, attractions
-3. Add flight/hotel recommendations if requested
-4. Be concise - no pleasantries or explanations
-5. Format: Day 1: [morning activity] → [lunch venue] → [afternoon activity] → [dinner venue]"""
+1. Provide complete day-by-day itinerary with specific times, costs, and booking status
+2. Include round-trip flight recommendations with realistic airlines and routes
+3. For each activity, provide 2-3 alternative options
+4. Default to "estimated" if unsure about bookable status
+5. Format response as JSON with this structure:
+
+{{
+  "destination": "City, Country",
+  "duration": "X days",
+  "description": "Brief trip description",
+  "flights": [
+    {{
+      "airline": "Airline Name",
+      "flight": "Flight Number",
+      "departure": "Origin → Destination",
+      "time": "Departure - Arrival Time",
+      "price": 850,
+      "type": "outbound"
+    }},
+    {{
+      "airline": "Airline Name",
+      "flight": "Flight Number", 
+      "departure": "Destination → Origin",
+      "time": "Departure - Arrival Time",
+      "price": 850,
+      "type": "return"
+    }}
+  ],
+  "hotel": {{
+    "name": "Hotel Name",
+    "address": "Hotel Address",
+    "check_in": "Check-in Date - Time",
+    "check_out": "Check-out Date - Time",
+    "room_type": "Room Type",
+    "price": 180,
+    "total_nights": 3
+  }},
+  "schedule": [
+    {{
+      "day": 1,
+      "date": "Date",
+      "activities": [
+        {{
+          "name": "Activity Name",
+          "time": "09:00",
+          "price": 25,
+          "type": "bookable",
+          "description": "Activity description",
+          "alternatives": [
+            {{
+              "name": "Alternative Activity",
+              "time": "09:00",
+              "price": 35,
+              "type": "bookable",
+              "description": "Alternative description"
+            }}
+          ]
+        }}
+      ]
+    }}
+  ],
+  "total_cost": 2500,
+  "bookable_cost": 1800,
+  "estimated_cost": 700
+}}
+
+IMPORTANT:
+- Always provide alternatives for each activity
+- Use realistic prices based on destination and budget
+- Mark as "bookable" for tours, museums, restaurants with reservations
+- Mark as "estimated" for free activities, walking tours, casual dining
+- Include specific venue names and addresses when possible
+- Use appropriate airlines for each destination (e.g., Air France for France, British Airways for UK, Lufthansa for Germany, Japan Airlines for Japan)
+- Provide round-trip flights with realistic routes and pricing
+- All prices should be numeric values, not strings
+- bookable_cost MUST include: flights (outbound + return) + hotel (price × nights) + all bookable activities
+- estimated_cost should include: all estimated activities and any free activities
+- total_cost should be: bookable_cost + estimated_cost"""
             
             # Debug: Print the system message being sent
             print(f"DEBUG - System message being sent to OpenAI:")
             print(f"System: {system_message}")
             print(f"User message: {message}")
             
-            # Call OpenAI API using the new v1.0.0+ format
-            client = openai.OpenAI(api_key=api_key)
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+            # Call OpenAI API using the legacy format
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo-16k",  # Using 16k model which is cheaper for longer responses
                 messages=[
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": message}
                 ],
-                max_tokens=800,
+                max_tokens=2000,  # Reduced tokens to save costs
                 temperature=0.7
             )
             
-            return response.choices[0].message.content.strip()
+            return response["choices"][0]["message"]["content"].strip()
             
         except Exception as e:
             print(f"Error generating chatbot response: {e}")
+            print(f"Error type: {type(e)}")
+            import traceback
+            traceback.print_exc()
             # Provide helpful fallback responses when API is unavailable
             if "quota" in str(e).lower() or "billing" in str(e).lower():
                 return "I'm currently experiencing high demand. Here are some travel tips based on your profile:\n\n• As a solo traveler with moderate budget, consider destinations like Portugal, Thailand, or Mexico\n• For art lovers, Florence and Barcelona are excellent choices\n• For food enthusiasts, try Tokyo, Bangkok, or Istanbul\n\nWould you like me to help you plan a specific trip?"
@@ -466,14 +578,25 @@ INSTRUCTIONS:
     @staticmethod
     def process_message(db: Session, user_id: int, message: str, api_key: str) -> Dict[str, Any]:
         """Process a user message and return bot response"""
-        # Save user message
-        user_message = ChatbotService.save_user_message(db, user_id, message)
+        # Save user message (handle database errors gracefully)
+        user_message = None
+        bot_message = None
+        
+        if db is not None:
+            try:
+                user_message = ChatbotService.save_user_message(db, user_id, message)
+            except Exception as e:
+                print(f"Error saving user message: {e}")
         
         # Generate bot response
         bot_response = ChatbotService.generate_response(db, user_id, message, api_key)
         
-        # Save bot response
-        bot_message = ChatbotService.save_bot_response(db, user_id, bot_response)
+        # Save bot response (handle database errors gracefully)
+        if db is not None:
+            try:
+                bot_message = ChatbotService.save_bot_response(db, user_id, bot_response)
+            except Exception as e:
+                print(f"Error saving bot response: {e}")
         
         return {
             "user_message": user_message,

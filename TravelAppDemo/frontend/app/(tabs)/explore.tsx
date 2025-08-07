@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import { EnhancedItinerary, ItineraryActivity } from '@/types';
 
 interface Activity {
   time: string;
@@ -16,6 +19,7 @@ interface AlternativeActivity {
 }
 
 export default function ScheduleScreen() {
+  const router = useRouter();
   const [showOldTrips, setShowOldTrips] = useState(false);
   const [showAlternatives, setShowAlternatives] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
@@ -56,43 +60,64 @@ export default function ScheduleScreen() {
     }
   ]);
 
-  const alternativeActivities: Record<string, AlternativeActivity[]> = {
-    'City Walking Tour': [
-      { name: 'Private Guided Tour', price: 45, type: 'bookable', description: 'Exclusive 2-hour private tour with expert guide' },
-      { name: 'Self-Guided Audio Tour', price: 15, type: 'bookable', description: 'Downloadable audio guide with map' },
-      { name: 'Bike Tour', price: 35, type: 'bookable', description: '3-hour cycling tour of major landmarks' },
-    ],
-    'Museum Visit': [
-      { name: 'Louvre Skip-the-Line Tour', price: 45, type: 'bookable', description: 'Guided tour with priority access' },
-      { name: 'Musée d\'Orsay Visit', price: 22, type: 'bookable', description: 'Impressionist masterpieces collection' },
-      { name: 'Pompidou Center', price: 18, type: 'bookable', description: 'Modern and contemporary art' },
-    ],
-    'Art Gallery Tour': [
-      { name: 'Private Gallery Tour', price: 60, type: 'bookable', description: 'Exclusive access to private collections' },
-      { name: 'Street Art Walking Tour', price: 25, type: 'bookable', description: 'Explore Paris street art scene' },
-      { name: 'Photography Workshop', price: 75, type: 'bookable', description: 'Learn photography while touring galleries' },
-    ],
-    'Boat Tour': [
-      { name: 'Luxury Dinner Cruise', price: 120, type: 'bookable', description: '3-course meal with live music' },
-      { name: 'Sunset Seine Cruise', price: 35, type: 'bookable', description: 'Romantic evening on the river' },
-      { name: 'Speedboat Adventure', price: 85, type: 'bookable', description: 'Thrilling high-speed river tour' },
-    ],
-    'Concert at Opera House': [
-      { name: 'Ballet Performance', price: 95, type: 'bookable', description: 'Classical ballet at Palais Garnier' },
-      { name: 'Jazz Club Night', price: 45, type: 'bookable', description: 'Intimate jazz venue experience' },
-      { name: 'Classical Music Concert', price: 75, type: 'bookable', description: 'Orchestra performance' },
-    ],
-    'Cooking Class': [
-      { name: 'Pastry Making Workshop', price: 95, type: 'bookable', description: 'Learn French pastry techniques' },
-      { name: 'Wine & Cheese Pairing', price: 65, type: 'bookable', description: 'Expert sommelier guided tasting' },
-      { name: 'Market to Table Experience', price: 110, type: 'bookable', description: 'Shop at markets then cook together' },
-    ],
-    'Wine Cellar Visit': [
-      { name: 'Champagne Region Tour', price: 150, type: 'bookable', description: 'Full-day champagne tasting tour' },
-      { name: 'Wine Tasting Masterclass', price: 75, type: 'bookable', description: 'Learn wine appreciation techniques' },
-      { name: 'Bordeaux Wine Tour', price: 200, type: 'bookable', description: 'Day trip to Bordeaux vineyards' },
-    ],
+  const [enhancedItinerary, setEnhancedItinerary] = useState<EnhancedItinerary | null>(null);
+  const [alternativeActivities, setAlternativeActivities] = useState<Record<string, AlternativeActivity[]>>({});
+
+  // Load enhanced itinerary data on component mount and when screen comes into focus
+  const loadItineraryData = () => {
+    if (typeof window !== 'undefined') {
+      const storedItinerary = sessionStorage.getItem('currentItinerary');
+      if (storedItinerary) {
+        try {
+          const itinerary = JSON.parse(storedItinerary);
+          setEnhancedItinerary(itinerary);
+          
+          // Convert enhanced itinerary to schedule format
+          const newSchedule = itinerary.schedule.map((day: any) => ({
+            day: day.day,
+            date: day.date,
+            activities: day.activities.map((activity: any) => ({
+              time: activity.time,
+              activity: activity.name,
+              price: activity.price,
+              type: activity.type as 'bookable' | 'estimated'
+            }))
+          }));
+          setSchedule(newSchedule);
+          
+          // Build alternatives map
+          const alternativesMap: Record<string, AlternativeActivity[]> = {};
+          itinerary.schedule.forEach((day: any) => {
+            day.activities.forEach((activity: any) => {
+              if (activity.alternatives && activity.alternatives.length > 0) {
+                alternativesMap[activity.name] = activity.alternatives.map((alt: any) => ({
+                  name: alt.name,
+                  price: alt.price,
+                  type: alt.type as 'bookable' | 'estimated',
+                  description: alt.description || ''
+                }));
+              }
+            });
+          });
+          setAlternativeActivities(alternativesMap);
+        } catch (error) {
+          console.error('Error parsing itinerary data:', error);
+        }
+      }
+    }
   };
+
+  // Load data on mount
+  useEffect(() => {
+    loadItineraryData();
+  }, []);
+
+  // Reload data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadItineraryData();
+    }, [])
+  );
 
   const oldTrips = [
     {
@@ -139,7 +164,24 @@ export default function ScheduleScreen() {
     }
   ];
 
-  const flightInfo = {
+  const [oldTripsState, setOldTripsState] = useState(oldTrips);
+
+  const flightInfo = enhancedItinerary ? {
+    outbound: enhancedItinerary.flights[0] || {
+      airline: 'Air France',
+      flight: 'AF 1234',
+      departure: 'JFK → CDG',
+      time: '10:30 AM - 11:45 PM',
+      price: 850
+    },
+    inbound: enhancedItinerary.flights[1] || {
+      airline: 'Air France',
+      flight: 'AF 1235',
+      departure: 'CDG → JFK',
+      time: '2:15 PM - 5:30 PM',
+      price: 850
+    }
+  } : {
     outbound: {
       airline: 'Air France',
       flight: 'AF 1234',
@@ -156,7 +198,15 @@ export default function ScheduleScreen() {
     }
   };
 
-  const hotelInfo = {
+  const hotelInfo = enhancedItinerary ? {
+    name: enhancedItinerary.hotel.name,
+    address: enhancedItinerary.hotel.address,
+    checkIn: enhancedItinerary.hotel.check_in,
+    checkOut: enhancedItinerary.hotel.check_out,
+    roomType: enhancedItinerary.hotel.room_type,
+    price: enhancedItinerary.hotel.price,
+    totalNights: enhancedItinerary.hotel.total_nights
+  } : {
     name: 'Hotel Le Marais',
     address: '123 Rue de Rivoli, Paris',
     checkIn: 'July 15, 2024 - 3:00 PM',
@@ -171,7 +221,7 @@ export default function ScheduleScreen() {
   );
   const totalFlights = flightInfo.outbound.price + flightInfo.inbound.price;
   const totalHotel = hotelInfo.price * hotelInfo.totalNights;
-  const totalCost = totalActivities + totalFlights + totalHotel;
+  const totalCost = enhancedItinerary ? enhancedItinerary.total_cost : (totalActivities + totalFlights + totalHotel);
 
   // Calculate bookable vs estimated costs
   const bookableActivities = schedule.reduce((sum, day) => 
@@ -182,10 +232,48 @@ export default function ScheduleScreen() {
     sum + day.activities.reduce((daySum, activity) => 
       activity.type === 'estimated' ? daySum + activity.price : daySum, 0), 0
   );
-  const bookableTotal = totalFlights + totalHotel + bookableActivities;
+  // Calculate bookable total ensuring flights and hotels are always included
+  const calculatedBookableTotal = totalFlights + totalHotel + bookableActivities;
+  const bookableTotal = enhancedItinerary 
+    ? Math.max(enhancedItinerary.bookable_cost || 0, calculatedBookableTotal) // Use the higher value to ensure all costs are included
+    : calculatedBookableTotal;
+  
+  // Debug logging for price calculations
+  console.log('Price Calculation Debug:', {
+    enhancedItinerary: !!enhancedItinerary,
+    enhancedItineraryBookableCost: enhancedItinerary?.bookable_cost,
+    calculatedBookableTotal,
+    bookableTotal,
+    totalFlights,
+    totalHotel,
+    bookableActivities,
+    flightInfo: {
+      outbound: flightInfo.outbound.price,
+      inbound: flightInfo.inbound.price
+    },
+    hotelInfo: {
+      price: hotelInfo.price,
+      totalNights: hotelInfo.totalNights,
+      total: hotelInfo.price * hotelInfo.totalNights
+    }
+  });
 
   const handleRateActivity = (tripId: number, activityName: string, newRating: number) => {
-    // In a real app, this would update the backend
+    // Update the rating in the state
+    setOldTripsState(prevTrips => 
+      prevTrips.map(trip => 
+        trip.id === tripId 
+          ? {
+              ...trip,
+              activities: trip.activities.map(activity => 
+                activity.name === activityName 
+                  ? { ...activity, rating: newRating }
+                  : activity
+              )
+            }
+          : trip
+      )
+    );
     console.log(`Rated ${activityName} in trip ${tripId} with ${newRating} stars`);
   };
 
@@ -209,7 +297,8 @@ export default function ScheduleScreen() {
 
   const handleCheckout = () => {
     console.log(`Processing checkout for bookable items: $${bookableTotal}`);
-    // In a real app, this would integrate with payment processing
+    // Navigate to checkout page
+    router.push('/checkout');
   };
 
   const handleChangeActivity = (activity: Activity) => {
@@ -252,7 +341,12 @@ export default function ScheduleScreen() {
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Your Travel Schedule</Text>
-          <Text style={styles.subtitle}>3 Days in Paris - Art & Food Lover's Dream</Text>
+          <Text style={styles.subtitle}>
+            {enhancedItinerary 
+              ? `${enhancedItinerary.duration} in ${enhancedItinerary.destination} - ${enhancedItinerary.description}`
+              : '3 Days in Paris - Art & Food Lover\'s Dream'
+            }
+          </Text>
           <TouchableOpacity 
             style={styles.oldTripsButton}
             onPress={() => setShowOldTrips(true)}
@@ -484,7 +578,7 @@ export default function ScheduleScreen() {
           </View>
           
           <ScrollView style={styles.modalContent}>
-            {oldTrips.map((trip) => (
+            {oldTripsState.map((trip) => (
               <View key={trip.id} style={styles.tripCard}>
                 <View style={styles.tripHeader}>
                   <Text style={styles.tripDestination}>{trip.destination}</Text>

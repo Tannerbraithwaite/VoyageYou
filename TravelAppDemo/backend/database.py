@@ -27,6 +27,9 @@ class User(Base):
     travel_style = Column(String)  # solo, couple, family, group
     budget_range = Column(String)  # budget, moderate, luxury
     additional_info = Column(Text)
+    is_verified = Column(Boolean, default=False)
+    verification_token = Column(String, nullable=True)
+    verification_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
