@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import GlassCard from '@/components/ui/GlassCard';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { EnhancedItinerary, ItineraryActivity } from '@/types';
@@ -339,7 +340,7 @@ export default function ScheduleScreen() {
   return (
     <>
       <ScrollView style={styles.container}>
-        <View style={styles.header}>
+        <GlassCard style={styles.header}>
           <Text style={styles.title}>Your Travel Schedule</Text>
           <Text style={styles.subtitle}>
             {enhancedItinerary 
@@ -353,41 +354,41 @@ export default function ScheduleScreen() {
           >
             <Text style={styles.oldTripsButtonText}>View Old Trips</Text>
           </TouchableOpacity>
-        </View>
+        </GlassCard>
         
         {/* Flight Information */}
-        <View style={styles.section}>
+        <GlassCard style={styles.section}>
           <Text style={styles.sectionTitle}>✈️ Flight Information</Text>
           
           <View style={styles.flightContainer}>
-            <View style={styles.flightCard}>
+            <GlassCard style={styles.flightCard}>
               <Text style={styles.flightLabel}>Outbound</Text>
               <Text style={styles.airline}>{flightInfo.outbound.airline} {flightInfo.outbound.flight}</Text>
               <Text style={styles.route}>{flightInfo.outbound.departure}</Text>
               <Text style={styles.timeText}>{flightInfo.outbound.time}</Text>
               <Text style={styles.priceText}>${flightInfo.outbound.price}</Text>
-            </View>
+            </GlassCard>
             
-            <View style={styles.flightCard}>
+            <GlassCard style={styles.flightCard}>
               <Text style={styles.flightLabel}>Return</Text>
               <Text style={styles.airline}>{flightInfo.inbound.airline} {flightInfo.inbound.flight}</Text>
               <Text style={styles.route}>{flightInfo.inbound.departure}</Text>
               <Text style={styles.timeText}>{flightInfo.inbound.time}</Text>
               <Text style={styles.priceText}>${flightInfo.inbound.price}</Text>
-            </View>
+            </GlassCard>
           </View>
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Flights:</Text>
             <Text style={styles.totalAmount}>${totalFlights}</Text>
           </View>
-        </View>
+        </GlassCard>
 
         {/* Hotel Information */}
-        <View style={styles.section}>
+        <GlassCard style={styles.section}>
           <Text style={styles.sectionTitle}>🏨 Hotel Information</Text>
           
-          <View style={styles.hotelCard}>
+          <GlassCard style={styles.hotelCard}>
             <Text style={styles.hotelName}>{hotelInfo.name}</Text>
             <Text style={styles.hotelAddress}>{hotelInfo.address}</Text>
             <Text style={styles.hotelDetails}>{hotelInfo.roomType}</Text>
@@ -397,15 +398,15 @@ export default function ScheduleScreen() {
               <Text style={styles.hotelPriceLabel}>${hotelInfo.price}/night × {hotelInfo.totalNights} nights</Text>
               <Text style={styles.hotelPriceTotal}>${hotelInfo.price * hotelInfo.totalNights}</Text>
             </View>
-          </View>
-        </View>
+          </GlassCard>
+        </GlassCard>
         
         {/* Daily Schedule */}
-        <View style={styles.section}>
+        <GlassCard style={styles.section}>
           <Text style={styles.sectionTitle}>📅 Daily Schedule</Text>
           
           {schedule.map((day) => (
-            <View key={day.day} style={styles.dayContainer}>
+            <GlassCard key={day.day} style={styles.dayContainer}>
               <View style={styles.dayHeader}>
                 <Text style={styles.dayTitle}>Day {day.day}</Text>
                 <Text style={styles.dayDate}>{day.date}</Text>
@@ -452,17 +453,17 @@ export default function ScheduleScreen() {
                   </View>
                 </View>
               ))}
-            </View>
+            </GlassCard>
           ))}
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Activities:</Text>
             <Text style={styles.totalAmount}>${totalActivities}</Text>
           </View>
-        </View>
+        </GlassCard>
         
         {/* Cost Breakdown */}
-        <View style={styles.totalContainer}>
+        <GlassCard style={styles.totalContainer}>
           <Text style={styles.totalTitle}>Trip Cost Breakdown</Text>
           <View style={styles.costBreakdown}>
             <View style={styles.costRow}>
@@ -487,10 +488,10 @@ export default function ScheduleScreen() {
             </View>
           </View>
           <Text style={styles.totalSubtext}>*Prices include taxes and fees</Text>
-        </View>
+        </GlassCard>
 
         {/* Checkout Button */}
-        <View style={styles.checkoutSection}>
+        <GlassCard style={styles.checkoutSection}>
           <View style={styles.checkoutInfo}>
             <Text style={styles.checkoutTitle}>Ready to Book?</Text>
             <Text style={styles.checkoutSubtitle}>
@@ -501,7 +502,7 @@ export default function ScheduleScreen() {
           <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
             <Text style={styles.checkoutButtonText}>Checkout Now</Text>
           </TouchableOpacity>
-        </View>
+        </GlassCard>
       </ScrollView>
 
       {/* Alternatives Modal */}
@@ -523,11 +524,11 @@ export default function ScheduleScreen() {
           
           <ScrollView style={styles.modalContent}>
             {selectedActivity && (
-              <View style={styles.currentActivityCard}>
+              <GlassCard style={styles.currentActivityCard}>
                 <Text style={styles.currentActivityTitle}>Current Activity:</Text>
                 <Text style={styles.currentActivityName}>{selectedActivity.activity}</Text>
                 <Text style={styles.currentActivityPrice}>${selectedActivity.price}</Text>
-              </View>
+              </GlassCard>
             )}
             
             <Text style={styles.alternativesTitle}>Choose an Alternative:</Text>
@@ -579,7 +580,7 @@ export default function ScheduleScreen() {
           
           <ScrollView style={styles.modalContent}>
             {oldTripsState.map((trip) => (
-              <View key={trip.id} style={styles.tripCard}>
+              <GlassCard key={trip.id} style={styles.tripCard}>
                 <View style={styles.tripHeader}>
                   <Text style={styles.tripDestination}>{trip.destination}</Text>
                   <Text style={styles.tripDate}>{trip.date} • {trip.duration}</Text>
@@ -598,7 +599,7 @@ export default function ScheduleScreen() {
                     {renderStars(activity.rating, handleRateActivity, activity.name, trip.id)}
                   </View>
                 ))}
-              </View>
+              </GlassCard>
             ))}
           </ScrollView>
         </View>

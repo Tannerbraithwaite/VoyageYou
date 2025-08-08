@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert, Modal } from 'react-native';
+import GlassCard from '@/components/ui/GlassCard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { DatePicker } from '@/components';
 import { TripDates, EnhancedItinerary, ItineraryActivity } from '@/types';
@@ -332,16 +333,16 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GlassCard style={styles.header}>
         <Text style={styles.headerTitle}>Travel Assistant</Text>
         <TouchableOpacity onPress={() => setShowOldTrips(true)} style={styles.oldTripsButton}>
           <Text style={styles.oldTripsButtonText}>View Old Trips</Text>
         </TouchableOpacity>
-      </View>
+      </GlassCard>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Chat Section */}
-        <View style={styles.chatSection}>
+        <GlassCard style={styles.chatSection}>
           <Text style={styles.sectionTitle}>Chat with AI Assistant</Text>
           
           {/* Trip Dates */}
@@ -390,32 +391,32 @@ export default function HomeScreen() {
               </View>
             )}
           </View>
-        </View>
+        </GlassCard>
 
         {/* Schedule Section */}
         {currentItinerary && (
-          <View style={styles.scheduleSection}>
+          <GlassCard style={styles.scheduleSection}>
             <Text style={styles.sectionTitle}>Your Itinerary</Text>
             
             {/* Trip Summary */}
-            <View style={styles.tripSummary}>
+            <GlassCard style={styles.tripSummary}>
               <Text style={styles.destinationTitle}>{currentItinerary.destination}</Text>
               <Text style={styles.durationText}>{currentItinerary.duration}</Text>
               <Text style={styles.descriptionText}>{currentItinerary.description}</Text>
-            </View>
+            </GlassCard>
 
             {/* Flight & Hotel Info */}
             <View style={styles.travelInfo}>
-              <View style={styles.flightInfo}>
+              <GlassCard style={styles.flightInfo}>
                 <Text style={styles.infoTitle}>✈️ Flights</Text>
                 {currentItinerary.flights.map((flight, index) => (
                   <Text key={index} style={styles.infoText}>
                     {flight.airline} {flight.flight} • {flight.departure} • ${flight.price}
                   </Text>
                 ))}
-              </View>
+              </GlassCard>
               
-              <View style={styles.hotelInfo}>
+              <GlassCard style={styles.hotelInfo}>
                 <Text style={styles.infoTitle}>🏨 Hotel</Text>
                 <Text style={styles.infoText}>{currentItinerary.hotel.name}</Text>
                 <Text style={styles.infoText}>{currentItinerary.hotel.address}</Text>
@@ -423,13 +424,13 @@ export default function HomeScreen() {
                   {currentItinerary.hotel.check_in} - {currentItinerary.hotel.check_out}
                 </Text>
                 <Text style={styles.infoText}>${currentItinerary.hotel.price}/night</Text>
-              </View>
+              </GlassCard>
             </View>
 
             {/* Daily Schedule */}
             <View style={styles.scheduleContainer}>
               {schedule.map((day, dayIndex) => (
-                <View key={dayIndex} style={styles.dayContainer}>
+                <GlassCard key={dayIndex} style={styles.dayContainer}>
                   <Text style={styles.dayTitle}>Day {day.day} - {day.date}</Text>
                   {day.activities.map((activity, activityIndex) => (
                     <View key={activityIndex} style={styles.activityContainer}>
@@ -454,12 +455,12 @@ export default function HomeScreen() {
                       </View>
                     </View>
                   ))}
-                </View>
+                </GlassCard>
               ))}
             </View>
 
             {/* Cost Summary */}
-            <View style={styles.costSummary}>
+            <GlassCard style={styles.costSummary}>
               <Text style={styles.costTitle}>Cost Breakdown</Text>
               <View style={styles.costRow}>
                 <Text style={styles.costLabel}>Flights:</Text>
@@ -477,20 +478,20 @@ export default function HomeScreen() {
                 <Text style={styles.totalLabel}>Ready to Book:</Text>
                 <Text style={styles.totalValue}>${bookableTotal}</Text>
               </View>
-            </View>
+            </GlassCard>
 
             {/* Checkout Button */}
             <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
               <Text style={styles.checkoutButtonText}>Checkout Now</Text>
             </TouchableOpacity>
-          </View>
+          </GlassCard>
         )}
       </ScrollView>
 
       {/* Alternatives Modal */}
       <Modal visible={showAlternatives} transparent={true} animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <GlassCard style={styles.modalContent}>
             <Text style={styles.modalTitle}>Alternative Activities</Text>
             <ScrollView style={styles.alternativesList}>
               {selectedActivity && alternativeActivities[selectedActivity.activity]?.map((alternative, index) => (
@@ -508,18 +509,18 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.modalButton} onPress={() => setShowAlternatives(false)}>
               <Text style={styles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
-          </View>
+          </GlassCard>
         </View>
       </Modal>
 
       {/* Old Trips Modal */}
       <Modal visible={showOldTrips} transparent={true} animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <GlassCard style={styles.modalContent}>
             <Text style={styles.modalTitle}>Past Trips</Text>
             <ScrollView style={styles.oldTripsList}>
               {oldTripsState.map((trip) => (
-                <View key={trip.id} style={styles.tripItem}>
+                <GlassCard key={trip.id} style={styles.tripItem}>
                   <Text style={styles.tripDestination}>{trip.destination}</Text>
                   <Text style={styles.tripDate}>{trip.date}</Text>
                   {trip.activities.map((activity, index) => (
@@ -528,13 +529,13 @@ export default function HomeScreen() {
                       {renderStars(activity.rating, handleRateActivity, activity.name, trip.id)}
                     </View>
                   ))}
-                </View>
+                </GlassCard>
               ))}
             </ScrollView>
             <TouchableOpacity style={styles.modalButton} onPress={() => setShowOldTrips(false)}>
               <Text style={styles.modalButtonText}>Close</Text>
             </TouchableOpacity>
-          </View>
+          </GlassCard>
         </View>
       </Modal>
     </View>

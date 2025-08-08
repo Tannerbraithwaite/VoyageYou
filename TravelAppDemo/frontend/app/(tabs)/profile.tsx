@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import GlassCard from '@/components/ui/GlassCard';
 import { router } from 'expo-router';
 
 export default function ProfileScreen() {
@@ -185,12 +186,12 @@ export default function ProfileScreen() {
       <Text style={styles.title}>Your Profile</Text>
       
       {isLoading && (
-        <View style={styles.loadingContainer}>
+        <GlassCard style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading your profile</Text>
-        </View>
+        </GlassCard>
       )}
 
-      <View style={styles.section}>
+      <GlassCard style={styles.section}>
         <Text style={styles.sectionTitle}>Basic Information</Text>
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Name</Text>
@@ -202,9 +203,9 @@ export default function ProfileScreen() {
             placeholderTextColor="#666"
           />
         </View>
-      </View>
+      </GlassCard>
 
-      <View style={styles.section}>
+      <GlassCard style={styles.section}>
         <Text style={styles.sectionTitle}>Travel Style</Text>
         <View style={styles.optionsContainer}>
           {travelStyles.map((style) => {
@@ -229,9 +230,9 @@ export default function ProfileScreen() {
             );
           })}
         </View>
-      </View>
+      </GlassCard>
 
-      <View style={styles.section}>
+      <GlassCard style={styles.section}>
         <Text style={styles.sectionTitle}>Budget Level</Text>
         <View style={styles.optionsContainer}>
           {budgetLevels.map((level) => {
@@ -256,9 +257,9 @@ export default function ProfileScreen() {
             );
           })}
         </View>
-      </View>
+      </GlassCard>
 
-      <View style={styles.section}>
+      <GlassCard style={styles.section}>
         <Text style={styles.sectionTitle}>Interests</Text>
         <Text style={styles.sectionSubtitle}>Select all that apply</Text>
         <View style={styles.interestsContainer}>
@@ -289,9 +290,9 @@ export default function ProfileScreen() {
             );
           })}
         </View>
-      </View>
+      </GlassCard>
 
-      <View style={styles.section}>
+      <GlassCard style={styles.section}>
         <Text style={styles.sectionTitle}>Anything else we should know?</Text>
         <Text style={styles.sectionSubtitle}>Tell us about your travel preferences in your own words</Text>
         <View style={styles.inputContainer}>
@@ -309,7 +310,7 @@ export default function ProfileScreen() {
         <Text style={styles.helpText}>
           This helps our AI understand your unique travel style and provide better recommendations
         </Text>
-      </View>
+      </GlassCard>
 
       <TouchableOpacity 
         style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
@@ -323,15 +324,15 @@ export default function ProfileScreen() {
 
       {/* Status indicator */}
       {saveStatus === 'success' && (
-        <View style={styles.statusContainer}>
+        <GlassCard style={styles.statusContainer}>
           <Text style={styles.successText}>Profile saved successfully!</Text>
-        </View>
+        </GlassCard>
       )}
       
       {saveStatus === 'error' && (
-        <View style={styles.statusContainer}>
+        <GlassCard style={styles.statusContainer}>
           <Text style={styles.errorText}>Failed to save profile</Text>
-        </View>
+        </GlassCard>
       )}
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
