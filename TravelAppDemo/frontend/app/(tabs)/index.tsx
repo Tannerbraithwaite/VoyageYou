@@ -307,6 +307,10 @@ export default function HomeScreen() {
     day.activities.filter(activity => activity.type === 'bookable')
   ).reduce((sum, activity) => sum + activity.price, 0);
   
+  const totalActivities = schedule.reduce((sum, day) => 
+    sum + day.activities.reduce((daySum, activity) => daySum + activity.price, 0), 0
+  );
+  
   const calculatedBookableTotal = totalFlights + totalHotel + bookableActivities;
   const enhancedItineraryBookableCost = currentItinerary?.bookable_cost;
   const bookableTotal = Math.max(calculatedBookableTotal, enhancedItineraryBookableCost || 0);
@@ -405,59 +409,111 @@ export default function HomeScreen() {
               <Text style={styles.descriptionText}>{currentItinerary.description}</Text>
             </GlassCard>
 
-            {/* Flight & Hotel Info */}
-            <View style={styles.travelInfo}>
-              <GlassCard style={styles.flightInfo}>
-                <Text style={styles.infoTitle}>✈️ Flights</Text>
-                {currentItinerary.flights.map((flight, index) => (
-                  <Text key={index} style={styles.infoText}>
-                    {flight.airline} {flight.flight} • {flight.departure} • ${flight.price}
-                  </Text>
-                ))}
-              </GlassCard>
+            {/* Flight Information */}
+            <GlassCard style={styles.section}>
+              <Text style={styles.sectionTitle}>✈️ Flight Information</Text>
               
-              <GlassCard style={styles.hotelInfo}>
-                <Text style={styles.infoTitle}>🏨 Hotel</Text>
-                <Text style={styles.infoText}>{currentItinerary.hotel.name}</Text>
-                <Text style={styles.infoText}>{currentItinerary.hotel.address}</Text>
-                <Text style={styles.infoText}>
-                  {currentItinerary.hotel.check_in} - {currentItinerary.hotel.check_out}
-                </Text>
-                <Text style={styles.infoText}>${currentItinerary.hotel.price}/night</Text>
-              </GlassCard>
-            </View>
+              <View style={styles.flightContainer}>
+                <GlassCard style={styles.flightCard}>
+                  <Text style={styles.flightLabel}>Outbound</Text>
+                  <Text style={styles.airline}>{currentItinerary.flights[0]?.airline} {currentItinerary.flights[0]?.flight}</Text>
+                  <Text style={styles.route}>{currentItinerary.flights[0]?.departure}</Text>
+                  <Text style={styles.timeText}>{currentItinerary.flights[0]?.time}</Text>
+                  <Text style={styles.priceText}>${currentItinerary.flights[0]?.price}</Text>
+                </GlassCard>
+                
+                <GlassCard style={styles.flightCard}>
+                  <Text style={styles.flightLabel}>Return</Text>
+                  <Text style={styles.airline}>{currentItinerary.flights[1]?.airline} {currentItinerary.flights[1]?.flight}</Text>
+                  <Text style={styles.route}>{currentItinerary.flights[1]?.departure}</Text>
+                  <Text style={styles.timeText}>{currentItinerary.flights[1]?.time}</Text>
+                  <Text style={styles.priceText}>${currentItinerary.flights[1]?.price}</Text>
+                </GlassCard>
+              </View>
+              
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Flights:</Text>
+                <Text style={styles.totalAmount}>${totalFlights}</Text>
+              </View>
+            </GlassCard>
 
+            {/* Hotel Information */}
+            <GlassCard style={styles.section}>
+              <Text style={styles.sectionTitle}>🏨 Hotel Information</Text>
+              
+              <GlassCard style={styles.hotelCard}>
+                <Text style={styles.hotelName}>{currentItinerary.hotel.name}</Text>
+                <Text style={styles.hotelAddress}>{currentItinerary.hotel.address}</Text>
+                <Text style={styles.hotelDetails}>{currentItinerary.hotel.room_type}</Text>
+                <Text style={styles.hotelDates}>Check-in: {currentItinerary.hotel.check_in}</Text>
+                <Text style={styles.hotelDates}>Check-out: {currentItinerary.hotel.check_out}</Text>
+                <View style={styles.hotelPriceRow}>
+                  <Text style={styles.hotelPriceLabel}>${currentItinerary.hotel.price}/night × {currentItinerary.hotel.total_nights} nights</Text>
+                  <Text style={styles.hotelPriceTotal}>${currentItinerary.hotel.price * currentItinerary.hotel.total_nights}</Text>
+                </View>
+              </GlassCard>
+            </GlassCard>
+            
             {/* Daily Schedule */}
-            <View style={styles.scheduleContainer}>
-              {schedule.map((day, dayIndex) => (
-                <GlassCard key={dayIndex} style={styles.dayContainer}>
-                  <Text style={styles.dayTitle}>Day {day.day} - {day.date}</Text>
-                  {day.activities.map((activity, activityIndex) => (
-                    <View key={activityIndex} style={styles.activityContainer}>
-                      <View style={styles.activityHeader}>
-                        <Text style={styles.activityTime}>{activity.time}</Text>
-                        <Text style={styles.activityName}>{activity.activity}</Text>
-                        <Text style={styles.activityPrice}>${activity.price}</Text>
+            <GlassCard style={styles.section}>
+              <Text style={styles.sectionTitle}>📅 Daily Schedule</Text>
+              
+              {schedule.map((day) => (
+                <GlassCard key={day.day} style={styles.dayContainer}>
+                  <View style={styles.dayHeader}>
+                    <Text style={styles.dayTitle}>Day {day.day}</Text>
+                    <Text style={styles.dayDate}>{day.date}</Text>
+                  </View>
+                  
+                  {day.activities.map((activity, index) => (
+                    <View key={index} style={styles.activityContainer}>
+                      <View style={styles.timeContainer}>
+                        <Text style={styles.time}>{activity.time}</Text>
                       </View>
-                      <View style={styles.activityActions}>
+                      <View style={styles.activityContent}>
                         <TouchableOpacity 
-                          style={styles.actionButton}
-                          onPress={() => handleChangeActivity(activity)}
+                          style={styles.activityClickable}
+                          onPress={() => alternativeActivities[activity.activity] && handleChangeActivity(activity)}
+                          disabled={!alternativeActivities[activity.activity]}
                         >
-                          <Text style={styles.actionButtonText}>Tap to change</Text>
+                          <Text style={styles.activityText}>{activity.activity}</Text>
+                          <View style={styles.activityDetails}>
+                            {activity.price > 0 && (
+                              <Text style={styles.priceText}>${activity.price}</Text>
+                            )}
+                            <View style={[
+                              styles.typeBadge,
+                              activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge
+                            ]}>
+                              <Text style={[
+                                styles.typeText,
+                                activity.type === 'bookable' ? styles.bookableText : styles.estimatedText
+                              ]}>
+                                {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
+                              </Text>
+                            </View>
+                          </View>
+                          {alternativeActivities[activity.activity] && (
+                            <Text style={styles.changeActivityHint}>Tap to change</Text>
+                          )}
                         </TouchableOpacity>
                         <TouchableOpacity 
-                          style={[styles.actionButton, styles.deleteButton]}
-                          onPress={() => handleDeleteActivity(dayIndex, activityIndex)}
+                          style={styles.deleteButton}
+                          onPress={() => handleDeleteActivity(day.day - 1, index)}
                         >
-                          <Text style={styles.deleteButtonText}>Delete</Text>
+                          <Text style={styles.deleteButtonText}>✕</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   ))}
                 </GlassCard>
               ))}
-            </View>
+              
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Activities:</Text>
+                <Text style={styles.totalAmount}>${totalActivities}</Text>
+              </View>
+            </GlassCard>
 
             {/* Cost Summary */}
             <GlassCard style={styles.costSummary}>
@@ -917,5 +973,173 @@ const styles = StyleSheet.create({
   },
   starFilled: {
     color: '#FFD700',
+  },
+  section: {
+    marginBottom: 20,
+  },
+  flightContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  flightCard: {
+    flex: 1,
+    marginHorizontal: 5,
+    backgroundColor: '#1a1a1a',
+    padding: 15,
+    borderRadius: 10,
+  },
+  flightLabel: {
+    fontSize: 14,
+    color: '#cccccc',
+    marginBottom: 5,
+  },
+  airline: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 2,
+  },
+  route: {
+    fontSize: 14,
+    color: '#6366f1',
+    marginBottom: 2,
+  },
+  timeText: {
+    fontSize: 14,
+    color: '#cccccc',
+    marginBottom: 2,
+  },
+  hotelCard: {
+    backgroundColor: '#1a1a1a',
+    padding: 15,
+    borderRadius: 10,
+  },
+  hotelName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 5,
+  },
+  hotelAddress: {
+    fontSize: 14,
+    color: '#cccccc',
+    marginBottom: 5,
+  },
+  hotelDetails: {
+    fontSize: 14,
+    color: '#6366f1',
+    marginBottom: 2,
+  },
+  hotelDates: {
+    fontSize: 14,
+    color: '#cccccc',
+    marginBottom: 2,
+  },
+  hotelPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  hotelPriceLabel: {
+    fontSize: 14,
+    color: '#cccccc',
+  },
+  hotelPriceTotal: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#6366f1',
+  },
+  totalAmount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#6366f1',
+  },
+  activityContainer: {
+    flexDirection: 'row',
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  timeContainer: {
+    width: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  time: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6366f1',
+  },
+  activityContent: {
+    flex: 1,
+    marginLeft: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activityClickable: {
+    flex: 1,
+    paddingVertical: 4,
+  },
+  activityText: {
+    fontSize: 14,
+    color: 'white',
+    marginBottom: 4,
+  },
+  activityDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  bookableBadge: {
+    backgroundColor: '#6366f1',
+  },
+  estimatedBadge: {
+    backgroundColor: '#666',
+  },
+  typeText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  bookableText: {
+    color: 'white',
+  },
+  estimatedText: {
+    color: '#ccc',
+  },
+  changeActivityHint: {
+    fontSize: 11,
+    color: '#6366f1',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  dayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  dayTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  dayDate: {
+    fontSize: 14,
+    color: '#cccccc',
+  },
+  priceText: {
+    fontSize: 14,
+    color: '#6366f1',
+    fontWeight: '600',
+    marginRight: 8,
   },
 });
