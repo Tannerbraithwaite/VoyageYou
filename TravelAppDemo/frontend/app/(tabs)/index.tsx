@@ -20,6 +20,18 @@ interface AlternativeActivity {
   description: string;
 }
 
+interface EditingTime {
+  dayIndex: number;
+  activityIndex: number;
+  newTime: string;
+}
+
+interface EditingDay {
+  dayIndex: number;
+  activityIndex: number;
+  newDay: number;
+}
+
 export default function HomeScreen() {
   const params = useLocalSearchParams();
   const [message, setMessage] = useState('');
@@ -74,6 +86,15 @@ export default function HomeScreen() {
     }
   ]);
 
+  // New state for time editing and drag & drop
+  const [editingTime, setEditingTime] = useState<EditingTime | null>(null);
+  const [draggedActivity, setDraggedActivity] = useState<{dayIndex: number, activityIndex: number} | null>(null);
+  const [draggedOverActivity, setDraggedOverActivity] = useState<{dayIndex: number, activityIndex: number} | null>(null);
+
+  // New state for combined time and day editing
+  const [showCombinedPicker, setShowCombinedPicker] = useState(false);
+  const [editingDay, setEditingDay] = useState<EditingDay | null>(null);
+
   console.log('HomeScreen rendering with isLoading:', isLoading, 'response:', response);
 
   // Test backend connection on component mount
@@ -94,6 +115,127 @@ export default function HomeScreen() {
 
     testBackendConnection();
   }, []);
+
+  // Combined edit handler for time and day
+  const handleCombinedEdit = (dayIndex: number, activityIndex: number, currentTime: string, currentDay: number) => {
+    console.log('Opening edit modal for:', { dayIndex, activityIndex, currentTime, currentDay });
+    setEditingTime({ dayIndex, activityIndex, newTime: currentTime });
+    setEditingDay({ dayIndex, activityIndex, newDay: currentDay });
+    setShowCombinedPicker(true);
+    console.log('Modal state set to true');
+    console.log('Initial editing state:', { 
+      editingTime: { dayIndex, activityIndex, newTime: currentTime },
+      editingDay: { dayIndex, activityIndex, newDay: currentDay }
+    });
+  };
+
+  const handleCombinedCancel = () => {
+    setShowCombinedPicker(false);
+    setEditingTime(null);
+    setEditingDay(null);
+  };
+
+  const handleCombinedConfirm = () => {
+    if (editingTime && editingDay) {
+      const { dayIndex, activityIndex, newTime } = editingTime;
+      const { newDay } = editingDay;
+      
+      console.log('handleCombinedConfirm called with:', { dayIndex, activityIndex, newTime, newDay });
+      console.log('Current schedule:', schedule);
+      
+      // Validate time format (HH:MM)
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(newTime)) {
+        Alert.alert(
+          'Invalid Time Format',
+          'Please enter time in HH:MM format (e.g., 09:00, 14:30)',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      console.log('About to show confirmation dialog...');
+      // Show confirmation dialog
+      console.log('Alert.alert buttons:', [
+        { text: 'Update', style: 'default' },
+        { text: 'Cancel', style: 'cancel' }
+      ]);
+      
+      Alert.alert(
+        '⚠️ CONFIRM ACTIVITY UPDATE ⚠️',
+        `Are you sure you want to update "${schedule[dayIndex].activities[activityIndex].activity}" to Day ${newDay} at ${newTime}?\n\n🟢 Press "Update" to confirm and save changes\n🔴 Press "Cancel" to abort`,
+        [
+          {
+            text: 'Update',
+            style: 'default',
+            onPress: function() {
+              console.log('=== UPDATE BUTTON PRESSED ===');
+              console.log('Update button pressed, starting update process...');
+              console.log('Current values:', { dayIndex, activityIndex, newTime, newDay });
+              
+              // Simple test - just close the modal for now
+              setShowCombinedPicker(false);
+              setEditingTime(null);
+              setEditingDay(null);
+              
+              console.log('Modal closed successfully');
+            }
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: function() {
+              console.log('=== CANCEL BUTTON PRESSED ===');
+              setShowCombinedPicker(false);
+              setEditingTime(null);
+              setEditingDay(null);
+            }
+          }
+        ]
+      );
+      console.log('Alert.alert called successfully');
+      console.log('handleCombinedConfirm function completed');
+    }
+  };
+
+  const handleDragStart = (dayIndex: number, activityIndex: number) => {
+    setDraggedActivity({ dayIndex, activityIndex });
+  };
+
+  const handleDragOver = (dayIndex: number, activityIndex: number) => {
+    if (draggedActivity && (draggedActivity.dayIndex !== dayIndex || draggedActivity.activityIndex !== activityIndex)) {
+      setDraggedOverActivity({ dayIndex, activityIndex });
+    }
+  };
+
+  const handleDragEnd = () => {
+    if (draggedActivity && draggedOverActivity) {
+      const newSchedule = [...schedule];
+      
+      // Get the dragged activity
+      const draggedItem = newSchedule[draggedActivity.dayIndex].activities[draggedActivity.activityIndex];
+      
+      // Remove from original position
+      newSchedule[draggedActivity.dayIndex].activities.splice(draggedActivity.activityIndex, 1);
+      
+      // Add to new position
+      newSchedule[draggedOverActivity.dayIndex].activities.splice(draggedOverActivity.activityIndex, 0, draggedItem);
+      
+      // Sort activities by time within each day
+      newSchedule.forEach(day => {
+        day.activities.sort((a, b) => {
+          const timeA = new Date(`2000-01-01 ${a.time}`);
+          const timeB = new Date(`2000-01-01 ${b.time}`);
+          return timeA.getTime() - timeB.getTime();
+        });
+      });
+      
+      setSchedule(newSchedule);
+    }
+    
+    setDraggedActivity(null);
+    setDraggedOverActivity(null);
+  };
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -291,12 +433,37 @@ export default function HomeScreen() {
   };
 
   const handleDeleteActivity = (dayIndex: number, activityIndex: number) => {
-    setSchedule(prevSchedule => 
-      prevSchedule.map((day, index) => 
-        index === dayIndex 
-          ? { ...day, activities: day.activities.filter((_, actIndex) => actIndex !== activityIndex) }
-          : day
-      )
+    const activity = schedule[dayIndex].activities[activityIndex];
+    
+    Alert.alert(
+      'Delete Activity',
+      `Are you sure you want to delete "${activity.activity}" from Day ${dayIndex + 1}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            setSchedule(prevSchedule => 
+              prevSchedule.map((day, index) => 
+                index === dayIndex 
+                  ? { ...day, activities: day.activities.filter((_, actIndex) => actIndex !== activityIndex) }
+                  : day
+              )
+            );
+            
+            // Show success message
+            Alert.alert(
+              'Activity Deleted',
+              `"${activity.activity}" has been successfully deleted from Day ${dayIndex + 1}`,
+              [{ text: 'OK' }]
+            );
+          }
+        }
+      ]
     );
   };
 
@@ -336,13 +503,22 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <GlassCard style={styles.header}>
-        <Text style={styles.headerTitle}>Travel Assistant</Text>
-        <TouchableOpacity onPress={() => setShowOldTrips(true)} style={styles.oldTripsButton}>
-          <Text style={styles.oldTripsButtonText}>View Old Trips</Text>
-        </TouchableOpacity>
-      </GlassCard>
+              {/* Header */}
+        <GlassCard style={styles.header}>
+          <Text style={styles.headerTitle}>Travel Assistant</Text>
+          <View style={styles.headerButtons}>
+                                       <TouchableOpacity style={styles.testModalButton} onPress={() => {
+                setEditingTime({ dayIndex: 0, activityIndex: 0, newTime: '10:00' });
+                setEditingDay({ dayIndex: 0, activityIndex: 0, newDay: 1 });
+                setShowCombinedPicker(true);
+              }}>
+               <Text style={styles.testModalButtonText}>Test Modal</Text>
+             </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowOldTrips(true)} style={styles.oldTripsButton}>
+              <Text style={styles.oldTripsButtonText}>View Old Trips</Text>
+            </TouchableOpacity>
+          </View>
+        </GlassCard>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Chat Section */}
@@ -457,6 +633,9 @@ export default function HomeScreen() {
             {/* Daily Schedule */}
             <GlassCard style={styles.section}>
               <Text style={styles.sectionTitle}>📅 Daily Schedule</Text>
+              <Text style={styles.scheduleHelpText}>
+                💡 Tap time to edit time & move between days, X to delete
+              </Text>
               
               {schedule.map((day) => (
                 <GlassCard key={day.day} style={styles.dayContainer}>
@@ -466,10 +645,24 @@ export default function HomeScreen() {
                   </View>
                   
                   {day.activities.map((activity, index) => (
-                    <View key={index} style={styles.activityContainer}>
-                      <View style={styles.timeContainer}>
+                    <View 
+                      key={index} 
+                      style={[
+                        styles.activityContainer,
+                        draggedActivity?.dayIndex === day.day - 1 && draggedActivity?.activityIndex === index && styles.draggingActivity,
+                        draggedOverActivity?.dayIndex === day.day - 1 && draggedOverActivity?.activityIndex === index && styles.dragOverActivity
+                      ]}
+                      onTouchStart={() => handleDragStart(day.day - 1, index)}
+                      onTouchMove={() => handleDragOver(day.day - 1, index)}
+                      onTouchEnd={handleDragEnd}
+                    >
+                      <TouchableOpacity 
+                        style={styles.timeContainer}
+                        onPress={() => handleCombinedEdit(day.day - 1, index, activity.time, day.day)}
+                      >
                         <Text style={styles.time}>{activity.time}</Text>
-                      </View>
+                        <Text style={styles.editTimeHint}>Tap to edit</Text>
+                      </TouchableOpacity>
                       <View style={styles.activityContent}>
                         <TouchableOpacity 
                           style={styles.activityClickable}
@@ -497,12 +690,15 @@ export default function HomeScreen() {
                             <Text style={styles.changeActivityHint}>Tap to change</Text>
                           )}
                         </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={styles.deleteButton}
-                          onPress={() => handleDeleteActivity(day.day - 1, index)}
-                        >
-                          <Text style={styles.deleteButtonText}>✕</Text>
-                        </TouchableOpacity>
+                        <View style={styles.activityActions}>
+                          <TouchableOpacity 
+                            style={styles.deleteButton}
+                            onPress={() => handleDeleteActivity(day.day - 1, index)}
+                          >
+                            <Text style={styles.deleteButtonText}>X</Text>
+                            <Text style={styles.deleteHint}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     </View>
                   ))}
@@ -594,6 +790,140 @@ export default function HomeScreen() {
           </GlassCard>
         </View>
       </Modal>
+
+      {/* Combined Time and Day Picker Modal */}
+      <Modal visible={showCombinedPicker} transparent={true} animationType="slide">
+        <View style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={styles.modalScrollContainer} showsVerticalScrollIndicator={false}>
+            <GlassCard style={[
+              styles.modalContent,
+              showCombinedPicker && styles.modalContentActive
+            ]}>
+            <Text style={styles.modalTitle}>Edit Activity Time & Day</Text>
+            
+            {/* Step-by-step guide */}
+            <View style={styles.stepGuide}>
+              <Text style={styles.stepGuideTitle}>How to edit:</Text>
+              <Text style={styles.stepGuideText}>1. Enter a new time (HH:MM)</Text>
+              <Text style={styles.stepGuideText}>2. Select a new day</Text>
+              <Text style={styles.stepGuideText}>3. Tap "Update Activity" to confirm</Text>
+            </View>
+            
+            {editingTime && editingDay && (
+              <View style={styles.moveActivityInfo}>
+                <Text style={styles.moveActivityText}>
+                  Editing: {schedule[editingTime.dayIndex]?.activities[editingTime.activityIndex]?.activity}
+                </Text>
+                <Text style={styles.moveActivityFromText}>
+                  From: Day {editingTime.dayIndex + 1} at {editingTime.newTime}
+                </Text>
+              </View>
+            )}
+            
+            {/* Time Input Section */}
+            <View style={styles.timeInputContainer}>
+              <Text style={styles.timeInputLabel}>New Time (HH:MM)</Text>
+              <TextInput
+                style={[
+                  styles.timeInput,
+                  editingTime?.newTime && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(editingTime.newTime) && styles.timeInputError
+                ]}
+                value={editingTime?.newTime || ''}
+                onChangeText={(text) => {
+                  console.log('Time input changed to:', text);
+                  setEditingTime(prev => {
+                    const newState = prev ? {...prev, newTime: text} : null;
+                    console.log('New editingTime state:', newState);
+                    return newState;
+                  });
+                }}
+                placeholder="09:00"
+                placeholderTextColor="#666"
+                keyboardType="numeric"
+                maxLength={5}
+              />
+              <Text style={[
+                styles.timeInputHint,
+                editingTime?.newTime && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(editingTime.newTime) && styles.timeInputError
+              ]}>
+                {editingTime?.newTime && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(editingTime.newTime) 
+                  ? '❌ Invalid format' 
+                  : 'Format: HH:MM (24-hour)'}
+              </Text>
+            </View>
+
+            {/* Day Selection Section */}
+            <View style={styles.timeInputContainer}>
+              <Text style={styles.timeInputLabel}>Move to Day</Text>
+              <View style={styles.dayPickerContainer}>
+                {schedule.map((day, index) => (
+                  <TouchableOpacity
+                    key={day.day}
+                    style={[
+                      styles.dayPickerOption,
+                      editingDay?.newDay === day.day && styles.dayPickerOptionSelected
+                    ]}
+                    onPress={() => {
+                      console.log('Day selected:', day.day);
+                      setEditingDay(prev => {
+                        const newState = prev ? {...prev, newDay: day.day} : null;
+                        console.log('New editingDay state:', newState);
+                        return newState;
+                      });
+                    }}
+                  >
+                    <Text style={[
+                      styles.dayPickerOptionText,
+                      editingDay?.newDay === day.day && styles.dayPickerOptionTextSelected
+                    ]}>
+                      Day {day.day}
+                    </Text>
+                    <Text style={[
+                      styles.dayPickerOptionDate,
+                      editingDay?.newDay === day.day && styles.dayPickerOptionDateSelected
+                    ]}>
+                      {day.date}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.timePickerButtons}>
+              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={handleCombinedCancel}>
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[
+                  styles.modalButton, 
+                  styles.confirmButton,
+                  (!editingTime?.newTime || !editingDay?.newDay) && styles.confirmButtonDisabled
+                ]} 
+                onPress={handleCombinedConfirm}
+                disabled={false}
+              >
+                <Text style={[
+                  styles.modalButtonText,
+                  (!editingTime?.newTime || !editingDay?.newDay) && styles.disabledButtonText
+                ]}>
+                  Update Activity
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Debug info */}
+            <Text style={styles.debugText}>
+              Debug: Time="{editingTime?.newTime || 'none'}", Day="{editingDay?.newDay || 'none'}"
+            </Text>
+            
+            {/* Help text */}
+            <Text style={styles.modalHelpText}>
+              💡 Tap on a day to select it, enter a time, then tap "Update Activity" to confirm
+            </Text>
+          </GlassCard>
+        </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -612,6 +942,11 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     backgroundColor: '#1a1a1a',
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -623,7 +958,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
   },
+  testModalButton: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
   oldTripsButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  testModalButtonText: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
@@ -805,6 +1151,8 @@ const styles = StyleSheet.create({
   activityActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginLeft: 10,
   },
   actionButton: {
     backgroundColor: '#333',
@@ -819,11 +1167,29 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: '#FF3B30',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#FF3B30',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   deleteButtonText: {
     color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  deleteHint: {
+    fontSize: 10,
+    color: '#cccccc',
+    marginTop: 2,
   },
   costSummary: {
     backgroundColor: '#1a1a1a',
@@ -885,12 +1251,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  modalScrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
   modalContent: {
     backgroundColor: '#1a1a1a',
     borderRadius: 20,
     padding: 20,
     width: '90%',
-    maxHeight: '80%',
+    maxWidth: 400,
+  },
+  modalContentActive: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
   modalTitle: {
     fontSize: 20,
@@ -1141,5 +1517,159 @@ const styles = StyleSheet.create({
     color: '#6366f1',
     fontWeight: '600',
     marginRight: 8,
+  },
+  editTimeHint: {
+    fontSize: 10,
+    color: '#6366f1',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  draggingActivity: {
+    opacity: 0.5,
+    backgroundColor: '#333',
+  },
+  dragOverActivity: {
+    backgroundColor: '#444',
+    borderWidth: 2,
+    borderColor: '#6366f1',
+  },
+  timeInputContainer: {
+    marginBottom: 20,
+  },
+  timeInputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 10,
+  },
+  timeInput: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: '#6366f1',
+  },
+  timeInputHint: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 5,
+  },
+  timeInputError: {
+    color: '#FF3B30',
+    borderColor: '#FF3B30',
+  },
+  timePickerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 20,
+    marginBottom: 10,
+    width: '100%',
+    gap: 15,
+  },
+  cancelButton: {
+    backgroundColor: '#FF3B30',
+  },
+  confirmButton: {
+    backgroundColor: '#007AFF',
+  },
+  confirmButtonDisabled: {
+    backgroundColor: '#666',
+  },
+  dayPickerContainer: {
+    marginTop: 10,
+  },
+  dayPickerOption: {
+    backgroundColor: '#333',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  dayPickerOptionSelected: {
+    backgroundColor: '#007AFF',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    transform: [{ scale: 1.05 }],
+  },
+  dayPickerOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 5,
+  },
+  dayPickerOptionTextSelected: {
+    color: '#ffffff',
+  },
+  dayPickerOptionDate: {
+    fontSize: 12,
+    color: '#cccccc',
+  },
+  dayPickerOptionDateSelected: {
+    color: '#ffffff',
+  },
+  moveActivityInfo: {
+    backgroundColor: '#333',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  moveActivityText: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '600',
+    marginBottom: 5,
+  },
+  moveActivityFromText: {
+    fontSize: 12,
+    color: '#cccccc',
+  },
+  scheduleHelpText: {
+    fontSize: 12,
+    color: '#cccccc',
+    marginTop: 10,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  disabledButtonText: {
+    color: '#999999',
+  },
+  modalHelpText: {
+    fontSize: 12,
+    color: '#cccccc',
+    textAlign: 'center',
+    marginTop: 15,
+    fontStyle: 'italic',
+  },
+  stepGuide: {
+    backgroundColor: '#2a2a2a',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+  stepGuideTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  stepGuideText: {
+    fontSize: 12,
+    color: '#cccccc',
+    marginBottom: 3,
+  },
+  debugText: {
+    fontSize: 10,
+    color: '#FF6B6B',
+    textAlign: 'center',
+    marginTop: 10,
+    fontFamily: 'monospace',
   },
 });

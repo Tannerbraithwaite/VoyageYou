@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
 
 interface ChatMessage {
@@ -149,79 +150,90 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
   
   if (hasError) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <Text style={styles.errorText}>Error loading chatbot. Please refresh the page.</Text>
-      </View>
+      </SafeAreaView>
     );
   }
   
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Travel Assistant</Text>
-        <Text style={styles.headerSubtitle}>Ask me anything about travel!</Text>
-      </View>
-
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {messages.length === 0 && (
-          <View style={styles.welcomeMessage}>
-            <Text style={styles.welcomeText}>
-              Hi! I'm your AI travel assistant. I can help you with:
-            </Text>
-            <Text style={styles.welcomeBullet}>• Travel recommendations</Text>
-            <Text style={styles.welcomeBullet}>• Destination information</Text>
-            <Text style={styles.welcomeBullet}>• Travel planning tips</Text>
-            <Text style={styles.welcomeBullet}>• Budget advice</Text>
-            <Text style={styles.welcomeText}>
-              Just ask me anything!
-            </Text>
-          </View>
-        )}
-        
-        {messages.map((message) => {
-          console.log('Rendering message:', message);
-          return renderMessage(message);
-        })}
-        
-        {isLoading && (
-          <View style={[styles.messageContainer, styles.botMessage]}>
-            <View style={[styles.messageBubble, styles.botBubble]}>
-              <ActivityIndicator size="small" color="#6366f1" />
-              <Text style={[styles.messageText, styles.botText, styles.typingText]}>
-                Thinking
-              </Text>
-            </View>
-          </View>
-        )}
-      </ScrollView>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Travel Assistant</Text>
+          <Text style={styles.headerSubtitle}>Ask me anything about travel!</Text>
+        </View>
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.textInput}
-          value={inputMessage}
-          onChangeText={setInputMessage}
-          placeholder="Ask me about travel..."
-          placeholderTextColor="#666"
-          multiline
-          maxLength={500}
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, !inputMessage.trim() && styles.sendButtonDisabled]}
-          onPress={sendMessage}
-          disabled={!inputMessage.trim() || isLoading}
-        >
-          <Text style={styles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+        {/* Messages Container - Takes up remaining space */}
+        <View style={styles.messagesWrapper}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContent}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            showsVerticalScrollIndicator={false}
+          >
+            {messages.length === 0 && (
+              <View style={styles.welcomeMessage}>
+                <Text style={styles.welcomeText}>
+                  Hi! I'm your AI travel assistant. I can help you with:
+                </Text>
+                <Text style={styles.welcomeBullet}>• Travel recommendations</Text>
+                <Text style={styles.welcomeBullet}>• Destination information</Text>
+                <Text style={styles.welcomeBullet}>• Travel planning tips</Text>
+                <Text style={styles.welcomeBullet}>• Budget advice</Text>
+                <Text style={styles.welcomeText}>
+                  Just ask me anything!
+                </Text>
+              </View>
+            )}
+            
+            {messages.map((message) => {
+              console.log('Rendering message:', message);
+              return renderMessage(message);
+            })}
+            
+            {isLoading && (
+              <View style={[styles.messageContainer, styles.botMessage]}>
+                <View style={[styles.messageBubble, styles.botBubble]}>
+                  <ActivityIndicator size="small" color="#6366f1" />
+                  <Text style={[styles.messageText, styles.botText, styles.typingText]}>
+                    Thinking
+                  </Text>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+
+        {/* Input Container - Fixed at bottom */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.textInput}
+            value={inputMessage}
+            onChangeText={setInputMessage}
+            placeholder="Ask me about travel..."
+            placeholderTextColor="#666"
+            multiline
+            maxLength={500}
+            returnKeyType="send"
+            onSubmitEditing={sendMessage}
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, !inputMessage.trim() && styles.sendButtonDisabled]}
+            onPress={sendMessage}
+            disabled={!inputMessage.trim() || isLoading}
+          >
+            <Text style={styles.sendButtonText}>Send</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -230,9 +242,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0a0a',
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   header: {
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 20,
     backgroundColor: '#1a1a1a',
     borderBottomWidth: 1,
     borderBottomColor: '#333',
@@ -247,11 +262,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
   },
+  messagesWrapper: {
+    flex: 1,
+  },
   messagesContainer: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   messagesContent: {
     padding: 16,
+    paddingBottom: 20,
   },
   welcomeMessage: {
     alignItems: 'center',
@@ -311,6 +331,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderTopWidth: 1,
     borderTopColor: '#333',
+    position: 'relative',
+    zIndex: 1,
   },
   textInput: {
     flex: 1,
@@ -324,6 +346,7 @@ const styles = StyleSheet.create({
     color: 'white',
     marginRight: 12,
     maxHeight: 100,
+    minHeight: 44,
   },
   sendButton: {
     backgroundColor: '#6366f1',
@@ -331,6 +354,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 60,
   },
   sendButtonDisabled: {
     backgroundColor: '#333',
@@ -341,9 +366,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   errorText: {
-    color: 'white',
+    color: '#ef4444',
     fontSize: 16,
     textAlign: 'center',
+    marginTop: 100,
     padding: 20,
   },
 }); 

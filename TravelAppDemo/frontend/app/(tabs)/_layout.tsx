@@ -17,22 +17,64 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
-          tabBarBackground: TabBarBackground,
+        tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
           ios: {
             // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
           },
-            default: {
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              borderTopWidth: 0,
-              elevation: 0,
-            },
+          default: {
+            backgroundColor: 'rgba(255,255,255,0.06)',
+            borderTopWidth: 0,
+            elevation: 0,
+          },
         }),
       }}>
-      <Tabs.Screen name="index" options={{ title: 'Home' }} />
-      <Tabs.Screen name="explore" options={{ title: 'Schedule' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+      <Tabs.Screen 
+        name="index" 
+        options={{ 
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol name="house.fill" size={size} color={color} />
+          ),
+        }} 
+      />
+      <Tabs.Screen 
+        name="explore" 
+        options={{ 
+          title: 'Schedule',
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol name="calendar" size={size} color={color} />
+          ),
+        }} 
+      />
+      <Tabs.Screen 
+        name="suggestions" 
+        options={{ 
+          title: 'Suggestions',
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol name="lightbulb.fill" size={size} color={color} />
+          ),
+        }} 
+      />
+      <Tabs.Screen 
+        name="chat" 
+        options={{ 
+          title: 'Chat',
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol name="message.fill" size={size} color={color} />
+          ),
+        }} 
+      />
+      <Tabs.Screen 
+        name="profile" 
+        options={{ 
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <IconSymbol name="person.fill" size={size} color={color} />
+          ),
+        }} 
+      />
     </Tabs>
   );
 }
