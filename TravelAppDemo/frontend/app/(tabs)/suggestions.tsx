@@ -125,18 +125,33 @@ export default function SuggestionsScreen() {
         setTimeout(() => {
           console.log('🚀 Attempting to navigate to home page...');
           console.log('📍 Current location: suggestions tab');
+          
+          // Try multiple navigation approaches
           try {
-            // Navigate to the tabs layout (this should show the index tab by default)
+            // First try: navigate to the tabs layout
+            console.log('🔄 Attempt 1: router.push("/(tabs)")');
             router.push('/(tabs)');
             console.log('✅ Navigation command sent successfully');
           } catch (navError) {
-            console.error('❌ Navigation error:', navError);
-            // Fallback: try to navigate to the root
+            console.error('❌ First navigation attempt failed:', navError);
+            
             try {
+              // Second try: navigate to the root
+              console.log('🔄 Attempt 2: router.push("/")');
               router.push('/');
-              console.log('✅ Fallback navigation to root successful');
-            } catch (fallbackError) {
-              console.error('❌ Fallback navigation also failed:', fallbackError);
+              console.log('✅ Second navigation attempt successful');
+            } catch (secondError) {
+              console.error('❌ Second navigation attempt failed:', secondError);
+              
+              try {
+                // Third try: navigate to the tabs layout again
+                console.log('🔄 Attempt 3: router.push("/(tabs)")');
+                router.push('/(tabs)');
+                console.log('✅ Third navigation attempt successful');
+              } catch (thirdError) {
+                console.error('❌ Third navigation attempt failed:', thirdError);
+                console.log('🚨 All navigation attempts failed - user will need to manually navigate');
+              }
             }
           }
         }, 800); // Reduced from 1500ms to 800ms
@@ -192,18 +207,33 @@ export default function SuggestionsScreen() {
           setTimeout(() => {
             console.log('🚀 Attempting to navigate to home page...');
             console.log('📍 Current location: suggestions tab');
+            
+            // Try multiple navigation approaches
             try {
-              // Navigate to the tabs layout (this should show the index tab by default)
+              // First try: navigate to the tabs layout
+              console.log('🔄 Attempt 1: router.push("/(tabs)")');
               router.push('/(tabs)');
               console.log('✅ Navigation command sent successfully');
             } catch (navError) {
-              console.error('❌ Navigation error:', navError);
-              // Fallback: try to navigate to the root
+              console.error('❌ First navigation attempt failed:', navError);
+              
               try {
+                // Second try: navigate to the root
+                console.log('🔄 Attempt 2: router.push("/")');
                 router.push('/');
-                console.log('✅ Fallback navigation to root successful');
-              } catch (fallbackError) {
-                console.error('❌ Fallback navigation also failed:', fallbackError);
+                console.log('✅ Second navigation attempt successful');
+              } catch (secondError) {
+                console.error('❌ Second navigation attempt failed:', secondError);
+                
+                try {
+                  // Third try: navigate to the tabs layout again
+                  console.log('🔄 Attempt 3: router.push("/(tabs)")');
+                  router.push('/(tabs)');
+                  console.log('✅ Third navigation attempt successful');
+                } catch (thirdError) {
+                  console.error('❌ Third navigation attempt failed:', thirdError);
+                  console.log('🚨 All navigation attempts failed - user will need to manually navigate');
+                }
               }
             }
           }, 800); // Reduced from 1500ms to 800ms
