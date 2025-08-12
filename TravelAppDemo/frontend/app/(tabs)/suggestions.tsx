@@ -123,8 +123,23 @@ export default function SuggestionsScreen() {
         
         // Navigate to the home page after a brief delay
         setTimeout(() => {
-          router.push('/');
-        }, 1500);
+          console.log('🚀 Attempting to navigate to home page...');
+          console.log('📍 Current location: suggestions tab');
+          try {
+            // Navigate to the tabs layout (this should show the index tab by default)
+            router.push('/(tabs)');
+            console.log('✅ Navigation command sent successfully');
+          } catch (navError) {
+            console.error('❌ Navigation error:', navError);
+            // Fallback: try to navigate to the root
+            try {
+              router.push('/');
+              console.log('✅ Fallback navigation to root successful');
+            } catch (fallbackError) {
+              console.error('❌ Fallback navigation also failed:', fallbackError);
+            }
+          }
+        }, 800); // Reduced from 1500ms to 800ms
       } else {
         console.error('❌ LLM API error:', response.status);
         // Fallback to regular chat endpoint
@@ -175,8 +190,23 @@ export default function SuggestionsScreen() {
           
           // Navigate to the home page after a brief delay
           setTimeout(() => {
-            router.push('/');
-          }, 1500);
+            console.log('🚀 Attempting to navigate to home page...');
+            console.log('📍 Current location: suggestions tab');
+            try {
+              // Navigate to the tabs layout (this should show the index tab by default)
+              router.push('/(tabs)');
+              console.log('✅ Navigation command sent successfully');
+            } catch (navError) {
+              console.error('❌ Navigation error:', navError);
+              // Fallback: try to navigate to the root
+              try {
+                router.push('/');
+                console.log('✅ Fallback navigation to root successful');
+              } catch (fallbackError) {
+                console.error('❌ Fallback navigation also failed:', fallbackError);
+              }
+            }
+          }, 800); // Reduced from 1500ms to 800ms
         } else {
           console.error('❌ Both API endpoints failed');
           alert('Sorry, I encountered an error while planning your trip. Please try again.');
@@ -301,6 +331,12 @@ export default function SuggestionsScreen() {
         visible={showSuccess}
         transparent={true}
         animationType="fade"
+        onShow={() => {
+          console.log('🎉 Success modal is now visible');
+        }}
+        onDismiss={() => {
+          console.log('👋 Success modal was dismissed');
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.successModal}>
@@ -316,6 +352,21 @@ export default function SuggestionsScreen() {
               💰 Costs calculated{'\n'}
               🚀 Redirecting to your itinerary...
             </Text>
+            
+            <TouchableOpacity
+              style={styles.manualNavButton}
+              onPress={() => {
+                console.log('🔄 Manual navigation button pressed');
+                try {
+                  router.push('/(tabs)');
+                  console.log('✅ Manual navigation successful');
+                } catch (error) {
+                  console.error('❌ Manual navigation failed:', error);
+                }
+              }}
+            >
+              <Text style={styles.manualNavButtonText}>Go to My Trip</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -623,5 +674,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     fontWeight: '400',
+  },
+  manualNavButton: {
+    backgroundColor: '#6366f1',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+    marginTop: 20,
+  },
+  manualNavButtonText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: 'white',
+    letterSpacing: 0.5,
   },
 }); 
