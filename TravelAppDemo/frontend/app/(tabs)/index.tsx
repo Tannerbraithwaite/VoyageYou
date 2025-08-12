@@ -20,6 +20,17 @@ interface AlternativeActivity {
   description: string;
 }
 
+interface SavedSchedule {
+  id: string;
+  name: string;
+  destination: string;
+  duration: string;
+  savedAt: string;
+  status: 'unbooked' | 'booked' | 'past';
+  itinerary: EnhancedItinerary;
+  schedule: Activity[][];
+}
+
 interface EditingTime {
   dayIndex: number;
   activityIndex: number;
@@ -65,6 +76,7 @@ export default function HomeScreen() {
     }
   ]);
   const [alternativeActivities, setAlternativeActivities] = useState<Record<string, AlternativeActivity[]>>({});
+  const [savedSchedules, setSavedSchedules] = useState<SavedSchedule[]>([]);
   const [oldTripsState, setOldTripsState] = useState([
     {
       id: 1,
@@ -234,6 +246,22 @@ export default function HomeScreen() {
         }
       } else {
         console.log('📱 No stored itinerary found in sessionStorage');
+      }
+    }
+  }, []);
+
+  // Load saved schedules from localStorage on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const storedSchedules = localStorage.getItem('savedSchedules');
+        if (storedSchedules) {
+          const schedules = JSON.parse(storedSchedules);
+          setSavedSchedules(schedules);
+          console.log('📱 Loaded saved schedules from localStorage:', schedules.length);
+        }
+      } catch (error) {
+        console.error('Error loading saved schedules:', error);
       }
     }
   }, []);
@@ -644,6 +672,59 @@ export default function HomeScreen() {
     } : null
   });
 
+  const handleSaveSchedule = () => {
+    if (!currentItinerary) {
+      Alert.alert('No Schedule', 'There is no current schedule to save.');
+      return;
+    }
+
+    Alert.prompt(
+      'Save Schedule',
+      'Enter a name for this schedule:',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Save',
+          style: 'default',
+          onPress: (scheduleName) => {
+            if (scheduleName && scheduleName.trim()) {
+              const newSchedule: SavedSchedule = {
+                id: Date.now().toString(),
+                name: scheduleName.trim(),
+                destination: currentItinerary.destination,
+                duration: currentItinerary.duration,
+                savedAt: new Date().toISOString(),
+                status: 'unbooked',
+                itinerary: currentItinerary,
+                schedule: schedule.map(day => day.activities)
+              };
+
+              // Add to local state
+              setSavedSchedules(prev => [...prev, newSchedule]);
+
+              // Save to localStorage
+              if (typeof window !== 'undefined') {
+                const existingSchedules = JSON.parse(localStorage.getItem('savedSchedules') || '[]');
+                const updatedSchedules = [...existingSchedules, newSchedule];
+                localStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+                
+                console.log('💾 Schedule saved:', newSchedule);
+                Alert.alert('Success', `Schedule "${scheduleName.trim()}" has been saved!`);
+              }
+            } else {
+              Alert.alert('Invalid Name', 'Please enter a valid name for the schedule.');
+            }
+          }
+        }
+      ],
+      'plain-text',
+      `${currentItinerary.destination} Trip`
+    );
+  };
+
   return (
     <View style={styles.container}>
               {/* Header */}
@@ -835,6 +916,11 @@ export default function HomeScreen() {
             {/* Checkout Button */}
             <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
               <Text style={styles.checkoutButtonText}>Checkout Now</Text>
+            </TouchableOpacity>
+
+            {/* Save Schedule Button */}
+            <TouchableOpacity style={styles.saveScheduleButton} onPress={handleSaveSchedule}>
+              <Text style={styles.saveScheduleButtonText}>💾 Save This Schedule</Text>
             </TouchableOpacity>
           </GlassCard>
         )}
@@ -1918,5 +2004,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginBottom: 5,
+  },
+  saveScheduleButton: {
+    backgroundColor: '#6366f1',
+    paddingVertical: 15,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  saveScheduleButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
