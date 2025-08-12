@@ -121,6 +121,10 @@ export default function HomeScreen() {
     timeSlot: string;
   } | null>(null);
 
+  // State for save schedule modal
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [scheduleName, setScheduleName] = useState('');
+
   console.log('HomeScreen rendering with isLoading:', isLoading, 'response:', response);
 
   // Activity Edit Form Component
@@ -678,51 +682,43 @@ export default function HomeScreen() {
       return;
     }
 
-    Alert.prompt(
-      'Save Schedule',
-      'Enter a name for this schedule:',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Save',
-          style: 'default',
-          onPress: (scheduleName) => {
-            if (scheduleName && scheduleName.trim()) {
-              const newSchedule: SavedSchedule = {
-                id: Date.now().toString(),
-                name: scheduleName.trim(),
-                destination: currentItinerary.destination,
-                duration: currentItinerary.duration,
-                savedAt: new Date().toISOString(),
-                status: 'unbooked',
-                itinerary: currentItinerary,
-                schedule: schedule.map(day => day.activities)
-              };
+    // Set default name and show modal
+    setScheduleName(`${currentItinerary.destination} Trip`);
+    setShowSaveModal(true);
+  };
 
-              // Add to local state
-              setSavedSchedules(prev => [...prev, newSchedule]);
+  const handleSaveScheduleConfirm = () => {
+    if (scheduleName && scheduleName.trim()) {
+      const newSchedule: SavedSchedule = {
+        id: Date.now().toString(),
+        name: scheduleName.trim(),
+        destination: currentItinerary!.destination,
+        duration: currentItinerary!.duration,
+        savedAt: new Date().toISOString(),
+        status: 'unbooked',
+        itinerary: currentItinerary!,
+        schedule: schedule.map(day => day.activities)
+      };
 
-              // Save to localStorage
-              if (typeof window !== 'undefined') {
-                const existingSchedules = JSON.parse(localStorage.getItem('savedSchedules') || '[]');
-                const updatedSchedules = [...existingSchedules, newSchedule];
-                localStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
-                
-                console.log('💾 Schedule saved:', newSchedule);
-                Alert.alert('Success', `Schedule "${scheduleName.trim()}" has been saved!`);
-              }
-            } else {
-              Alert.alert('Invalid Name', 'Please enter a valid name for the schedule.');
-            }
-          }
-        }
-      ],
-      'plain-text',
-      `${currentItinerary.destination} Trip`
-    );
+      // Add to local state
+      setSavedSchedules(prev => [...prev, newSchedule]);
+
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        const existingSchedules = JSON.parse(localStorage.getItem('savedSchedules') || '[]');
+        const updatedSchedules = [...existingSchedules, newSchedule];
+        localStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+        
+        console.log('💾 Schedule saved:', newSchedule);
+        Alert.alert('Success', `Schedule "${scheduleName.trim()}" has been saved!`);
+      }
+
+      // Close modal and reset
+      setShowSaveModal(false);
+      setScheduleName('');
+    } else {
+      Alert.alert('Invalid Name', 'Please enter a valid name for the schedule.');
+    }
   };
 
   return (
@@ -975,6 +971,31 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.modalButton} onPress={() => setShowOldTrips(false)}>
               <Text style={styles.modalButtonText}>Close</Text>
             </TouchableOpacity>
+          </GlassCard>
+        </View>
+      </Modal>
+
+      {/* Save Schedule Modal */}
+      <Modal visible={showSaveModal} transparent={true} animationType="slide">
+        <View style={styles.modalOverlay}>
+          <GlassCard style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Save Schedule</Text>
+            <TextInput
+              style={styles.timeInput}
+              placeholder="Enter schedule name"
+              placeholderTextColor="#666"
+              value={scheduleName}
+              onChangeText={setScheduleName}
+              autoFocus
+            />
+            <View style={styles.timePickerButtons}>
+              <TouchableOpacity style={[styles.modalButton, styles.timePickerCancelButton]} onPress={() => setShowSaveModal(false)}>
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handleSaveScheduleConfirm}>
+                <Text style={styles.modalButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
           </GlassCard>
         </View>
       </Modal>
@@ -1345,7 +1366,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1356,11 +1377,9 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   modalContent: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 20,
-    padding: 20,
-    width: '90%',
-    maxWidth: 400,
+    padding: 24,
+    margin: 24,
+    minWidth: 300,
   },
   modalContentActive: {
     opacity: 0.9,
@@ -1368,8 +1387,8 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontWeight: '700',
+    color: 'white',
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -1631,16 +1650,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   timeInput: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
+    backgroundColor: '#2a2a2a',
     borderWidth: 1,
-    borderColor: '#6366f1',
+    borderColor: '#333',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: 'white',
+    marginBottom: 20,
   },
   timeInputHint: {
     fontSize: 14,
@@ -1852,17 +1869,14 @@ const styles = StyleSheet.create({
   },
   timePickerButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 20,
-    marginBottom: 10,
-    width: '100%',
-    gap: 15,
+    justifyContent: 'space-between',
+    gap: 12,
   },
   timePickerCancelButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#6b7280',
   },
   confirmButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6366f1',
   },
   confirmButtonDisabled: {
     backgroundColor: '#666',
