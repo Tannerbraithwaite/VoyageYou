@@ -37,7 +37,7 @@ export default function ScheduleScreen() {
           setSavedSchedules(schedules);
           console.log('📱 Loaded saved schedules:', schedules.length);
         }
-      } catch (error) {
+        } catch (error) {
         console.error('Error loading saved schedules:', error);
       }
     }
@@ -143,14 +143,14 @@ export default function ScheduleScreen() {
               <Text style={styles.emptyStateTitle}>No Saved Schedules</Text>
               <Text style={styles.emptyStateText}>
                 Create a schedule in the Home tab and save it to see it here!
-              </Text>
-              <TouchableOpacity 
+          </Text>
+          <TouchableOpacity 
                 style={styles.createScheduleButton}
                 onPress={() => router.push('/')}
-              >
+          >
                 <Text style={styles.createScheduleButtonText}>Go to Home</Text>
-              </TouchableOpacity>
-            </GlassCard>
+          </TouchableOpacity>
+        </GlassCard>
           ) : (
             savedSchedules.map((schedule) => (
               <TouchableOpacity
@@ -164,23 +164,23 @@ export default function ScheduleScreen() {
                     <Text style={styles.scheduleDestination}>{schedule.destination}</Text>
                     <Text style={styles.scheduleDuration}>{schedule.duration}</Text>
                     <Text style={styles.scheduleDate}>Saved: {formatDate(schedule.savedAt)}</Text>
-                  </View>
+          </View>
                   <View style={styles.scheduleStatus}>
                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(schedule.status) }]}>
                       <Text style={styles.statusIcon}>{getStatusIcon(schedule.status)}</Text>
                       <Text style={styles.statusText}>{schedule.status}</Text>
-                    </View>
-                  </View>
-                </View>
-                
+          </View>
+            </View>
+              </View>
+              
                 <View style={styles.scheduleActions}>
-                  <TouchableOpacity 
+                    <TouchableOpacity 
                     style={styles.actionButton}
                     onPress={() => handleStatusChange(schedule.id, 'unbooked')}
                   >
                     <Text style={styles.actionButtonText}>⏳ Unbooked</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
+                    </TouchableOpacity>
+                    <TouchableOpacity 
                     style={styles.actionButton}
                     onPress={() => handleStatusChange(schedule.id, 'booked')}
                   >
@@ -191,9 +191,9 @@ export default function ScheduleScreen() {
                     onPress={() => handleStatusChange(schedule.id, 'past')}
                   >
                     <Text style={styles.actionButtonText}>📅 Past</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
+                    </TouchableOpacity>
+                  </View>
+          </TouchableOpacity>
             ))
           )}
         </View>
@@ -210,16 +210,16 @@ export default function ScheduleScreen() {
           <View style={styles.modalContent}>
             {selectedSchedule && (
               <>
-                <View style={styles.modalHeader}>
+          <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>{selectedSchedule.name}</Text>
-                  <TouchableOpacity 
-                    style={styles.closeButton}
+            <TouchableOpacity 
+              style={styles.closeButton}
                     onPress={() => setShowScheduleDetails(false)}
-                  >
-                    <Text style={styles.closeButtonText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          
                 <ScrollView style={styles.modalBody}>
                   {/* Schedule Info */}
                   <GlassCard style={styles.detailSection}>
@@ -228,7 +228,7 @@ export default function ScheduleScreen() {
                     <Text style={styles.detailText}>Duration: {selectedSchedule.duration}</Text>
                     <Text style={styles.detailText}>Status: {selectedSchedule.status}</Text>
                     <Text style={styles.detailText}>Saved: {formatDate(selectedSchedule.savedAt)}</Text>
-                  </GlassCard>
+              </GlassCard>
 
                   {/* Daily Schedule */}
                   <GlassCard style={styles.detailSection}>
@@ -243,19 +243,19 @@ export default function ScheduleScreen() {
                               <Text style={styles.activityName}>{activity.activity}</Text>
                               <View style={styles.activityDetails}>
                                 <Text style={styles.activityPrice}>${activity.price}</Text>
-                                <View style={[
-                                  styles.typeBadge,
+                  <View style={[
+                    styles.typeBadge,
                                   activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge
                                 ]}>
                                   <Text style={styles.typeText}>
                                     {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
-                                  </Text>
-                                </View>
-                              </View>
+                    </Text>
+                  </View>
+                </View>
                             </View>
                           </View>
-                        ))}
-                      </View>
+            ))}
+        </View>
                     ))}
                   </GlassCard>
 
@@ -268,7 +268,7 @@ export default function ScheduleScreen() {
                       <Text style={styles.checkoutButtonText}>💳 Checkout</Text>
                     </TouchableOpacity>
                     
-                    <TouchableOpacity 
+            <TouchableOpacity 
                       style={styles.deleteButton}
                       onPress={() => {
                         Alert.alert(
@@ -286,9 +286,9 @@ export default function ScheduleScreen() {
                       }}
                     >
                       <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
-                    </TouchableOpacity>
-                  </View>
-                </ScrollView>
+            </TouchableOpacity>
+          </View>
+          </ScrollView>
               </>
             )}
           </View>

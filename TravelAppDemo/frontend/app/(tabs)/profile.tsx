@@ -7,7 +7,7 @@ export default function ProfileScreen() {
   const [name, setName] = useState('Sarah Johnson');
   const [travelStyle, setTravelStyle] = useState('solo');
   const [budget, setBudget] = useState('moderate');
-  const [interests, setInterests] = useState(['art', 'food', 'culture']);
+  const [interests, setInterests] = useState(['art', 'food', 'culture', 'photography', 'architecture']);
   const [additionalInfo, setAdditionalInfo] = useState('I prefer boutique hotels over chains, love trying local street food, and always pack light. I am comfortable with public transportation and enjoy getting lost in new cities.');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(''); // 'success', 'error', or ''
@@ -47,10 +47,10 @@ export default function ProfileScreen() {
           
           // Extract interest IDs from the response
           const loadedInterests = interestsData.map((interest: any) => interest.interest_name);
-          setInterests(loadedInterests.length > 0 ? loadedInterests : ['art', 'food', 'culture']);
+          setInterests(loadedInterests.length > 0 ? loadedInterests : ['art', 'food', 'culture', 'photography', 'architecture']);
         } else {
           console.log('Failed to load interests, using defaults');
-          setInterests(['art', 'food', 'culture']);
+          setInterests(['art', 'food', 'culture', 'photography', 'architecture']);
         }
       } else {
         console.log('Failed to load profile, using defaults');
@@ -76,14 +76,22 @@ export default function ProfileScreen() {
   ];
 
   const interestOptions = [
-    { id: 'art', label: 'Art & Museums', icon: 'A' },
-    { id: 'food', label: 'Food & Dining', icon: 'F' },
-    { id: 'culture', label: 'Culture & History', icon: 'C' },
-    { id: 'nature', label: 'Nature & Outdoors', icon: 'N' },
-    { id: 'adventure', label: 'Adventure', icon: 'A' },
-    { id: 'relaxation', label: 'Relaxation', icon: 'R' },
-    { id: 'shopping', label: 'Shopping', icon: 'S' },
-    { id: 'nightlife', label: 'Nightlife', icon: 'N' },
+    { id: 'art', label: 'Art & Museums', icon: '🎨' },
+    { id: 'food', label: 'Food & Dining', icon: '🍽️' },
+    { id: 'culture', label: 'Culture & History', icon: '🏛️' },
+    { id: 'nature', label: 'Nature & Outdoors', icon: '🌲' },
+    { id: 'adventure', label: 'Adventure & Sports', icon: '🏔️' },
+    { id: 'relaxation', label: 'Relaxation & Wellness', icon: '🧘' },
+    { id: 'shopping', label: 'Shopping & Markets', icon: '🛍️' },
+    { id: 'nightlife', label: 'Nightlife & Entertainment', icon: '🌙' },
+    { id: 'photography', label: 'Photography', icon: '📸' },
+    { id: 'architecture', label: 'Architecture', icon: '🏗️' },
+    { id: 'music', label: 'Music & Concerts', icon: '🎵' },
+    { id: 'technology', label: 'Technology & Innovation', icon: '💻' },
+    { id: 'fashion', label: 'Fashion & Style', icon: '👗' },
+    { id: 'wine', label: 'Wine & Spirits', icon: '🍷' },
+    { id: 'beach', label: 'Beach & Water Sports', icon: '🏖️' },
+    { id: 'hiking', label: 'Hiking & Trekking', icon: '🥾' },
   ];
 
   const toggleInterest = (interestId: string) => {
@@ -263,26 +271,22 @@ export default function ProfileScreen() {
         <Text style={styles.sectionTitle}>Interests</Text>
         <Text style={styles.sectionSubtitle}>Select all that apply</Text>
         <View style={styles.interestsContainer}>
-          {interests.filter(id => interestOptions.some(opt => opt.id === id)).map((interestId) => {
-            const interest = interestOptions.find(opt => opt.id === interestId);
-            console.log('Rendering interest:', interestId, 'found:', interest);
-            if (!interest) {
-              console.log('Interest not found, skipping:', interestId);
-              return null;
-            }
+          {interestOptions.map((interest) => {
+            const isSelected = interests.includes(interest.id);
+            console.log('Rendering interest:', interest.id, 'selected:', isSelected);
             return (
               <TouchableOpacity
                 key={interest.id}
                 style={[
                   styles.interestButton,
-                  interests.includes(interest.id) && styles.selectedInterest
+                  isSelected && styles.selectedInterest
                 ]}
                 onPress={() => toggleInterest(interest.id)}
               >
                 <Text style={styles.interestIcon}>{interest.icon}</Text>
                 <Text style={[
                   styles.interestText,
-                  interests.includes(interest.id) && styles.selectedInterestText
+                  isSelected && styles.selectedInterestText
                 ]}>
                   {interest.label}
                 </Text>

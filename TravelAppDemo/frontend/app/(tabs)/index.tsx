@@ -531,7 +531,7 @@ export default function HomeScreen() {
               ))
             }
           : day
-      );
+    );
       
       console.log('   New schedule after update:', newSchedule);
       return newSchedule;
@@ -821,7 +821,7 @@ export default function HomeScreen() {
               <Text style={styles.debugText}>Schedule length: {schedule.length}</Text>
               <Text style={styles.debugText}>First day activities: {schedule[0]?.activities?.length || 0}</Text>
             </View>
-
+            
             {/* Trip Summary */}
             <GlassCard style={styles.tripSummary}>
               <Text style={styles.destinationTitle}>{currentItinerary.destination}</Text>
@@ -917,8 +917,8 @@ export default function HomeScreen() {
             {/* Save Schedule Button */}
             <TouchableOpacity style={styles.saveScheduleButton} onPress={handleSaveSchedule}>
               <Text style={styles.saveScheduleButtonText}>💾 Save This Schedule</Text>
-            </TouchableOpacity>
-          </GlassCard>
+                            </TouchableOpacity>
+            </GlassCard>
         )}
 
 
