@@ -218,6 +218,26 @@ export default function HomeScreen() {
     testBackendConnection();
   }, []);
 
+  // Load itinerary data from sessionStorage on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedItinerary = sessionStorage.getItem('currentItinerary');
+      if (storedItinerary) {
+        try {
+          const itinerary = JSON.parse(storedItinerary);
+          console.log('📱 Loading stored itinerary from sessionStorage:', itinerary);
+          setCurrentItinerary(itinerary);
+          updateScheduleFromItinerary(itinerary);
+          console.log('✅ Itinerary loaded and schedule updated from sessionStorage');
+        } catch (error) {
+          console.error('Error parsing stored itinerary:', error);
+        }
+      } else {
+        console.log('📱 No stored itinerary found in sessionStorage');
+      }
+    }
+  }, []);
+
   // Interactive schedule editing - no modal needed
 
   // Old drag and drop functions removed - replaced with new interactive system
@@ -718,6 +738,13 @@ export default function HomeScreen() {
           <GlassCard style={styles.scheduleSection}>
             <Text style={styles.sectionTitle}>Your Itinerary</Text>
             
+            {/* Debug Info */}
+            <View style={styles.debugInfo}>
+              <Text style={styles.debugText}>Debug: currentItinerary exists</Text>
+              <Text style={styles.debugText}>Schedule length: {schedule.length}</Text>
+              <Text style={styles.debugText}>First day activities: {schedule[0]?.activities?.length || 0}</Text>
+            </View>
+
             {/* Trip Summary */}
             <GlassCard style={styles.tripSummary}>
               <Text style={styles.destinationTitle}>{currentItinerary.destination}</Text>
@@ -1880,5 +1907,16 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  debugInfo: {
+    backgroundColor: '#2a2a2a',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 5,
   },
 });

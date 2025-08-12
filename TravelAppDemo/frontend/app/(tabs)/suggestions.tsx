@@ -387,6 +387,9 @@ export default function SuggestionsScreen() {
               style={styles.manualNavButton}
               onPress={() => {
                 console.log('🔄 Manual navigation button pressed');
+                // Hide the success modal first
+                setShowSuccess(false);
+                // Then navigate
                 try {
                   router.push('/(tabs)');
                   console.log('✅ Manual navigation successful');
