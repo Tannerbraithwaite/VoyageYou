@@ -404,6 +404,9 @@ export default function ScheduleScreen() {
         {/* Daily Schedule */}
         <GlassCard style={styles.section}>
           <Text style={styles.sectionTitle}>📅 Daily Schedule</Text>
+          <Text style={styles.scheduleHelpText}>
+            💡 Tap activities to edit or change them
+          </Text>
           
           {schedule.map((day) => (
             <GlassCard key={day.day} style={styles.dayContainer}>
@@ -412,47 +415,55 @@ export default function ScheduleScreen() {
                 <Text style={styles.dayDate}>{day.date}</Text>
               </View>
               
-              {day.activities.map((activity, index) => (
-                <View key={index} style={styles.activityContainer}>
-                  <View style={styles.timeContainer}>
-                    <Text style={styles.time}>{activity.time}</Text>
-                  </View>
-                  <View style={styles.activityContent}>
-                    <TouchableOpacity 
-                      style={styles.activityClickable}
-                      onPress={() => alternativeActivities[activity.activity] && handleChangeActivity(activity)}
-                      disabled={!alternativeActivities[activity.activity]}
-                    >
-                      <Text style={styles.activityText}>{activity.activity}</Text>
-                      <View style={styles.activityDetails}>
-                        {activity.price > 0 && (
-                          <Text style={styles.priceText}>${activity.price}</Text>
-                        )}
-                        <View style={[
-                          styles.typeBadge,
-                          activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge
-                        ]}>
-                          <Text style={[
-                            styles.typeText,
-                            activity.type === 'bookable' ? styles.bookableText : styles.estimatedText
+              {/* Only show time slots that have activities */}
+              {day.activities.length > 0 ? (
+                day.activities.map((activity, index) => (
+                  <View key={index} style={styles.activityContainer}>
+                    <View style={styles.timeContainer}>
+                      <Text style={styles.time}>{activity.time}</Text>
+                    </View>
+                    <View style={styles.activityContent}>
+                      <TouchableOpacity 
+                        style={styles.activityClickable}
+                        onPress={() => alternativeActivities[activity.activity] && handleChangeActivity(activity)}
+                        disabled={!alternativeActivities[activity.activity]}
+                      >
+                        <Text style={styles.activityText}>{activity.activity}</Text>
+                        <View style={styles.activityDetails}>
+                          {activity.price > 0 && (
+                            <Text style={styles.priceText}>${activity.price}</Text>
+                          )}
+                          <View style={[
+                            styles.typeBadge,
+                            activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge
                           ]}>
-                            {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
-                          </Text>
+                            <Text style={[
+                              styles.typeText,
+                              activity.type === 'bookable' ? styles.bookableText : styles.estimatedText
+                            ]}>
+                              {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                      {alternativeActivities[activity.activity] && (
-                        <Text style={styles.changeActivityHint}>Tap to change</Text>
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.deleteButton}
-                      onPress={() => handleDeleteActivity(day.day - 1, index)}
-                    >
-                      <Text style={styles.deleteButtonText}>✕</Text>
-                    </TouchableOpacity>
+                        {alternativeActivities[activity.activity] && (
+                          <Text style={styles.changeActivityHint}>Tap to change</Text>
+                        )}
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.deleteButton}
+                        onPress={() => handleDeleteActivity(day.day - 1, index)}
+                      >
+                        <Text style={styles.deleteButtonText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
+                ))
+              ) : (
+                <View style={styles.emptyDayContainer}>
+                  <Text style={styles.emptyDayText}>No activities scheduled for this day</Text>
+                  <Text style={styles.emptyDaySubtext}>Use the chat to plan your activities</Text>
                 </View>
-              ))}
+              )}
             </GlassCard>
           ))}
           
@@ -1193,5 +1204,33 @@ const styles = StyleSheet.create({
   },
   starFilled: {
     color: '#6366f1',
+  },
+  scheduleHelpText: {
+    fontSize: 12,
+    color: '#ccc',
+    marginTop: 8,
+    marginBottom: 12,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  emptyDayContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  emptyDayText: {
+    fontSize: 14,
+    color: 'white',
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  emptyDaySubtext: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
   },
 });

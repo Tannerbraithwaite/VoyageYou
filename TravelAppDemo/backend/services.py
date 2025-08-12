@@ -551,18 +551,36 @@ IMPORTANT:
             print(f"System: {system_message}")
             print(f"User message: {message}")
             
-            # Call OpenAI API using the legacy format
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-16k",  # Using 16k model which is cheaper for longer responses
-                messages=[
-                    {"role": "system", "content": system_message},
-                    {"role": "user", "content": message}
-                ],
-                max_tokens=2000,  # Reduced tokens to save costs
-                temperature=0.7
-            )
-            
-            return response["choices"][0]["message"]["content"].strip()
+            # Call OpenAI API – support both v1.* (new) and legacy 0.* clients
+            if hasattr(openai, "OpenAI"):
+                # New Python SDK (>=1.0)
+                client = openai.OpenAI(api_key=api_key)
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo-16k",  # 16k context for longer responses at lower cost
+                    messages=[
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": message}
+                    ],
+                    max_tokens=2000,
+                    temperature=0.7,
+                )
+                content = response.choices[0].message.content
+            else:
+                # Legacy 0.x client
+                openai.api_key = api_key
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo-16k",
+                    messages=[
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": message}
+                    ],
+                    max_tokens=2000,
+                    temperature=0.7,
+                )
+                # In legacy responses, content is under ['choices'][0]['message']['content']
+                content = response["choices"][0]["message"]["content"]
+
+            return content.strip()
             
         except Exception as e:
             print(f"Error generating chatbot response: {e}")

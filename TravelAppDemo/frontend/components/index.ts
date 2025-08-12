@@ -1,4 +1,5 @@
 // Component exports for cleaner imports
+export { CleanSchedule } from './CleanSchedule';
 export { default as TravelChatbot } from './TravelChatbot';
 export { Collapsible } from './Collapsible';
 export { default as DatePicker } from './DatePicker';
