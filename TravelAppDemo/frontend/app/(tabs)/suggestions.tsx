@@ -6,6 +6,8 @@ import { createTripPrompt, TripRecommendation } from '@/utils';
 export default function SuggestionsScreen() {
   const [isPlanning, setIsPlanning] = useState(false);
   const [planningDestination, setPlanningDestination] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successDestination, setSuccessDestination] = useState('');
   
   const personalizedRecommendations = [
     {
@@ -112,10 +114,17 @@ export default function SuggestionsScreen() {
         // Store the itinerary data in sessionStorage
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('currentItinerary', JSON.stringify(result));
+          console.log('💾 Itinerary saved to session storage');
         }
         
-        // Navigate to the home page (now integrated with scheduling)
-        router.push('/(tabs)/');
+        // Show success message briefly
+        setSuccessDestination(recommendation.destination);
+        setShowSuccess(true);
+        
+        // Navigate to the home page after a brief delay
+        setTimeout(() => {
+          router.push('/');
+        }, 1500);
       } else {
         console.error('❌ LLM API error:', response.status);
         // Fallback to regular chat endpoint
@@ -138,7 +147,7 @@ export default function SuggestionsScreen() {
           const simplifiedItinerary = {
             destination: recommendation.destination,
             duration: recommendation.duration,
-            description: `Trip to ${recommendation.destination}`,
+            description: `AI-planned trip to ${recommendation.destination} based on your preferences. ${recommendation.whyYoullLoveIt}`,
             flights: [],
             hotel: {
               name: 'Hotel TBD',
@@ -157,9 +166,17 @@ export default function SuggestionsScreen() {
           
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('currentItinerary', JSON.stringify(simplifiedItinerary));
+            console.log('💾 Simplified itinerary saved to session storage');
           }
           
-          router.push('/(tabs)/');
+          // Show success message briefly
+          setSuccessDestination(recommendation.destination);
+          setShowSuccess(true);
+          
+          // Navigate to the home page after a brief delay
+          setTimeout(() => {
+            router.push('/');
+          }, 1500);
         } else {
           console.error('❌ Both API endpoints failed');
           alert('Sorry, I encountered an error while planning your trip. Please try again.');
@@ -226,9 +243,19 @@ export default function SuggestionsScreen() {
               <TouchableOpacity
                 style={styles.planTripButton}
                 onPress={() => handlePlanTrip(recommendation)}
+                activeOpacity={0.8}
               >
                 <Text style={styles.planTripButtonText}>Plan This Trip</Text>
+                <Text style={styles.planTripButtonSubtext}>
+                  🤖 AI will create a complete itinerary
+                </Text>
               </TouchableOpacity>
+              
+              <View style={styles.aiPlanningInfo}>
+                <Text style={styles.aiPlanningText}>
+                  ✈️ Flights • 🏨 Hotels • 📅 Daily Schedule • 🎯 Activities • 💰 Pricing
+                </Text>
+              </View>
             </View>
           ))}
         </View>
@@ -254,10 +281,40 @@ export default function SuggestionsScreen() {
               Creating a detailed itinerary for {planningDestination}...
             </Text>
             <Text style={styles.planningDetails}>
-              🤖 AI is analyzing your preferences{'\n'}
-              📅 Building day-by-day schedule{'\n'}
-              💰 Calculating costs and booking options{'\n'}
-              🎯 Finding the best activities and alternatives
+              🤖 AI is analyzing your preferences and the destination{'\n'}
+              ✈️ Researching flight options and pricing{'\n'}
+              🏨 Finding the best hotel recommendations{'\n'}
+              📅 Building a day-by-day schedule{'\n'}
+              🎯 Selecting activities based on your interests{'\n'}
+              💰 Calculating realistic costs and alternatives{'\n'}
+              🚗 Planning practical logistics and transportation
+            </Text>
+            <Text style={styles.planningNote}>
+              This usually takes 10-30 seconds. Your complete itinerary will be ready on the Home tab!
+            </Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccess}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModal}>
+            <Text style={styles.successIcon}>🎉</Text>
+            <Text style={styles.successTitle}>Trip Planned Successfully!</Text>
+            <Text style={styles.successSubtitle}>
+              Your {successDestination} itinerary is ready
+            </Text>
+            <Text style={styles.successDetails}>
+              ✈️ Flights and hotels selected{'\n'}
+              📅 Daily schedule created{'\n'}
+              🎯 Activities tailored to your interests{'\n'}
+              💰 Costs calculated{'\n'}
+              🚀 Redirecting to your itinerary...
             </Text>
           </View>
         </View>
@@ -435,6 +492,28 @@ const styles = StyleSheet.create({
     color: 'white',
     letterSpacing: 0.5,
   },
+  planTripButtonSubtext: {
+    fontSize: 12,
+    color: '#ccc',
+    marginTop: 8,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  aiPlanningInfo: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+    alignItems: 'center',
+  },
+  aiPlanningText: {
+    fontSize: 13,
+    color: '#999',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
   footer: {
     margin: 16,
     padding: 20,
@@ -492,6 +571,53 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   planningDetails: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '400',
+  },
+  planningNote: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 20,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  successModal: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 20,
+    padding: 32,
+    margin: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  successIcon: {
+    fontSize: 60,
+    marginBottom: 16,
+  },
+  successTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  successSubtitle: {
+    fontSize: 16,
+    color: '#ccc',
+    marginBottom: 20,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  successDetails: {
     fontSize: 14,
     color: '#999',
     textAlign: 'center',

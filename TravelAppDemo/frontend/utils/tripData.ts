@@ -1,5 +1,6 @@
 export interface TripRecommendation {
   destination: string;
+  reason: string;
   duration: string;
   estimatedCost: number;
   highlights: string[];
@@ -10,17 +11,28 @@ export interface TripRecommendation {
 export const createTripPrompt = (recommendation: TripRecommendation): string => {
   const highlightsText = recommendation.highlights.map(h => `• ${h}`).join('\n');
   
-  return `I want to plan a trip to ${recommendation.destination} for ${recommendation.duration}. 
-  
-Here are the details:
+  return `I want to plan a detailed trip to ${recommendation.destination} for ${recommendation.duration}. 
+
+Here's what I'm looking for:
 - Destination: ${recommendation.destination}
 - Duration: ${recommendation.duration}
-- Estimated Cost: $${recommendation.estimatedCost}
-- Why I'll love it: ${recommendation.whyYoullLoveIt}
-- Confidence: ${recommendation.confidence}%
+- Budget: Around $${recommendation.estimatedCost}
+- Why this appeals to me: ${recommendation.whyYoullLoveIt}
+- AI confidence: ${recommendation.confidence}%
 
-Top activities I'm interested in:
+The reason this destination was recommended: ${recommendation.reason}
+
+Top activities I'm most interested in:
 ${highlightsText}
 
-Please create a detailed day-by-day itinerary for this trip, including specific venues, restaurants, and activities. Make it practical and bookable.`;
+Please create a comprehensive day-by-day itinerary that includes:
+1. Specific flight options with airlines, times, and prices
+2. Hotel recommendations with names, addresses, and pricing
+3. Detailed daily schedule with specific times, venues, and activities
+4. Restaurant recommendations for meals
+5. Alternative activity options for each planned activity
+6. Realistic pricing for all bookable and estimated costs
+7. Practical logistics and transportation between activities
+
+Make this itinerary practical, bookable, and tailored to my interests. Focus on the activities I highlighted as most appealing.`;
 }; 
