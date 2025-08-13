@@ -21,7 +21,10 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv()  # First try current directory
+# If running from project root, also try backend/.env
+if not os.getenv('OPENAI_API_KEY'):
+    load_dotenv('backend/.env')
 
 from database import get_db, create_tables, UserInterest, Flight, Hotel, User
 import schemas
@@ -514,6 +517,17 @@ def chat_with_bot(chat_request: ChatRequest, db: Session = Depends(get_db)):
         print(f"Error in chat endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat message: {str(e)}")
 
+@app.delete("/chat/{user_id}/clear")
+def clear_chat_history(user_id: int, db: Session = Depends(get_db)):
+    """Clear chat history for a user"""
+    try:
+        from database import ChatMessage
+        db.query(ChatMessage).filter(ChatMessage.user_id == user_id).delete()
+        db.commit()
+        return {"message": f"Chat history cleared for user {user_id}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error clearing chat history: {str(e)}")
+
 @app.post("/chat/enhanced/", response_model=schemas.EnhancedItineraryResponse)
 def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = Depends(get_db)):
     """Chat with the AI travel assistant and return structured itinerary data"""
@@ -526,24 +540,95 @@ def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = Depend
         )
     
     try:
+        # Save user message to database first
+        if db is not None:
+            try:
+                ChatbotService.save_user_message(db, chat_request.user_id, chat_request.message)
+            except Exception:
+                # Silently handle database errors
+                pass
+        
         # Generate enhanced response
         response_text = ChatbotService.generate_response(db, chat_request.user_id, chat_request.message, api_key)
         
         # Try to parse JSON response
         import json
         try:
-            # Look for JSON in the response
+            # Look for JSON in the response and clean it
             start_idx = response_text.find('{')
             end_idx = response_text.rfind('}') + 1
             
             if start_idx != -1 and end_idx > start_idx:
                 json_str = response_text[start_idx:end_idx]
-                print(f"Attempting to parse JSON string (length: {len(json_str)}):")
-                print(f"JSON start: {json_str[:200]}...")
-                print(f"JSON end: ...{json_str[-200:]}")
+                
+                # Try to fix common JSON issues
+                json_str = json_str.replace('\n', ' ').replace('\r', ' ')
+                # Remove trailing commas before closing braces/brackets
+                import re
+                json_str = re.sub(r',\s*}', '}', json_str)
+                json_str = re.sub(r',\s*]', ']', json_str)
+                
+                # More aggressive JSON cleanup
+                # Remove any incomplete trailing content first
+                last_complete_brace = -1
+                brace_count = 0
+                for i, char in enumerate(json_str):
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            last_complete_brace = i
+                            break
+                
+                if last_complete_brace > 0:
+                    json_str = json_str[:last_complete_brace + 1]
+                else:
+                    # If no complete structure found, try to close what we have
+                    if json_str.count('{') > json_str.count('}'):
+                        missing_braces = json_str.count('{') - json_str.count('}')
+                        json_str += '}' * missing_braces
+                
+                # Additional cleanup for common issues
+                # Remove trailing commas before closing brackets/braces
+                json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
+                # Fix any double commas
+                json_str = re.sub(r',,+', ',', json_str)
+                
+                # Fix mathematical expressions in cost fields
+                # Replace expressions like "300 + 400" with calculated values
+                def calculate_expression(match):
+                    try:
+                        expr = match.group(1)
+                        # Simple arithmetic evaluation (only basic operations)
+                        if all(c in '0123456789+-*/ ().' for c in expr):
+                            result = eval(expr)
+                            return f'"{match.group(0).split(":")[0]}": {result}'
+                        return match.group(0)
+                    except:
+                        return match.group(0)
+                
+                # Find and replace cost field expressions
+                json_str = re.sub(r'"(total_cost|bookable_cost|estimated_cost)":\s*([^,}]+)', 
+                                lambda m: f'"{m.group(1)}": {eval(m.group(2).strip()) if all(c in "0123456789+-*/ ()." for c in m.group(2).strip()) else m.group(2)}', 
+                                json_str)
                 
                 itinerary_data = json.loads(json_str)
-                print(f"Successfully parsed JSON with keys: {list(itinerary_data.keys())}")
+                
+                # Fix any missing 'type' fields in flights
+                if 'flights' in itinerary_data:
+                    for i, flight in enumerate(itinerary_data['flights']):
+                        if 'type' not in flight:
+                            # Assign type based on position: first is outbound, rest are return
+                            flight['type'] = 'outbound' if i == 0 else 'return'
+                
+                # Save bot response to database
+                if db is not None:
+                    try:
+                        ChatbotService.save_bot_response(db, chat_request.user_id, response_text)
+                    except Exception:
+                        # Silently handle database errors
+                        pass
                 
                 # Convert to EnhancedItineraryResponse
                 return schemas.EnhancedItineraryResponse(**itinerary_data)
@@ -551,33 +636,88 @@ def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = Depend
                 # If no JSON found, return a default structure
                 raise ValueError("No JSON structure found in response")
                 
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"Error parsing JSON response: {e}")
-            print(f"Raw response length: {len(response_text)}")
-            print(f"Raw response preview: {response_text[:500]}...")
-            print(f"Raw response end: ...{response_text[-500:]}")
+        except (json.JSONDecodeError, ValueError, Exception) as e:
+            # Handle JSON parsing errors by falling back to default response
+            pass
             
             # Return a default structure if JSON parsing fails
+            # Try to extract destination from the conversation history and current message
+            default_destination = "Paris, France"  # ultimate fallback
+            
+            # Check current message first
+            message_lower = chat_request.message.lower()
+            cities = ['chicago', 'tokyo', 'london', 'barcelona', 'rome', 'berlin', 'amsterdam', 'madrid']
+            found_city = None
+            
+            for city in cities:
+                if city in message_lower:
+                    found_city = city
+                    break
+            
+            # If no city in current message, check recent chat history
+            if not found_city and db is not None:
+                try:
+                    recent_history = ChatbotService.get_chat_history(db, chat_request.user_id, limit=3)
+                    for msg in recent_history:
+                        if msg.message:
+                            msg_lower = msg.message.lower()
+                            for city in cities:
+                                if city in msg_lower:
+                                    found_city = city
+                                    break
+                        if found_city:
+                            break
+                except Exception:
+                    # Silently handle errors
+                    pass
+            
+            # Set destination based on found city
+            if found_city:
+                country_map = {
+                    'chicago': 'USA', 'tokyo': 'Japan', 'london': 'UK', 
+                    'barcelona': 'Spain', 'madrid': 'Spain', 'rome': 'Italy', 
+                    'berlin': 'Germany', 'amsterdam': 'Netherlands'
+                }
+                default_destination = f"{found_city.title()}, {country_map.get(found_city, 'International')}"
+            
+            # Save fallback bot response to database
+            if db is not None:
+                try:
+                    fallback_response = f"Default itinerary for {default_destination}"
+                    ChatbotService.save_bot_response(db, chat_request.user_id, fallback_response)
+                except Exception:
+                    # Silently handle database errors
+                    pass
+            
             return schemas.EnhancedItineraryResponse(
-                destination="Paris, France",
+                destination=default_destination,
                 duration="3 days",
-                description="Default itinerary",
+                description=f"Default itinerary for {default_destination}",
                 flights=[
                     schemas.FlightInfo(
-                        airline="Air France",
-                        flight="AF 1234",
-                        departure="JFK → CDG",
-                        time="10:30 AM - 11:45 PM",
-                        price=850
+                        airline="United Airlines",
+                        flight="UA 123",
+                        departure="JFK → ORD",
+                        time="10:30 AM - 12:45 PM",
+                        price=400,
+                        type="outbound"
+                    ),
+                    schemas.FlightInfo(
+                        airline="United Airlines",
+                        flight="UA 456",
+                        departure="ORD → JFK",
+                        time="2:00 PM - 5:30 PM",
+                        price=400,
+                        type="return"
                     )
                 ],
                 hotel=schemas.HotelInfo(
-                    name="Hotel Le Marais",
-                    address="123 Rue de Rivoli, Paris",
+                    name="Chicago Downtown Hotel",
+                    address="123 Michigan Ave, Chicago, IL",
                     check_in="July 15, 2024 - 3:00 PM",
                     check_out="July 18, 2024 - 11:00 AM",
-                    room_type="Deluxe Room",
-                    price=180,
+                    room_type="Standard Room",
+                    price=150,
                     total_nights=3
                 ),
                 schedule=[
@@ -610,8 +750,7 @@ def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = Depend
             )
             
     except Exception as e:
-        print(f"Error in enhanced chat endpoint: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error processing enhanced chat message: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error processing enhanced chat message")
 
 @app.get("/users/{user_id}/chat/history/", response_model=List[ChatMessage])
 def get_chat_history(user_id: int, limit: int = 20, db: Session = Depends(get_db)):

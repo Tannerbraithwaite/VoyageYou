@@ -542,26 +542,72 @@ IMPORTANT:
 - Use appropriate airlines for each destination (e.g., Air France for France, British Airways for UK, Lufthansa for Germany, Japan Airlines for Japan)
 - Provide round-trip flights with realistic routes and pricing
 - All prices should be numeric values, not strings
+- CRITICAL: Every flight MUST have a "type" field set to either "outbound" or "return"
+- CRITICAL: Follow the exact JSON structure provided - missing fields will cause errors
+- CRITICAL: ALL COST FIELDS must be final calculated numbers (e.g., 1200) NEVER mathematical expressions (e.g., "300 + 400" or "200 * 4")
 - bookable_cost MUST include: flights (outbound + return) + hotel (price × nights) + all bookable activities
 - estimated_cost should include: all estimated activities and any free activities
-- total_cost should be: bookable_cost + estimated_cost"""
+- total_cost should be: bookable_cost + estimated_cost
+- Calculate all costs yourself and provide only the final numeric result"""
             
-            # Debug: Print the system message being sent
-            print(f"DEBUG - System message being sent to OpenAI:")
-            print(f"System: {system_message}")
-            print(f"User message: {message}")
-            
+            # ---------------------------
+            # Build full chat history for multi-turn conversation
+            # ---------------------------
+            messages = [
+                {"role": "system", "content": system_message}
+            ]
+
+            # Pull last 2 turns (newest first) and append them oldest-first
+            # Keep it very short to avoid context overflow causing truncated responses
+            if db is not None:
+                try:
+                    chat_history = ChatbotService.get_chat_history(db, user_id, limit=2)
+                    
+                    for msg in reversed(chat_history):
+                        # user messages are in `message`, bot messages in `response`
+                        if msg.is_bot:
+                            if msg.response:
+                                # Truncate long bot responses to avoid context limits
+                                response_content = msg.response
+                                if len(response_content) > 500:
+                                    # For JSON responses, extract just key info
+                                    if response_content.strip().startswith('{'):
+                                        try:
+                                            import json
+                                            data = json.loads(response_content)
+                                            if 'destination' in data and 'duration' in data:
+                                                response_content = f"Previous itinerary: {data['destination']} for {data['duration']}"
+                                            else:
+                                                response_content = "Previous travel itinerary created"
+                                        except:
+                                            response_content = "Previous travel itinerary created"
+                                    else:
+                                        response_content = response_content[:300] + "... [truncated]"
+                                messages.append({
+                                    "role": "assistant",
+                                    "content": response_content
+                                })
+                        else:
+                            if msg.message and msg.message != message:  # Exclude current message from history
+                                messages.append({
+                                    "role": "user", 
+                                    "content": msg.message
+                                })
+                except Exception as e:
+                    # Silently handle chat history errors
+                    pass
+
+            # Finally append the new user input
+            messages.append({"role": "user", "content": message})
+
             # Call OpenAI API – support both v1.* (new) and legacy 0.* clients
             if hasattr(openai, "OpenAI"):
                 # New Python SDK (>=1.0)
                 client = openai.OpenAI(api_key=api_key)
                 response = client.chat.completions.create(
                     model="gpt-3.5-turbo-16k",  # 16k context for longer responses at lower cost
-                    messages=[
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": message}
-                    ],
-                    max_tokens=2000,
+                    messages=messages,
+                    max_tokens=4000,  # Increased for longer itineraries
                     temperature=0.7,
                 )
                 content = response.choices[0].message.content
@@ -570,11 +616,8 @@ IMPORTANT:
                 openai.api_key = api_key
                 response = openai.ChatCompletion.create(
                     model="gpt-3.5-turbo-16k",
-                    messages=[
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": message}
-                    ],
-                    max_tokens=2000,
+                    messages=messages,
+                    max_tokens=4000,
                     temperature=0.7,
                 )
                 # In legacy responses, content is under ['choices'][0]['message']['content']

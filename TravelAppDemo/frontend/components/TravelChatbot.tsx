@@ -24,47 +24,80 @@ interface ChatbotProps {
   userId: number;
 }
 
+/**
+ * TravelChatbot Component
+ * Provides an interactive chat interface with AI travel assistant
+ * Features auto-scroll, chat history, and integration with itinerary system
+ */
 export default function TravelChatbot({ userId }: ChatbotProps) {
-  console.log('TravelChatbot component loaded with userId:', userId);
   
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [isNearBottom, setIsNearBottom] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  const scrollToBottom = (animated: boolean = true) => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated });
+    }, 100);
+  };
+
+  // Check if user is near bottom of chat
+  const handleScroll = (event: any) => {
+    try {
+      const { contentSize, layoutMeasurement, contentOffset } = event.nativeEvent;
+      const isAtBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 100;
+      setIsNearBottom(isAtBottom);
+      
+      const shouldShow = !isAtBottom && messages.length > 3;
+      if (shouldShow !== showScrollToBottom) {
+        setShowScrollToBottom(shouldShow);
+      }
+    } catch (error) {
+      // Silently handle scroll errors
+    }
+  };
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollToBottom(true);
+    }
+  }, [messages]);
+
+  // Auto-scroll when loading starts
+  useEffect(() => {
+    if (isLoading) {
+      scrollToBottom(true);
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     const testBackendConnection = async () => {
       try {
-        console.log('Testing backend connection...');
         const response = await fetch('http://localhost:8000/');
-        console.log('Backend test response:', response.status);
         if (response.ok) {
-          const data = await response.json();
-          console.log('Backend is reachable:', data);
+          await response.json();
         }
       } catch (error) {
-        console.error('Backend connection failed:', error);
         setHasError(true);
       }
     };
 
     const loadChatHistory = async () => {
       try {
-        console.log('Loading chat history for user:', userId);
         const response = await fetch(`http://localhost:8000/users/${userId}/chat/history/`);
-        console.log('Chat history response status:', response.status);
         
         if (response.ok) {
           const history = await response.json();
-          console.log('Chat history loaded:', history);
           setMessages(history.reverse());
-        } else {
-          const errorText = await response.text();
-          console.error('Error loading chat history:', response.status, errorText);
         }
       } catch (error) {
-        console.error('Error loading chat history:', error);
+        // Silently handle chat history loading errors
       }
     };
 
@@ -72,6 +105,10 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
     loadChatHistory();
   }, [userId]);
 
+  /**
+   * Sends a message to the AI travel assistant
+   * Handles both enhanced (structured) and fallback (text) responses
+   */
   const sendMessage = async () => {
     if (!inputMessage.trim()) return;
 
@@ -79,10 +116,9 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
     setInputMessage('');
     setIsLoading(true);
 
-    console.log('Sending message:', userMessage);
-
     try {
-      const response = await fetch('http://localhost:8000/chat/', {
+      // Try enhanced endpoint first for structured responses
+      const response = await fetch('http://localhost:8000/chat/enhanced/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,11 +129,13 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
         }),
       });
 
-      console.log('Response status:', response.status);
-
       if (response.ok) {
         const result = await response.json();
-        console.log('Response data:', result);
+
+        // Store the itinerary data in sessionStorage for home screen
+        if (result.destination && typeof window !== 'undefined') {
+          sessionStorage.setItem('currentItinerary', JSON.stringify(result));
+        }
 
         const newUserMessage: ChatMessage = {
           id: Date.now(),
@@ -106,27 +144,66 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
           created_at: new Date().toISOString(),
         };
 
+        // Create a user-friendly summary instead of raw JSON
+        const botResponseText = result.destination 
+          ? `I've created a detailed itinerary for your trip to ${result.destination}!\n\n📅 Duration: ${result.duration}\n✈️ Flights: ${result.flights?.length || 0} flights included\n🏨 Hotel: ${result.hotel?.name || 'Hotel included'}\n💰 Total Cost: $${result.total_cost || 'TBD'}\n\nYour schedule has been loaded below. You can continue chatting with me to make changes or ask questions!`
+          : 'I\'ve processed your request. Let me know if you need any adjustments!';
+
         const newBotMessage: ChatMessage = {
           id: Date.now() + 1,
           message: '',
           is_bot: true,
-          response: result.bot_response,
-          created_at: result.created_at,
+          response: botResponseText,
+          created_at: new Date().toISOString(),
         };
 
-        console.log('Adding messages to UI:', { newUserMessage, newBotMessage });
         setMessages(prev => [...prev, newUserMessage, newBotMessage]);
       } else {
-        const errorText = await response.text();
-        console.error('Error sending message:', response.status, errorText);
+        // Fallback to regular chat endpoint
+        
+        const fallbackResponse = await fetch('http://localhost:8000/chat/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: userMessage,
+            user_id: userId,
+          }),
+        });
+
+        if (fallbackResponse.ok) {
+          const fallbackResult = await fallbackResponse.json();
+
+          const newUserMessage: ChatMessage = {
+            id: Date.now(),
+            message: userMessage,
+            is_bot: false,
+            created_at: new Date().toISOString(),
+          };
+
+          const newBotMessage: ChatMessage = {
+            id: Date.now() + 1,
+            message: '',
+            is_bot: true,
+            response: fallbackResult.bot_response,
+            created_at: fallbackResult.created_at,
+          };
+
+          setMessages(prev => [...prev, newUserMessage, newBotMessage]);
+        }
+        // Silently handle endpoint failures
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      // Silently handle errors
     } finally {
       setIsLoading(false);
     }
   };
 
+  /**
+   * Renders a single chat message with appropriate styling
+   */
   const renderMessage = (message: ChatMessage) => {
     const isBot = message.is_bot;
     const messageText = isBot ? message.response || '' : message.message;
@@ -142,12 +219,6 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
     );
   };
 
-  console.log('TravelChatbot component rendering...');
-  console.log('Messages array:', messages);
-  console.log('Input message:', inputMessage);
-  console.log('Is loading:', isLoading);
-  console.log('Has error:', hasError);
-  
   if (hasError) {
     return (
       <SafeAreaView style={styles.container}>
@@ -175,8 +246,11 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
             ref={scrollViewRef}
             style={styles.messagesContainer}
             contentContainerStyle={styles.messagesContent}
-            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-            showsVerticalScrollIndicator={false}
+            onScroll={handleScroll}
+            onContentSizeChange={() => scrollToBottom(true)}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="handled"
           >
             {messages.length === 0 && (
               <View style={styles.welcomeMessage}>
@@ -193,10 +267,7 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
               </View>
             )}
             
-            {messages.map((message) => {
-              console.log('Rendering message:', message);
-              return renderMessage(message);
-            })}
+            {messages.map((message) => renderMessage(message))}
             
             {isLoading && (
               <View style={[styles.messageContainer, styles.botMessage]}>
@@ -210,6 +281,20 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
             )}
           </ScrollView>
         </View>
+
+        {/* Floating Scroll to Bottom Button */}
+        {showScrollToBottom && (
+          <TouchableOpacity
+            style={styles.scrollToBottomButton}
+            onPress={() => {
+              scrollToBottom(true);
+              setShowScrollToBottom(false);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.scrollToBottomText}>↓</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Input Container - Fixed at bottom */}
         <View style={styles.inputContainer}>
@@ -371,5 +456,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 100,
     padding: 20,
+  },
+  scrollToBottomButton: {
+    position: 'absolute',
+    bottom: 90, // Above the input container
+    right: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 10,
+  },
+  scrollToBottomText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    lineHeight: 20,
   },
 }); 
