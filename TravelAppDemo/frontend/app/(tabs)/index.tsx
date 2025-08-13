@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert, Modal } from 'react-native';
 import GlassCard from '@/components/ui/GlassCard';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -47,6 +47,7 @@ interface EditingDay {
 
 export default function HomeScreen() {
   const params = useLocalSearchParams();
+  const chatScrollRef = useRef<ScrollView>(null);
   const [message, setMessage] = useState('');
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -301,6 +302,14 @@ export default function HomeScreen() {
     
     await sendMessageToAPI(enhancedMessage);
   };
+
+  // Auto-scroll chat to bottom when history or loading state changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      chatScrollRef.current?.scrollToEnd({ animated: true });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [chatHistory, isLoading]);
 
   const sendMessageToAPI = async (messageToSend: string) => {
     console.log('Sending message to API:', messageToSend);
@@ -747,42 +756,52 @@ export default function HomeScreen() {
             />
           </View>
 
-          {/* Chat History - Now at the top */}
+          {/* Chat History - Scrollable with auto-scroll to bottom */}
           <View style={styles.chatHistoryContainer}>
-            {chatHistory.length === 0 && (
-              <View style={styles.welcomeMessage}>
-                <Text style={styles.welcomeText}>
-                  Hi! I&apos;m your AI travel assistant. I can help you with:
-                </Text>
-                <Text style={styles.welcomeBullet}>• Travel recommendations</Text>
-                <Text style={styles.welcomeBullet}>• Destination information</Text>
-                <Text style={styles.welcomeBullet}>• Travel planning tips</Text>
-                <Text style={styles.welcomeBullet}>• Budget advice</Text>
-                <Text style={styles.welcomeText}>
-                  Just ask me anything about your trip!
-                </Text>
-              </View>
-            )}
-            
-            {chatHistory.map((chat, index) => (
-              <View key={index} style={[styles.chatMessage, chat.isBot ? styles.botMessage : styles.userMessage]}>
-                <View style={[styles.messageBubble, chat.isBot ? styles.botBubble : styles.userBubble]}>
-                  <Text style={[styles.chatText, chat.isBot ? styles.botText : styles.userText]}>
-                    {chat.message}
+            <ScrollView
+              ref={chatScrollRef}
+              style={styles.chatHistoryScroll}
+              contentContainerStyle={styles.chatHistoryContent}
+              onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
+            >
+              {chatHistory.length === 0 && (
+                <View style={styles.welcomeMessage}>
+                  <Text style={styles.welcomeText}>
+                    Hi! I&apos;m your AI travel assistant. I can help you with:
+                  </Text>
+                  <Text style={styles.welcomeBullet}>• Travel recommendations</Text>
+                  <Text style={styles.welcomeBullet}>• Destination information</Text>
+                  <Text style={styles.welcomeBullet}>• Travel planning tips</Text>
+                  <Text style={styles.welcomeBullet}>• Budget advice</Text>
+                  <Text style={styles.welcomeText}>
+                    Just ask me anything about your trip!
                   </Text>
                 </View>
-              </View>
-            ))}
-            
-            {isLoading && (
-              <View style={[styles.chatMessage, styles.botMessage]}>
-                <View style={[styles.messageBubble, styles.botBubble]}>
-                  <Text style={[styles.chatText, styles.botText, styles.typingText]}>
-                    Thinking...
-                  </Text>
+              )}
+              
+              {chatHistory.map((chat, index) => (
+                <View key={index} style={[styles.chatMessage, chat.isBot ? styles.botMessage : styles.userMessage]}>
+                  <View style={[styles.messageBubble, chat.isBot ? styles.botBubble : styles.userBubble]}>
+                    <Text style={[styles.chatText, chat.isBot ? styles.botText : styles.userText]}>
+                      {chat.message}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            )}
+              ))}
+              
+              {isLoading && (
+                <View style={[styles.chatMessage, styles.botMessage]}>
+                  <View style={[styles.messageBubble, styles.botBubble]}>
+                    <Text style={[styles.chatText, styles.botText, styles.typingText]}>
+                      Thinking...
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
           </View>
 
           {/* Chat Input - Now at the bottom */}
@@ -1117,6 +1136,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     minHeight: 200,
     maxHeight: 400,
+  },
+  chatHistoryScroll: {
+    flex: 1,
+  },
+  chatHistoryContent: {
+    paddingVertical: 10,
   },
   welcomeMessage: {
     backgroundColor: '#1a1a1a',
