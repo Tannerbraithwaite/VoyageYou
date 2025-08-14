@@ -103,7 +103,14 @@ export default function CheckoutScreen() {
           const hasActivities = Array.isArray(itineraryData.schedule) && itineraryData.schedule.some((d: any) => (d.activities || []).length > 0);
           let include = { flights: true, hotel: true, activities: true };
           if (storedOptions) {
-            try { include = JSON.parse(storedOptions); } catch {}
+            try {
+              const parsed = JSON.parse(storedOptions);
+              include = {
+                flights: (parsed.flights ?? parsed.includeFlights) ?? true,
+                hotel: (parsed.hotel ?? parsed.includeHotel) ?? true,
+                activities: (parsed.activities ?? parsed.includeActivities) ?? true,
+              };
+            } catch {}
           }
           setEnabledSteps({
             flights: include.flights && hasFlights,
