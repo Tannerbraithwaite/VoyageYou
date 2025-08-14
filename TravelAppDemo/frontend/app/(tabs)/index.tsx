@@ -131,6 +131,18 @@ export default function HomeScreen() {
   const [includeHotel, setIncludeHotel] = useState(true);
   const [includeActivities, setIncludeActivities] = useState(true);
 
+  // Persist purchase options for checkout
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const options = { includeFlights, includeHotel, includeActivities };
+      try {
+        sessionStorage.setItem('purchaseOptions', JSON.stringify(options));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [includeFlights, includeHotel, includeActivities]);
+
   console.log('HomeScreen rendering with isLoading:', isLoading, 'response:', response);
 
   // Activity Edit Form Component

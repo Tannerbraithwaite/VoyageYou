@@ -39,6 +39,11 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const [itinerary, setItinerary] = useState<EnhancedItinerary | null>(null);
   const [activeStep, setActiveStep] = useState(1);
+  const [enabledSteps, setEnabledSteps] = useState<{ flights: boolean; hotel: boolean; activities: boolean }>({
+    flights: true,
+    hotel: true,
+    activities: true,
+  });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showNationalityPicker, setShowNationalityPicker] = useState(false);
   const [showSeatClassPicker, setShowSeatClassPicker] = useState(false);
@@ -87,10 +92,24 @@ export default function CheckoutScreen() {
     // Load itinerary data from session storage
     if (typeof window !== 'undefined') {
       const storedItinerary = sessionStorage.getItem('currentItinerary');
+      const storedOptions = sessionStorage.getItem('purchaseOptions');
       if (storedItinerary) {
         try {
           const itineraryData = JSON.parse(storedItinerary);
           setItinerary(itineraryData);
+          // Determine enabled steps based on itinerary availability and user options
+          const hasFlights = Array.isArray(itineraryData.flights) && itineraryData.flights.length > 0;
+          const hasHotel = !!itineraryData.hotel;
+          const hasActivities = Array.isArray(itineraryData.schedule) && itineraryData.schedule.some((d: any) => (d.activities || []).length > 0);
+          let include = { flights: true, hotel: true, activities: true };
+          if (storedOptions) {
+            try { include = JSON.parse(storedOptions); } catch {}
+          }
+          setEnabledSteps({
+            flights: include.flights && hasFlights,
+            hotel: include.hotel && hasHotel,
+            activities: include.activities && hasActivities,
+          });
         } catch (error) {
           console.error('Error parsing itinerary:', error);
         }
@@ -139,9 +158,9 @@ export default function CheckoutScreen() {
           t.passportNumber && t.passportExpiry && t.nationality
         );
       case 3: // Flight Info
-        return flightInfo.seatClass && flightInfo.mealPreference;
+        return enabledSteps.flights ? (flightInfo.seatClass && flightInfo.mealPreference) : true;
       case 4: // Hotel Info
-        return hotelInfo.roomType;
+        return enabledSteps.hotel ? !!hotelInfo.roomType : true;
       case 5: // Payment Info
         return paymentInfo.cardNumber && paymentInfo.cardholderName && 
                paymentInfo.expiryDate && paymentInfo.cvv && paymentInfo.billingAddress;
@@ -151,15 +170,28 @@ export default function CheckoutScreen() {
   };
 
   const nextStep = () => {
-    if (validateStep(activeStep)) {
-      setActiveStep(activeStep + 1);
-    } else {
+    if (!validateStep(activeStep)) {
       Alert.alert('Incomplete Information', 'Please fill in all required fields before continuing.');
+      return;
     }
+    // Determine the next enabled step
+    let next = activeStep + 1;
+    while (next <= 6) {
+      const isEnabled = (next === 3 && enabledSteps.flights) || (next === 4 && enabledSteps.hotel) || next === 1 || next === 2 || next === 5 || next === 6;
+      if (isEnabled) break;
+      next += 1;
+    }
+    setActiveStep(Math.min(next, 6));
   };
 
   const prevStep = () => {
-    setActiveStep(activeStep - 1);
+    let prev = activeStep - 1;
+    while (prev >= 1) {
+      const isEnabled = (prev === 3 && enabledSteps.flights) || (prev === 4 && enabledSteps.hotel) || prev === 1 || prev === 2 || prev === 5 || prev === 6;
+      if (isEnabled) break;
+      prev -= 1;
+    }
+    setActiveStep(Math.max(prev, 1));
   };
 
   const handleSubmit = () => {
@@ -257,18 +289,24 @@ export default function CheckoutScreen() {
         <View key={step} style={styles.stepContainer}>
           <View style={[
             styles.stepCircle,
-            step <= activeStep ? styles.activeStep : styles.inactiveStep
+            step <= activeStep ? styles.activeStep : styles.inactiveStep,
+            (step === 3 && !enabledSteps.flights) && styles.disabledStep,
+            (step === 4 && !enabledSteps.hotel) && styles.disabledStep
           ]}>
             <Text style={[
               styles.stepNumber,
-              step <= activeStep ? styles.activeStepText : styles.inactiveStepText
+              step <= activeStep ? styles.activeStepText : styles.inactiveStepText,
+              (step === 3 && !enabledSteps.flights) && styles.disabledStepText,
+              (step === 4 && !enabledSteps.hotel) && styles.disabledStepText
             ]}>
               {step}
             </Text>
           </View>
           <Text style={[
             styles.stepLabel,
-            step <= activeStep ? styles.activeStepText : styles.inactiveStepText
+            step <= activeStep ? styles.activeStepText : styles.inactiveStepText,
+            (step === 3 && !enabledSteps.flights) && styles.disabledStepText,
+            (step === 4 && !enabledSteps.hotel) && styles.disabledStepText
           ]}>
             {step === 1 ? 'Contact' : step === 2 ? 'Travelers' : step === 3 ? 'Flights' : step === 4 ? 'Hotels' : step === 5 ? 'Payment' : 'Confirm'}
           </Text>
@@ -600,9 +638,9 @@ export default function CheckoutScreen() {
       case 2:
         return renderTravelerInfo();
       case 3:
-        return renderFlightInfo();
+        return enabledSteps.flights ? renderFlightInfo() : null;
       case 4:
-        return renderHotelInfo();
+        return enabledSteps.hotel ? renderHotelInfo() : null;
       case 5:
         return renderPaymentInfo();
       case 6:
@@ -852,6 +890,11 @@ const styles = StyleSheet.create({
   inactiveStep: {
     backgroundColor: '#333',
   },
+  disabledStep: {
+    backgroundColor: '#222',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
   stepNumber: {
     fontSize: 14,
     fontWeight: '600',
@@ -861,6 +904,9 @@ const styles = StyleSheet.create({
   },
   inactiveStepText: {
     color: '#666',
+  },
+  disabledStepText: {
+    color: '#444',
   },
   stepLabel: {
     fontSize: 12,
