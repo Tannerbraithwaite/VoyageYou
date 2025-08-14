@@ -36,6 +36,8 @@ interface CleanScheduleProps {
   alternativeActivities: { all: AlternativeActivity[] };
   onActivityEditSave: (dayIndex: number, activityIndex: number, updatedActivity: Activity) => void;
   onActivityEditCancel: () => void;
+  activityRatings?: Record<string, number>;
+  onRateActivity?: (key: string, rating: number) => void;
 }
 
 export const CleanSchedule: React.FC<CleanScheduleProps> = ({
@@ -47,7 +49,9 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
   editingActivity,
   alternativeActivities,
   onActivityEditSave,
-  onActivityEditCancel
+  onActivityEditCancel,
+  activityRatings = {},
+  onRateActivity
 }) => {
   // Add debugging and error handling
   console.log('CleanSchedule render - schedule:', schedule);
@@ -310,6 +314,37 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                             <Text style={styles.editHint}>Tap to edit</Text>
                           </TouchableOpacity>
                           
+                          {/* Past activity rating */}
+                          {(() => {
+                            // Determine if this activity time is in the past
+                            try {
+                              const activityDateTime = new Date(`${day.date} ${activity.time}`);
+                              const isPast = !isNaN(activityDateTime.getTime()) && activityDateTime.getTime() < Date.now();
+                              if (!isPast) return null;
+                              const key = `${day.date}|${activity.time}|${activity.activity}`;
+                              const currentRating = activityRatings[key] || 0;
+                              const stars = [1, 2, 3, 4, 5];
+                              return (
+                                <View style={styles.ratingRow}>
+                                  {stars.map((star) => (
+                                    <TouchableOpacity
+                                      key={star}
+                                      onPress={() => onRateActivity && onRateActivity(key, star)}
+                                      style={styles.starButton}
+                                      disabled={!onRateActivity}
+                                    >
+                                      <Text style={[styles.star, star <= currentRating && styles.starFilled]}>
+                                        {star <= currentRating ? '★' : '☆'}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              );
+                            } catch (e) {
+                              return null;
+                            }
+                          })()}
+
                           <View style={styles.activityActions}>
                             <TouchableOpacity 
                               style={styles.editButton}
@@ -553,6 +588,22 @@ const styles = {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#6366f1',
+  },
+  ratingRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  starButton: {
+    marginRight: 4,
+  },
+  star: {
+    fontSize: 16,
+    color: '#666',
+  },
+  starFilled: {
+    color: '#FFD700',
   },
   // New styles for ActivityEditForm
   activityEditForm: {

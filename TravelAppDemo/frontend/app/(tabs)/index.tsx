@@ -78,6 +78,14 @@ export default function HomeScreen() {
   ]);
   const [alternativeActivities, setAlternativeActivities] = useState<Record<string, AlternativeActivity[]>>({});
   const [savedSchedules, setSavedSchedules] = useState<SavedSchedule[]>([]);
+  const [activityRatings, setActivityRatings] = useState<Record<string, number>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return JSON.parse(localStorage.getItem('activityRatings') || '{}');
+      } catch {}
+    }
+    return {};
+  });
   const [oldTripsState, setOldTripsState] = useState([
     {
       id: 1,
@@ -531,6 +539,16 @@ export default function HomeScreen() {
     setSelectedActivity(null);
   };
 
+  const handleRatePastActivity = (key: string, rating: number) => {
+    setActivityRatings(prev => {
+      const updated = { ...prev, [key]: rating };
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem('activityRatings', JSON.stringify(updated)); } catch {}
+      }
+      return updated;
+    });
+  };
+
   // New interactive schedule functions
   const handleActivityEdit = (dayIndex: number, activityIndex: number) => {
     setEditingActivity({ dayIndex, activityIndex, isEditing: true });
@@ -960,6 +978,8 @@ export default function HomeScreen() {
                 alternativeActivities={{ all: getAllAvailableAlternatives() }}
                 onActivityEditSave={handleActivityEditSave}
                 onActivityEditCancel={handleActivityEditCancel}
+                activityRatings={activityRatings}
+                onRateActivity={handleRatePastActivity}
               />
             )}
               
