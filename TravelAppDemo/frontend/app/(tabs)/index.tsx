@@ -758,6 +758,33 @@ export default function HomeScreen() {
         {/* Chat Section */}
         <GlassCard style={styles.chatSection}>
           <Text style={styles.sectionTitle}>Chat with AI Assistant</Text>
+
+          {/* Quick Purchase Options (adjust before/while chatting) */}
+          <View style={styles.quickOptionsCard}>
+            <Text style={styles.quickOptionsTitle}>Include in Plan</Text>
+            <View style={styles.quickOptionsRow}>
+              <TouchableOpacity style={styles.checkboxRow} onPress={() => setIncludeFlights(!includeFlights)}>
+                <View style={[styles.checkbox, includeFlights && styles.checkboxChecked]}>
+                  {includeFlights && <Text style={styles.checkboxTick}>✓</Text>}
+                </View>
+                <Text style={styles.checkboxLabel}>Flights</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.checkboxRow} onPress={() => setIncludeHotel(!includeHotel)}>
+                <View style={[styles.checkbox, includeHotel && styles.checkboxChecked]}>
+                  {includeHotel && <Text style={styles.checkboxTick}>✓</Text>}
+                </View>
+                <Text style={styles.checkboxLabel}>Hotel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.checkboxRow} onPress={() => setIncludeActivities(!includeActivities)}>
+                <View style={[styles.checkbox, includeActivities && styles.checkboxChecked]}>
+                  {includeActivities && <Text style={styles.checkboxTick}>✓</Text>}
+                </View>
+                <Text style={styles.checkboxLabel}>Activities</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
           
           {/* Trip Dates */}
           <View style={styles.datesContainer}>
@@ -861,62 +888,68 @@ export default function HomeScreen() {
             </GlassCard>
 
             {/* Flight Information */}
-            <GlassCard style={styles.section}>
-              <Text style={styles.sectionTitle}>✈️ Flight Information</Text>
-              
-              <View style={styles.flightContainer}>
-                <GlassCard style={styles.flightCard}>
-                  <Text style={styles.flightLabel}>Outbound</Text>
-                  <Text style={styles.airline}>{currentItinerary.flights[0]?.airline} {currentItinerary.flights[0]?.flight}</Text>
-                  <Text style={styles.route}>{currentItinerary.flights[0]?.departure}</Text>
-                  <Text style={styles.timeText}>{currentItinerary.flights[0]?.time}</Text>
-                  <Text style={styles.priceText}>${currentItinerary.flights[0]?.price}</Text>
-                </GlassCard>
+            {includeFlights && (
+              <GlassCard style={styles.section}>
+                <Text style={styles.sectionTitle}>✈️ Flight Information</Text>
                 
-                <GlassCard style={styles.flightCard}>
-                  <Text style={styles.flightLabel}>Return</Text>
-                  <Text style={styles.airline}>{currentItinerary.flights[1]?.airline} {currentItinerary.flights[1]?.flight}</Text>
-                  <Text style={styles.route}>{currentItinerary.flights[1]?.departure}</Text>
-                  <Text style={styles.timeText}>{currentItinerary.flights[1]?.time}</Text>
-                  <Text style={styles.priceText}>${currentItinerary.flights[1]?.price}</Text>
-                </GlassCard>
-              </View>
-              
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total Flights:</Text>
-                <Text style={styles.totalAmount}>${totalFlights}</Text>
-              </View>
-            </GlassCard>
-
-            {/* Hotel Information */}
-            <GlassCard style={styles.section}>
-              <Text style={styles.sectionTitle}>🏨 Hotel Information</Text>
-              
-              <GlassCard style={styles.hotelCard}>
-                <Text style={styles.hotelName}>{currentItinerary.hotel.name}</Text>
-                <Text style={styles.hotelAddress}>{currentItinerary.hotel.address}</Text>
-                <Text style={styles.hotelDetails}>{currentItinerary.hotel.room_type}</Text>
-                <Text style={styles.hotelDates}>Check-in: {currentItinerary.hotel.check_in}</Text>
-                <Text style={styles.hotelDates}>Check-out: {currentItinerary.hotel.check_out}</Text>
-                <View style={styles.hotelPriceRow}>
-                  <Text style={styles.hotelPriceLabel}>${currentItinerary.hotel.price}/night × {currentItinerary.hotel.total_nights} nights</Text>
-                  <Text style={styles.hotelPriceTotal}>${currentItinerary.hotel.price * currentItinerary.hotel.total_nights}</Text>
+                <View style={styles.flightContainer}>
+                  <GlassCard style={styles.flightCard}>
+                    <Text style={styles.flightLabel}>Outbound</Text>
+                    <Text style={styles.airline}>{currentItinerary.flights[0]?.airline} {currentItinerary.flights[0]?.flight}</Text>
+                    <Text style={styles.route}>{currentItinerary.flights[0]?.departure}</Text>
+                    <Text style={styles.timeText}>{currentItinerary.flights[0]?.time}</Text>
+                    <Text style={styles.priceText}>${currentItinerary.flights[0]?.price}</Text>
+                  </GlassCard>
+                  
+                  <GlassCard style={styles.flightCard}>
+                    <Text style={styles.flightLabel}>Return</Text>
+                    <Text style={styles.airline}>{currentItinerary.flights[1]?.airline} {currentItinerary.flights[1]?.flight}</Text>
+                    <Text style={styles.route}>{currentItinerary.flights[1]?.departure}</Text>
+                    <Text style={styles.timeText}>{currentItinerary.flights[1]?.time}</Text>
+                    <Text style={styles.priceText}>${currentItinerary.flights[1]?.price}</Text>
+                  </GlassCard>
+                </View>
+                
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Total Flights:</Text>
+                  <Text style={styles.totalAmount}>${totalFlights}</Text>
                 </View>
               </GlassCard>
-            </GlassCard>
+            )}
+
+            {/* Hotel Information */}
+            {includeHotel && (
+              <GlassCard style={styles.section}>
+                <Text style={styles.sectionTitle}>🏨 Hotel Information</Text>
+                
+                <GlassCard style={styles.hotelCard}>
+                  <Text style={styles.hotelName}>{currentItinerary.hotel.name}</Text>
+                  <Text style={styles.hotelAddress}>{currentItinerary.hotel.address}</Text>
+                  <Text style={styles.hotelDetails}>{currentItinerary.hotel.room_type}</Text>
+                  <Text style={styles.hotelDates}>Check-in: {currentItinerary.hotel.check_in}</Text>
+                  <Text style={styles.hotelDates}>Check-out: {currentItinerary.hotel.check_out}</Text>
+                  <View style={styles.hotelPriceRow}>
+                    <Text style={styles.hotelPriceLabel}>${currentItinerary.hotel.price}/night × {currentItinerary.hotel.total_nights} nights</Text>
+                    <Text style={styles.hotelPriceTotal}>${currentItinerary.hotel.price * currentItinerary.hotel.total_nights}</Text>
+                  </View>
+                </GlassCard>
+              </GlassCard>
+            )}
             
-            {/* Interactive Daily Schedule */}
-            <CleanSchedule
-              schedule={schedule}
-              onEditActivity={handleActivityEdit}
-              onDeleteActivity={handleDeleteActivity}
-              onAddActivity={handleAddActivity}
-              totalActivities={totalActivities}
-              editingActivity={editingActivity}
-              alternativeActivities={{ all: getAllAvailableAlternatives() }}
-              onActivityEditSave={handleActivityEditSave}
-              onActivityEditCancel={handleActivityEditCancel}
-            />
+            {/* Interactive Daily Schedule (hide when Activities are excluded) */}
+            {includeActivities && (
+              <CleanSchedule
+                schedule={schedule}
+                onEditActivity={handleActivityEdit}
+                onDeleteActivity={handleDeleteActivity}
+                onAddActivity={handleAddActivity}
+                totalActivities={totalActivities}
+                editingActivity={editingActivity}
+                alternativeActivities={{ all: getAllAvailableAlternatives() }}
+                onActivityEditSave={handleActivityEditSave}
+                onActivityEditCancel={handleActivityEditCancel}
+              />
+            )}
               
 
             {/* Purchase Options */}
@@ -1115,6 +1148,25 @@ const styles = StyleSheet.create({
   },
   chatSection: {
     marginBottom: 30,
+  },
+  quickOptionsCard: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 15,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+    marginBottom: 12,
+  },
+  quickOptionsTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  quickOptionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   scheduleSection: {
     marginBottom: 30,
