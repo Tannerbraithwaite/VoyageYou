@@ -16,7 +16,8 @@ def seed_database():
                 password=AuthService.get_password_hash("password123"),
                 travel_style="solo",
                 budget_range="moderate",
-                additional_info="I prefer boutique hotels over chains, love trying local street food, and always pack light. I'm comfortable with public transportation and enjoy getting lost in new cities."
+                additional_info="I prefer boutique hotels over chains, love trying local street food, and always pack light. I'm comfortable with public transportation and enjoy getting lost in new cities.",
+                is_verified=True
             ),
             User(
                 name="Mike Chen",
@@ -24,7 +25,8 @@ def seed_database():
                 password=AuthService.get_password_hash("password123"),
                 travel_style="couple",
                 budget_range="luxury",
-                additional_info="We love luxury experiences and fine dining. Prefer private tours and high-end accommodations."
+                additional_info="We love luxury experiences and fine dining. Prefer private tours and high-end accommodations.",
+                is_verified=True
             ),
             User(
                 name="Emma Rodriguez",
@@ -32,7 +34,8 @@ def seed_database():
                 password=AuthService.get_password_hash("password123"),
                 travel_style="family",
                 budget_range="moderate",
-                additional_info="Traveling with two kids (8 and 12). Need family-friendly activities and spacious accommodations."
+                additional_info="Traveling with two kids (8 and 12). Need family-friendly activities and spacious accommodations.",
+                is_verified=True
             )
         ]
         

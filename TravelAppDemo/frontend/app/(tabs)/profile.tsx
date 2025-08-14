@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import GlassCard from '@/components/ui/GlassCard';
 import { router } from 'expo-router';
+import authService from '@/services/auth';
 
 export default function ProfileScreen() {
   const [name, setName] = useState('Sarah Johnson');
@@ -12,19 +13,39 @@ export default function ProfileScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(''); // 'success', 'error', or ''
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<number | null>(null);
 
   // Load user profile data when component mounts
   useEffect(() => {
-    loadUserProfile();
+    const init = async () => {
+      try {
+        const user = await authService.getCurrentUser();
+        if (!user) {
+          router.replace('/auth/login');
+          return;
+        }
+        setUserId(user.id);
+        await loadUserProfile(user.id);
+      } catch (e) {
+        router.replace('/auth/login');
+      }
+    };
+    init();
   }, []);
 
-  const loadUserProfile = async () => {
+  const loadUserProfile = async (resolvedUserId?: number) => {
     try {
       console.log('Loading user profile...');
-      const userId = 1;
+      const effectiveUserId = typeof resolvedUserId === 'number' ? resolvedUserId : userId;
+      if (!effectiveUserId) {
+        console.log('No user id available, skipping load');
+        return;
+      }
       
       // Load user profile
-      const profileResponse = await fetch(`http://localhost:8000/users/${userId}`);
+      const profileResponse = await fetch(`http://localhost:8000/users/${effectiveUserId}`, {
+        credentials: 'include'
+      });
       console.log('Profile load response status:', profileResponse.status);
       
       if (profileResponse.ok) {
@@ -38,7 +59,9 @@ export default function ProfileScreen() {
         setAdditionalInfo(profileData.additional_info || '');
         
         // Load user interests
-        const interestsResponse = await fetch(`http://localhost:8000/users/${userId}/interests/`);
+        const interestsResponse = await fetch(`http://localhost:8000/users/${effectiveUserId}/interests/`, {
+          credentials: 'include'
+        });
         console.log('Interests load response status:', interestsResponse.status);
         
         if (interestsResponse.ok) {
@@ -46,7 +69,7 @@ export default function ProfileScreen() {
           console.log('Loaded interests data:', interestsData);
           
           // Extract interest IDs from the response
-          const loadedInterests = interestsData.map((interest: any) => interest.interest_name);
+          const loadedInterests = interestsData.map((interest: any) => interest.interest || interest.interest_name);
           setInterests(loadedInterests.length > 0 ? loadedInterests : ['art', 'food', 'culture', 'photography', 'architecture']);
         } else {
           console.log('Failed to load interests, using defaults');
@@ -113,7 +136,11 @@ export default function ProfileScreen() {
     setSaveStatus('');
 
     try {
-      const userId = 1;
+      if (!userId) {
+        console.log('No user id found, redirecting to login');
+        router.replace('/auth/login');
+        return;
+      }
       
       console.log('Making profile update request...');
       // Update user profile
@@ -127,7 +154,8 @@ export default function ProfileScreen() {
           travel_style: travelStyle,
           budget_range: budget,
           additional_info: additionalInfo
-        })
+        }),
+        credentials: 'include'
       });
 
       console.log('Profile response status:', profileResponse.status);
@@ -141,7 +169,8 @@ export default function ProfileScreen() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(interests)
+        body: JSON.stringify(interests),
+        credentials: 'include'
       });
 
       console.log('Interests response status:', interestsResponse.status);

@@ -13,11 +13,10 @@ print(f"[DEBUG] Current working directory: {os.getcwd()}")
 from fastapi import FastAPI, Depends, HTTPException, status, Response, Request
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter
+from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from starlette.requests import Request as StarletteRequest
-from starlette.middleware.base import BaseHTTPMiddleware
+from slowapi.middleware import SlowAPIMiddleware
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 from typing import List
@@ -66,18 +65,9 @@ app.add_middleware(
 
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
-
-@app.middleware("http")
-async def rate_limit_middleware(request: StarletteRequest, call_next):
-    try:
-        response = await limiter.limit("60/minute")(call_next)(request)
-        return response
-    except RateLimitExceeded as e:
-        return Response(
-            content="Too Many Requests",
-            status_code=429,
-            headers={"Retry-After": str(e.retry_after)}
-        )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Create database tables on startup
 @app.on_event("startup")
@@ -238,7 +228,7 @@ def refresh_token(request: Request, response: Response):
             key="access_token",
             value=access_token,
             httponly=True,
-            secure=False,  # Set to True in production with HTTPS
+            secure=os.getenv("ENV", "development") == "production",
             samesite="lax",
             max_age=1800  # 30 minutes
         )
@@ -253,8 +243,9 @@ def refresh_token(request: Request, response: Response):
 @app.post("/auth/logout")
 def logout(response: Response):
     """Logout user by clearing cookies"""
-    response.delete_cookie("access_token", httponly=True, secure=False, samesite="lax")
-    response.delete_cookie("refresh_token", httponly=True, secure=False, samesite="lax")
+    secure_flag = os.getenv("ENV", "development") == "production"
+    response.delete_cookie("access_token", httponly=True, secure=secure_flag, samesite="lax")
+    response.delete_cookie("refresh_token", httponly=True, secure=secure_flag, samesite="lax")
     return {"message": "Logged out successfully"}
 
 @app.post("/auth/oauth", response_model=LoginResponse)
