@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert, Modal, Platform } from 'react-native';
 import GlassCard from '@/components/ui/GlassCard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { DatePicker, CleanSchedule } from '@/components';
@@ -595,38 +595,41 @@ export default function HomeScreen() {
     setDragOverTarget(null);
   };
 
+  const performDeleteActivity = (dayIndex: number, activityIndex: number) => {
+    setSchedule(prevSchedule => 
+      prevSchedule.map((day, index) => 
+        index === dayIndex 
+          ? { 
+              ...day, 
+              activities: sortActivitiesByTime(day.activities.filter((_, actIndex) => actIndex !== activityIndex))
+            }
+          : day
+      )
+    );
+  };
+
   const handleDeleteActivity = (dayIndex: number, activityIndex: number) => {
     const activity = schedule[dayIndex].activities[activityIndex];
     
+    if (Platform.OS === 'web') {
+      const ok = typeof window !== 'undefined' ? window.confirm(`Delete "${activity.activity}" from Day ${dayIndex + 1}?`) : true;
+      if (ok) {
+        performDeleteActivity(dayIndex, activityIndex);
+      }
+      return;
+    }
+
     Alert.alert(
       'Delete Activity',
       `Are you sure you want to delete "${activity.activity}" from Day ${dayIndex + 1}?`,
       [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Delete',
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
           style: 'destructive',
           onPress: () => {
-            setSchedule(prevSchedule => 
-              prevSchedule.map((day, index) => 
-                index === dayIndex 
-                  ? { 
-                      ...day, 
-                      activities: sortActivitiesByTime(day.activities.filter((_, actIndex) => actIndex !== activityIndex))
-                    }
-                  : day
-              )
-            );
-            
-            // Show success message
-            Alert.alert(
-              'Activity Deleted',
-              `&quot;${activity.activity}&quot; has been successfully deleted from Day ${dayIndex + 1}`,
-              [{ text: 'OK' }]
-            );
+            performDeleteActivity(dayIndex, activityIndex);
+            Alert.alert('Activity Deleted', `"${activity.activity}" has been successfully deleted from Day ${dayIndex + 1}`, [{ text: 'OK' }]);
           }
         }
       ]
