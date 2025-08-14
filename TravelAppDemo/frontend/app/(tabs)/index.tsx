@@ -126,6 +126,11 @@ export default function HomeScreen() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [scheduleName, setScheduleName] = useState('');
 
+  // Purchase options
+  const [includeFlights, setIncludeFlights] = useState(true);
+  const [includeHotel, setIncludeHotel] = useState(true);
+  const [includeActivities, setIncludeActivities] = useState(true);
+
   console.log('HomeScreen rendering with isLoading:', isLoading, 'response:', response);
 
   // Activity Edit Form Component
@@ -665,9 +670,13 @@ export default function HomeScreen() {
   console.log('   New schedule:', schedule);
   console.log('   New totalActivities:', totalActivities);
   
+  const selectedFlights = includeFlights ? totalFlights : 0;
+  const selectedHotel = includeHotel ? totalHotel : 0;
+  const selectedActivities = includeActivities ? bookableActivities : 0;
+
   const calculatedBookableTotal = totalFlights + totalHotel + bookableActivities;
   const enhancedItineraryBookableCost = currentItinerary?.bookable_cost;
-  const bookableTotal = Math.max(calculatedBookableTotal, enhancedItineraryBookableCost || 0);
+  const bookableTotal = selectedFlights + selectedHotel + selectedActivities;
 
   console.log('Price Calculation Debug:', {
     enhancedItinerary: !!currentItinerary,
@@ -910,20 +919,47 @@ export default function HomeScreen() {
             />
               
 
+            {/* Purchase Options */}
+            <GlassCard style={styles.section}>
+              <Text style={styles.sectionTitle}>Purchase Options</Text>
+              <View style={styles.checkboxGroup}>
+                <TouchableOpacity style={styles.checkboxRow} onPress={() => setIncludeFlights(!includeFlights)}>
+                  <View style={[styles.checkbox, includeFlights && styles.checkboxChecked]}>
+                    {includeFlights && <Text style={styles.checkboxTick}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkboxLabel}>Flights</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.checkboxRow} onPress={() => setIncludeHotel(!includeHotel)}>
+                  <View style={[styles.checkbox, includeHotel && styles.checkboxChecked]}>
+                    {includeHotel && <Text style={styles.checkboxTick}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkboxLabel}>Hotel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.checkboxRow} onPress={() => setIncludeActivities(!includeActivities)}>
+                  <View style={[styles.checkbox, includeActivities && styles.checkboxChecked]}>
+                    {includeActivities && <Text style={styles.checkboxTick}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkboxLabel}>Activities</Text>
+                </TouchableOpacity>
+              </View>
+            </GlassCard>
+
             {/* Cost Summary */}
             <GlassCard style={styles.costSummary}>
               <Text style={styles.costTitle}>Cost Breakdown</Text>
               <View style={styles.costRow}>
-                <Text style={styles.costLabel}>Flights:</Text>
-                <Text style={styles.costValue}>${totalFlights}</Text>
+                <Text style={[styles.costLabel, !includeFlights && styles.costLabelDisabled]}>Flights:</Text>
+                <Text style={[styles.costValue, !includeFlights && styles.costValueDisabled]}>${includeFlights ? totalFlights : 0}</Text>
               </View>
               <View style={styles.costRow}>
-                <Text style={styles.costLabel}>Hotel:</Text>
-                <Text style={styles.costValue}>${totalHotel}</Text>
+                <Text style={[styles.costLabel, !includeHotel && styles.costLabelDisabled]}>Hotel:</Text>
+                <Text style={[styles.costValue, !includeHotel && styles.costValueDisabled]}>${includeHotel ? totalHotel : 0}</Text>
               </View>
               <View style={styles.costRow}>
-                <Text style={styles.costLabel}>Activities:</Text>
-                <Text style={styles.costValue}>${bookableActivities}</Text>
+                <Text style={[styles.costLabel, !includeActivities && styles.costLabelDisabled]}>Activities:</Text>
+                <Text style={[styles.costValue, !includeActivities && styles.costValueDisabled]}>${includeActivities ? bookableActivities : 0}</Text>
               </View>
               <View style={[styles.costRow, styles.totalRow]}>
                 <Text style={styles.totalLabel}>Ready to Book:</Text>
@@ -1344,6 +1380,39 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginBottom: 20,
   },
+  checkboxGroup: {
+    gap: 12,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#6366f1',
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  checkboxChecked: {
+    backgroundColor: '#6366f1',
+  },
+  checkboxTick: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    lineHeight: 14,
+  },
+  checkboxLabel: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   costTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -1359,10 +1428,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#cccccc',
   },
+  costLabelDisabled: {
+    color: '#666',
+    textDecorationLine: 'line-through',
+  },
   costValue: {
     fontSize: 14,
     color: '#ffffff',
     fontWeight: '600',
+  },
+  costValueDisabled: {
+    color: '#666',
   },
   totalRow: {
     borderTopWidth: 1,
