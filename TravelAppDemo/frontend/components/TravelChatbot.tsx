@@ -118,6 +118,9 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
 
     try {
       // Try enhanced endpoint first for structured responses
+      // Debug: log full prompt before sending
+      try { console.log('FULL_PROMPT (TravelChatbot):', userMessage); } catch {}
+
       const response = await fetch('http://localhost:8000/chat/enhanced/', {
         method: 'POST',
         headers: {

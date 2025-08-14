@@ -322,8 +322,14 @@ export default function HomeScreen() {
         dateContext += ' - Flexible with dates';
       }
       
-      enhancedMessage = `${dateContext}\n\nUser Request: ${userMessage}`;
+      // Purchase options context
+      const optionsContext = `Purchase Options:\n- Flights: ${includeFlights ? 'Include' : 'Exclude'}\n- Hotel: ${includeHotel ? 'Include' : 'Exclude'}\n- Activities: ${includeActivities ? 'Include' : 'Exclude'}`;
+
+      enhancedMessage = `${dateContext}\n${optionsContext}\n\nUser Request: ${userMessage}`;
     }
+    
+    // Log full prompt for debugging
+    try { console.log('FULL_PROMPT:', enhancedMessage); } catch {}
     
     await sendMessageToAPI(enhancedMessage);
   };
