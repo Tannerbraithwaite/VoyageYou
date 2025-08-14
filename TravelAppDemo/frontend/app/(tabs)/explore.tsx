@@ -26,6 +26,7 @@ export default function ScheduleScreen() {
   const [savedSchedules, setSavedSchedules] = useState<SavedSchedule[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<SavedSchedule | null>(null);
   const [showScheduleDetails, setShowScheduleDetails] = useState(false);
+  const [activityRatings, setActivityRatings] = useState<Record<string, number>>({});
 
   // Load saved schedules from localStorage
   const loadSavedSchedules = () => {
@@ -37,7 +38,11 @@ export default function ScheduleScreen() {
           setSavedSchedules(schedules);
           console.log('📱 Loaded saved schedules:', schedules.length);
         }
-        } catch (error) {
+        const storedRatings = localStorage.getItem('activityRatings');
+        if (storedRatings) {
+          try { setActivityRatings(JSON.parse(storedRatings)); } catch {}
+        }
+      } catch (error) {
         console.error('Error loading saved schedules:', error);
       }
     }
@@ -124,6 +129,29 @@ export default function ScheduleScreen() {
     }
   };
 
+  const setRating = (key: string, rating: number) => {
+    setActivityRatings(prev => {
+      const updated = { ...prev, [key]: rating };
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem('activityRatings', JSON.stringify(updated)); } catch {}
+      }
+      return updated;
+    });
+  };
+
+  const renderStars = (key: string) => {
+    const current = activityRatings[key] || 0;
+    return (
+      <View style={styles.ratingRow}>
+        {[1,2,3,4,5].map(star => (
+          <TouchableOpacity key={star} style={styles.starButton} onPress={() => setRating(key, star)}>
+            <Text style={[styles.star, star <= current && styles.starFilled]}>{star <= current ? '★' : '☆'}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -143,14 +171,14 @@ export default function ScheduleScreen() {
               <Text style={styles.emptyStateTitle}>No Saved Schedules</Text>
               <Text style={styles.emptyStateText}>
                 Create a schedule in the Home tab and save it to see it here!
-          </Text>
-          <TouchableOpacity 
+              </Text>
+              <TouchableOpacity 
                 style={styles.createScheduleButton}
                 onPress={() => router.push('/')}
-          >
+              >
                 <Text style={styles.createScheduleButtonText}>Go to Home</Text>
-          </TouchableOpacity>
-        </GlassCard>
+              </TouchableOpacity>
+            </GlassCard>
           ) : (
             savedSchedules.map((schedule) => (
               <TouchableOpacity
@@ -164,23 +192,22 @@ export default function ScheduleScreen() {
                     <Text style={styles.scheduleDestination}>{schedule.destination}</Text>
                     <Text style={styles.scheduleDuration}>{schedule.duration}</Text>
                     <Text style={styles.scheduleDate}>Saved: {formatDate(schedule.savedAt)}</Text>
-          </View>
+                  </View>
                   <View style={styles.scheduleStatus}>
                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(schedule.status) }]}>
                       <Text style={styles.statusIcon}>{getStatusIcon(schedule.status)}</Text>
                       <Text style={styles.statusText}>{schedule.status}</Text>
-          </View>
-            </View>
-              </View>
-              
+                    </View>
+                  </View>
+                </View>
                 <View style={styles.scheduleActions}>
-                    <TouchableOpacity 
+                  <TouchableOpacity 
                     style={styles.actionButton}
                     onPress={() => handleStatusChange(schedule.id, 'unbooked')}
                   >
                     <Text style={styles.actionButtonText}>⏳ Unbooked</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
+                  </TouchableOpacity>
+                  <TouchableOpacity 
                     style={styles.actionButton}
                     onPress={() => handleStatusChange(schedule.id, 'booked')}
                   >
@@ -191,9 +218,9 @@ export default function ScheduleScreen() {
                     onPress={() => handleStatusChange(schedule.id, 'past')}
                   >
                     <Text style={styles.actionButtonText}>📅 Past</Text>
-                    </TouchableOpacity>
-                  </View>
-          </TouchableOpacity>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
             ))
           )}
         </View>
@@ -210,16 +237,15 @@ export default function ScheduleScreen() {
           <View style={styles.modalContent}>
             {selectedSchedule && (
               <>
-          <View style={styles.modalHeader}>
+                <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>{selectedSchedule.name}</Text>
-            <TouchableOpacity 
-              style={styles.closeButton}
+                  <TouchableOpacity 
+                    style={styles.closeButton}
                     onPress={() => setShowScheduleDetails(false)}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-          
+                  >
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
                 <ScrollView style={styles.modalBody}>
                   {/* Schedule Info */}
                   <GlassCard style={styles.detailSection}>
@@ -228,7 +254,7 @@ export default function ScheduleScreen() {
                     <Text style={styles.detailText}>Duration: {selectedSchedule.duration}</Text>
                     <Text style={styles.detailText}>Status: {selectedSchedule.status}</Text>
                     <Text style={styles.detailText}>Saved: {formatDate(selectedSchedule.savedAt)}</Text>
-              </GlassCard>
+                  </GlassCard>
 
                   {/* Daily Schedule */}
                   <GlassCard style={styles.detailSection}>
@@ -236,26 +262,28 @@ export default function ScheduleScreen() {
                     {selectedSchedule.schedule.map((dayActivities, dayIndex) => (
                       <View key={dayIndex} style={styles.daySection}>
                         <Text style={styles.dayTitle}>Day {dayIndex + 1}</Text>
-                        {dayActivities.map((activity, activityIndex) => (
-                          <View key={activityIndex} style={styles.activityItem}>
-                            <Text style={styles.activityTime}>{activity.time}</Text>
-                            <View style={styles.activityContent}>
-                              <Text style={styles.activityName}>{activity.activity}</Text>
-                              <View style={styles.activityDetails}>
-                                <Text style={styles.activityPrice}>${activity.price}</Text>
-                  <View style={[
-                    styles.typeBadge,
-                                  activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge
-                                ]}>
-                                  <Text style={styles.typeText}>
-                                    {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
-                    </Text>
-                  </View>
-                </View>
+                        {dayActivities.map((activity, activityIndex) => {
+                          const key = `${selectedSchedule.id}|${dayIndex}|${activityIndex}|${activity.time}|${activity.activity}`;
+                          return (
+                            <View key={activityIndex} style={styles.activityItem}>
+                              <Text style={styles.activityTime}>{activity.time}</Text>
+                              <View style={styles.activityContent}>
+                                <Text style={styles.activityName}>{activity.activity}</Text>
+                                <View style={styles.activityDetails}>
+                                  <Text style={styles.activityPrice}>${activity.price}</Text>
+                                  <View style={[styles.typeBadge, activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge]}>
+                                    <Text style={styles.typeText}>
+                                      {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
+                                    </Text>
+                                  </View>
+                                </View>
+                              </View>
+                              {/* Ratings visible only for past schedules */}
+                              {selectedSchedule.status === 'past' && renderStars(key)}
                             </View>
-                          </View>
-            ))}
-        </View>
+                          );
+                        })}
+                      </View>
                     ))}
                   </GlassCard>
 
@@ -268,7 +296,7 @@ export default function ScheduleScreen() {
                       <Text style={styles.checkoutButtonText}>💳 Checkout</Text>
                     </TouchableOpacity>
                     
-            <TouchableOpacity 
+                    <TouchableOpacity 
                       style={styles.deleteButton}
                       onPress={() => {
                         Alert.alert(
@@ -286,9 +314,9 @@ export default function ScheduleScreen() {
                       }}
                     >
                       <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
-            </TouchableOpacity>
-          </View>
-          </ScrollView>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
               </>
             )}
           </View>
@@ -570,6 +598,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: 'white',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  starButton: {
+    marginHorizontal: 2,
+  },
+  star: {
+    fontSize: 16,
+    color: '#666',
+  },
+  starFilled: {
+    color: '#FFD700',
   },
   modalActions: {
     flexDirection: 'row',

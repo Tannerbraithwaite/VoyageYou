@@ -978,8 +978,6 @@ export default function HomeScreen() {
                 alternativeActivities={{ all: getAllAvailableAlternatives() }}
                 onActivityEditSave={handleActivityEditSave}
                 onActivityEditCancel={handleActivityEditCancel}
-                activityRatings={activityRatings}
-                onRateActivity={handleRatePastActivity}
               />
             )}
               
