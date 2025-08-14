@@ -10,7 +10,9 @@ from database import get_db
 import os
 
 # Security configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key-change-this-in-production-123456789")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY is not set. Please configure SECRET_KEY in the environment.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7

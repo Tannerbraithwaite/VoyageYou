@@ -13,6 +13,11 @@ print(f"[DEBUG] Current working directory: {os.getcwd()}")
 from fastapi import FastAPI, Depends, HTTPException, status, Response, Request
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from starlette.requests import Request as StarletteRequest
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 from typing import List
@@ -49,35 +54,52 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add CORS middleware
-# Broaden CORS for local development including localhost and 127.0.0.1 on common ports
+# CORS: allowlist from env
+ALLOWED_ORIGINS = os.getenv("ALLOW_ORIGINS", "http://localhost:8081").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8081",
-        "http://localhost:8082",
-        "http://localhost:3000",
-        "http://localhost:19006",
-        "http://localhost:8080",
-        "http://127.0.0.1:8081",
-        "http://127.0.0.1:8082",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:8080",
-    ],
+    allow_origins=[o.strip() for o in ALLOWED_ORIGINS if o.strip()],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+
+@app.middleware("http")
+async def rate_limit_middleware(request: StarletteRequest, call_next):
+    try:
+        response = await limiter.limit("60/minute")(call_next)(request)
+        return response
+    except RateLimitExceeded as e:
+        return Response(
+            content="Too Many Requests",
+            status_code=429,
+            headers={"Retry-After": str(e.retry_after)}
+        )
 
 # Create database tables on startup
 @app.on_event("startup")
 def startup_event():
     create_tables()
 
-# Health check endpoint
+# Health and readiness endpoints
 @app.get("/")
 async def root():
     return {"message": "TravelApp API is running!"}
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
+
+@app.get("/readyz")
+def readyz(db: Session = Depends(get_db)):
+    try:
+        db.execute("SELECT 1")
+        return {"ready": True}
+    except Exception:
+        raise HTTPException(status_code=503, detail="Not ready")
 
 # Authentication endpoints
 @app.post("/auth/login", response_model=LoginResponse)
@@ -103,7 +125,7 @@ def login(login_data: LoginRequest, response: Response, db: Session = Depends(ge
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,  # Set to True in production with HTTPS
+        secure=os.getenv("ENV", "development") == "production",
         samesite="lax",
         max_age=1800  # 30 minutes
     )
@@ -112,7 +134,7 @@ def login(login_data: LoginRequest, response: Response, db: Session = Depends(ge
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False,  # Set to True in production with HTTPS
+        secure=os.getenv("ENV", "development") == "production",
         samesite="lax",
         max_age=604800  # 7 days
     )
@@ -251,7 +273,7 @@ async def oauth_login(oauth_data: OAuthRequest, response: Response, db: Session 
             key="access_token",
             value=result["access_token"],
             httponly=True,
-            secure=False,  # Set to True in production with HTTPS
+            secure=os.getenv("ENV", "development") == "production",
             samesite="lax",
             max_age=1800  # 30 minutes
         )
@@ -260,7 +282,7 @@ async def oauth_login(oauth_data: OAuthRequest, response: Response, db: Session 
             key="refresh_token",
             value=result["refresh_token"],
             httponly=True,
-            secure=False,  # Set to True in production with HTTPS
+            secure=os.getenv("ENV", "development") == "production",
             samesite="lax",
             max_age=604800  # 7 days
         )
@@ -326,7 +348,9 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     return UserService.create_user(db, user)
 
 @app.get("/users/{user_id}", response_model=schemas.User)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_cookies)):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     """Get user by ID"""
     user = UserService.get_user(db, user_id)
     if not user:
@@ -334,7 +358,9 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     return user
 
 @app.put("/users/{user_id}", response_model=schemas.User)
-def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
+def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_cookies)):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     """Update user profile"""
     user = UserService.update_user(db, user_id, user_update.dict(exclude_unset=True))
     if not user:
@@ -342,13 +368,17 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
     return user
 
 @app.post("/users/{user_id}/interests/")
-def update_user_interests(user_id: int, interests: List[str], db: Session = Depends(get_db)):
+def update_user_interests(user_id: int, interests: List[str], db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_cookies)):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     """Update user interests"""
     user_interests = UserService.add_user_interests(db, user_id, interests)
     return {"message": f"Updated {len(user_interests)} interests for user {user_id}"}
 
 @app.get("/users/{user_id}/profile", response_model=UserProfileResponse)
-def get_user_profile(user_id: int, db: Session = Depends(get_db)):
+def get_user_profile(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_cookies)):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     """Get complete user profile with interests"""
     user = UserService.get_user(db, user_id)
     if not user:
@@ -377,7 +407,9 @@ def get_trip(trip_id: int, db: Session = Depends(get_db)):
     return TripResponse(trip=trip, activities=activities, flights=flights, hotels=hotels)
 
 @app.get("/users/{user_id}/trips/", response_model=List[Trip])
-def get_user_trips(user_id: int, db: Session = Depends(get_db)):
+def get_user_trips(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_cookies)):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     """Get all trips for a user"""
     return TripService.get_user_trips(db, user_id)
 
@@ -434,7 +466,9 @@ def generate_recommendations(user_id: int, db: Session = Depends(get_db)):
     return {"message": f"Generated {len(recommendations)} recommendations", "recommendations": recommendations}
 
 @app.get("/users/{user_id}/recommendations/", response_model=List[Recommendation])
-def get_user_recommendations(user_id: int, db: Session = Depends(get_db)):
+def get_user_recommendations(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_cookies)):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     """Get all active recommendations for a user"""
     return RecommendationService.get_user_recommendations(db, user_id)
 
@@ -753,7 +787,9 @@ def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = Depend
         raise HTTPException(status_code=500, detail="Error processing enhanced chat message")
 
 @app.get("/users/{user_id}/chat/history/", response_model=List[ChatMessage])
-def get_chat_history(user_id: int, limit: int = 20, db: Session = Depends(get_db)):
+def get_chat_history(user_id: int, limit: int = 20, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_cookies)):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     """Get chat history for a user"""
     return ChatbotService.get_chat_history(db, user_id, limit)
 
