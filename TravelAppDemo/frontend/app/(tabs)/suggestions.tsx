@@ -1,14 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, Platform, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { createTripPrompt, TripRecommendation } from '@/utils';
+import { useTripSettings } from '@/components/TripSettingsContext';
+import DatePicker from '@/components/DatePicker';
+import { calculateTripDuration } from '@/utils';
+import { TripDates } from '@/types';
 
 export default function SuggestionsScreen() {
+  const { settings, update } = useTripSettings();
+
+  // Planning workflow state (re-added)
   const [isPlanning, setIsPlanning] = useState(false);
   const [planningDestination, setPlanningDestination] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [successDestination, setSuccessDestination] = useState('');
-  
+
+  const [tripDatesPerRec, setTripDatesPerRec] = useState<Record<number, TripDates>>({});
+
+  // Map <id, customDays>
   const personalizedRecommendations = [
     {
       id: 1,
@@ -85,7 +95,20 @@ export default function SuggestionsScreen() {
   ];
 
   const handlePlanTrip = async (recommendation: TripRecommendation) => {
-    const tripPrompt = createTripPrompt(recommendation);
+    // Override duration inside prompt to chosenDays
+    let tripPrompt = createTripPrompt(recommendation);
+
+    const dates = tripDatesPerRec[recommendation.id];
+    if (dates?.startDate && dates.endDate) {
+      const diffDays = calculateTripDuration(dates.startDate, dates.endDate);
+      // replace original duration text in prompt
+      tripPrompt = tripPrompt.replaceAll(recommendation.duration, `${diffDays} days`);
+      const startISO = dates.startDate.toISOString().split('T')[0];
+      const endISO = dates.endDate.toISOString().split('T')[0];
+      const flexText = dates.isFlexible ? ' (flexible)' : '';
+      tripPrompt += `\nTrip Dates: ${startISO} to ${endISO} (${diffDays} days)${flexText}.`;
+      update({ startDate: dates.startDate, days: diffDays });
+    }
     
     console.log('🎯 Planning trip to:', recommendation.destination);
     console.log('📝 Trip prompt:', tripPrompt);
@@ -239,12 +262,12 @@ export default function SuggestionsScreen() {
           }, 800); // Reduced from 1500ms to 800ms
         } else {
           console.error('❌ Both API endpoints failed');
-          alert('Sorry, I encountered an error while planning your trip. Please try again.');
+          Alert.alert('Error', 'Sorry, I encountered an error while planning your trip. Please try again.');
         }
       }
     } catch (error) {
       console.error('❌ Error planning trip:', error);
-      alert('Sorry, I encountered an error while planning your trip. Please try again.');
+      Alert.alert('Error', 'Sorry, I encountered an error while planning your trip. Please try again.');
     } finally {
       setIsPlanning(false);
       setPlanningDestination('');
@@ -270,54 +293,66 @@ export default function SuggestionsScreen() {
 
         <View style={styles.recommendationsSection}>
           <Text style={styles.sectionTitle}>Personalized Recommendations</Text>
-          {personalizedRecommendations.map((recommendation) => (
-            <View key={recommendation.id} style={styles.recommendationCard}>
-              <View style={styles.recommendationHeader}>
-                <View style={styles.destinationInfo}>
-                  <Text style={styles.destinationName}>{recommendation.destination}</Text>
-                  <Text style={styles.destinationDetails}>
-                    {recommendation.duration} • ${recommendation.estimatedCost} • {recommendation.confidence}% match
+          {personalizedRecommendations.map((recommendation) => {
+            const dates = tripDatesPerRec[recommendation.id];
+            const startDate = dates?.startDate ?? null;
+            const endDate = dates?.endDate ?? null;
+            const days = startDate && endDate ? calculateTripDuration(startDate, endDate) : parseInt(recommendation.duration);
+            return (
+              <View key={recommendation.id} style={styles.recommendationCard}>
+                <View style={styles.recommendationHeader}>
+                  <View style={styles.destinationInfo}>
+                    <Text style={styles.destinationName}>{recommendation.destination}</Text>
+                    {/* Removed duration & price; confidence badge already shows match */}
+                    <Text style={styles.destinationDetails}></Text>
+                  </View>
+                  <View style={styles.confidenceBadge}>
+                    <Text style={styles.confidenceText}>{recommendation.confidence}%</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.reasonText}>{recommendation.reason}</Text>
+
+                <View style={styles.whyYoullLoveSection}>
+                  <Text style={styles.whyYoullLoveTitle}>Why You'll Love It</Text>
+                  <Text style={styles.whyYoullLoveText}>{recommendation.whyYoullLoveIt}</Text>
+                </View>
+
+                <View style={styles.highlightsSection}>
+                  <Text style={styles.highlightsTitle}>Top Highlights</Text>
+                  {recommendation.highlights.map((highlight, index) => (
+                    <View key={index} style={styles.highlightItem}>
+                      <Text style={styles.highlightText}>• {highlight}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Start date selector */}
+                <DatePicker
+                  tripDates={dates ?? { startDate: null, endDate: null, isFlexible: false }}
+                  onDatesChange={(d: TripDates) => setTripDatesPerRec(prev => ({ ...prev, [recommendation.id]: d }))}
+                />
+
+                {/* Plan button uses days variable already */}
+                <TouchableOpacity
+                  style={styles.planTripButton}
+                  onPress={() => handlePlanTrip(recommendation)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.planTripButtonText}>Plan This Trip</Text>
+                  <Text style={styles.planTripButtonSubtext}>
+                    🤖 AI will create a complete itinerary
+                  </Text>
+                </TouchableOpacity>
+                
+                <View style={styles.aiPlanningInfo}>
+                  <Text style={styles.aiPlanningText}>
+                    ✈️ Flights • 🏨 Hotels • 📅 Daily Schedule • 🎯 Activities • 💰 Pricing
                   </Text>
                 </View>
-                <View style={styles.confidenceBadge}>
-                  <Text style={styles.confidenceText}>{recommendation.confidence}%</Text>
-                </View>
               </View>
-
-              <Text style={styles.reasonText}>{recommendation.reason}</Text>
-
-              <View style={styles.whyYoullLoveSection}>
-                <Text style={styles.whyYoullLoveTitle}>Why You'll Love It</Text>
-                <Text style={styles.whyYoullLoveText}>{recommendation.whyYoullLoveIt}</Text>
-              </View>
-
-              <View style={styles.highlightsSection}>
-                <Text style={styles.highlightsTitle}>Top Highlights</Text>
-                {recommendation.highlights.map((highlight, index) => (
-                  <View key={index} style={styles.highlightItem}>
-                    <Text style={styles.highlightText}>• {highlight}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <TouchableOpacity
-                style={styles.planTripButton}
-                onPress={() => handlePlanTrip(recommendation)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.planTripButtonText}>Plan This Trip</Text>
-                <Text style={styles.planTripButtonSubtext}>
-                  🤖 AI will create a complete itinerary
-                </Text>
-              </TouchableOpacity>
-              
-              <View style={styles.aiPlanningInfo}>
-                <Text style={styles.aiPlanningText}>
-                  ✈️ Flights • 🏨 Hotels • 📅 Daily Schedule • 🎯 Activities • 💰 Pricing
-                </Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         <View style={styles.footer}>
@@ -403,6 +438,7 @@ export default function SuggestionsScreen() {
           </View>
         </View>
       </Modal>
+      {/* DatePicker handles its own modal */}
     </View>
   );
 }
