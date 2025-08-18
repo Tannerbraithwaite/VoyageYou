@@ -42,7 +42,7 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert('Forgot Password', 'Password reset functionality would be implemented here');
+    router.push('/auth/forgot-password');
   };
 
   const handleGoogleSignIn = async () => {

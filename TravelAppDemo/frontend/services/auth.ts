@@ -145,6 +145,44 @@ class AuthService {
     }
   }
 
+  // ---------------- Password Reset -----------------
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    try {
+      const response = await fetch('http://localhost:8000/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || 'Unable to process request');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      throw error;
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    try {
+      const response = await fetch('http://localhost:8000/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, new_password: newPassword }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || 'Unable to reset password');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Reset password error:', error);
+      throw error;
+    }
+  }
+
   async getCurrentUser(): Promise<User | null> {
     if (this.currentUser) {
       return this.currentUser;
