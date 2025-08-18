@@ -457,7 +457,7 @@ const styles = {
     backgroundColor: '#6366f1',
   },
   estimatedBadge: {
-    backgroundColor: '#666',
+    backgroundColor: '#475569',
   },
   typeText: {
     fontSize: 10,

@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#10b981',
   },
   estimatedBadge: {
-    backgroundColor: '#f59e0b',
+    backgroundColor: '#475569',
   },
   typeText: {
     fontSize: 12,
