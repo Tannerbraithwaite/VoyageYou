@@ -146,6 +146,19 @@ class Recommendation(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+# Password reset tokens
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    token = Column(String, unique=True, index=True)
+    expires_at = Column(DateTime)
+    used = Column(Boolean, default=False)
+
+    # Relationships
+    user = relationship("User")
+
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
     

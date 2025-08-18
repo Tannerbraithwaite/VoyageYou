@@ -32,5 +32,17 @@ class EmailService:
             print(f"Error sending email: {e}")
             return False
 
+    async def send_password_reset_email(self, recipient_email: str, recipient_name: str, token: str) -> bool:
+        """Send password reset email (simplified stub)"""
+        try:
+            reset_link = f"https://your-frontend-domain.com/auth/reset-password?token={token}"
+            print(
+                f"Would send password reset email to {recipient_email} with link {reset_link}"
+            )
+            return True
+        except Exception as e:
+            print(f"Error sending password reset email: {e}")
+            return False
+
 # Create a singleton instance
 email_service = EmailService() 

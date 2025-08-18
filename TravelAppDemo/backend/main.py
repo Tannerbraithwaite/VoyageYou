@@ -248,6 +248,63 @@ def logout(response: Response):
     response.delete_cookie("refresh_token", httponly=True, secure=secure_flag, samesite="lax")
     return {"message": "Logged out successfully"}
 
+# ---------------- Password Reset Flow -----------------
+
+
+@app.post("/auth/forgot-password")
+async def forgot_password(request_data: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Initiate password reset by sending email with reset token"""
+    from database import PasswordResetToken, User
+    from datetime import datetime, timedelta
+    # Always respond success message to avoid email enumeration
+    generic_response = {"message": "If an account with that email exists, a password reset link has been sent."}
+
+    user = db.query(User).filter(User.email == request_data.email).first()
+    if not user:
+        return generic_response
+
+    # Generate unique token
+    import secrets, string
+    token = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(48))
+
+    expires_at = datetime.utcnow() + timedelta(hours=1)
+
+    # Store token
+    reset_record = PasswordResetToken(user_id=user.id, token=token, expires_at=expires_at, used=False)
+    db.add(reset_record)
+    db.commit()
+
+    # Send email (async call)
+    await email_service.send_password_reset_email(user.email, user.name or "User", token)
+
+    return generic_response
+
+
+@app.post("/auth/reset-password")
+async def reset_password(request_data: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Reset password using token"""
+    from database import PasswordResetToken, User
+    from datetime import datetime
+
+    reset_record = db.query(PasswordResetToken).filter(PasswordResetToken.token == request_data.token).first()
+    if not reset_record or reset_record.used or reset_record.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    user = db.query(User).filter(User.id == reset_record.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Hash new password and update
+    hashed = AuthService.get_password_hash(request_data.new_password)
+    user.password = hashed
+    db.commit()
+
+    # Mark token used
+    reset_record.used = True
+    db.commit()
+
+    return {"message": "Password has been reset successfully. You can now log in."}
+
 @app.post("/auth/oauth", response_model=LoginResponse)
 async def oauth_login(oauth_data: OAuthRequest, response: Response, db: Session = Depends(get_db)):
     """OAuth login with Google or Apple"""
@@ -518,6 +575,39 @@ def get_suggestions():
         ]
     }
 
+# New API search endpoints
+@app.get("/flights/search")
+async def search_flights(origin: str, destination: str, departure_date: str, 
+                        return_date: str = None, passengers: int = 1):
+    """Search for flights using Duffel API"""
+    from api_services import duffel_service
+    try:
+        result = await duffel_service.search_flights(origin, destination, departure_date, return_date, passengers)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error searching flights: {str(e)}")
+
+@app.get("/hotels/search")
+async def search_hotels(destination: str, checkin: str, checkout: str, 
+                       guests: int = 2, rooms: int = 1):
+    """Search for hotels using Hotelbeds API"""
+    from api_services import hotelbeds_service
+    try:
+        result = await hotelbeds_service.search_hotels(destination, checkin, checkout, guests, rooms)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error searching hotels: {str(e)}")
+
+@app.get("/events/search")
+async def search_events(location: str, start_date: str = None, end_date: str = None):
+    """Search for events using Ticketmaster API"""
+    from api_services import ticketmaster_service
+    try:
+        result = await ticketmaster_service.search_events(location, start_date, end_date)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error searching events: {str(e)}")
+
 # Chatbot endpoints
 @app.post("/chat/", response_model=ChatResponse)
 def chat_with_bot(chat_request: ChatRequest, db: Session = Depends(get_db)):
@@ -554,7 +644,7 @@ def clear_chat_history(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error clearing chat history: {str(e)}")
 
 @app.post("/chat/enhanced/", response_model=schemas.EnhancedItineraryResponse)
-def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = Depends(get_db)):
+async def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = Depends(get_db)):
     """Chat with the AI travel assistant and return structured itinerary data"""
     # Get OpenAI API key from environment variable
     api_key = os.getenv("OPENAI_API_KEY")
@@ -574,7 +664,7 @@ def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = Depend
                 pass
         
         # Generate enhanced response
-        response_text = ChatbotService.generate_response(db, chat_request.user_id, chat_request.message, api_key)
+        response_text = await ChatbotService.generate_response(db, chat_request.user_id, chat_request.message, api_key)
         
         # Try to parse JSON response
         import json

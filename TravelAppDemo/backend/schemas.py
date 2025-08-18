@@ -33,6 +33,15 @@ class TokenResponse(BaseModel):
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
+# Password reset schemas
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 class OAuthRequest(BaseModel):
     id_token: str
     provider: str  # "google" or "apple"
