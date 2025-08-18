@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert, Modal, Platform } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import GlassCard from '@/components/ui/GlassCard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { DatePicker, CleanSchedule } from '@/components';
 import { TripDates, EnhancedItinerary, ItineraryActivity } from '@/types';
 import { formatDateForChat, calculateTripDuration } from '@/utils';
+import exportService from '@/services/export';
 
 interface Activity {
   time: string;
@@ -133,6 +135,9 @@ export default function HomeScreen() {
   // State for save schedule modal
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [scheduleName, setScheduleName] = useState('');
+  
+  // State for export functionality
+  const [isExporting, setIsExporting] = useState(false);
 
   // Purchase options
   const [includeFlights, setIncludeFlights] = useState(true);
@@ -279,6 +284,26 @@ export default function HomeScreen() {
       }
     }
   }, []);
+
+  // Reload the itinerary every time the Home tab gains focus (e.g., after selecting "Edit" from the Schedule tab)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (typeof window !== 'undefined') {
+        const storedItinerary = sessionStorage.getItem('currentItinerary');
+        if (storedItinerary) {
+          try {
+            const itinerary = JSON.parse(storedItinerary);
+            setCurrentItinerary(itinerary);
+            updateScheduleFromItinerary(itinerary);
+          } catch (error) {
+            console.error('Error parsing stored itinerary on focus:', error);
+          }
+        }
+      }
+      // No cleanup necessary
+      return () => {};
+    }, [])
+  );
 
   // Load saved schedules from localStorage on component mount
   useEffect(() => {
@@ -778,6 +803,31 @@ export default function HomeScreen() {
     }
   };
 
+  const handleExportItinerary = async () => {
+    if (!currentItinerary) {
+      Alert.alert('No Itinerary', 'There is no current itinerary to export.');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const result = await exportService.exportItinerary(currentItinerary);
+      
+      if (result.success) {
+        if (Platform.OS === 'web') {
+          Alert.alert('Success', result.message || 'PDF downloaded successfully!');
+        } else {
+          Alert.alert('Success', result.message || 'PDF has been sent to your email!');
+        }
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Export Failed', error instanceof Error ? error.message : 'Failed to export itinerary');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
               {/* Header */}
@@ -921,6 +971,24 @@ export default function HomeScreen() {
               <Text style={styles.destinationTitle}>{currentItinerary.destination}</Text>
               <Text style={styles.durationText}>{currentItinerary.duration}</Text>
               <Text style={styles.descriptionText}>{currentItinerary.description}</Text>
+              
+              {/* Export Actions */}
+              <View style={styles.exportActions}>
+                <TouchableOpacity 
+                  style={[styles.exportButton, isExporting && styles.exportButtonDisabled]} 
+                  onPress={handleExportItinerary}
+                  disabled={isExporting}
+                >
+                  <Text style={styles.exportButtonText}>
+                    {isExporting 
+                      ? 'Exporting...' 
+                      : Platform.OS === 'web' 
+                        ? '📄 Download PDF' 
+                        : '📧 Email PDF'
+                    }
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </GlassCard>
 
             {/* Flight Information */}
@@ -2222,5 +2290,29 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  exportActions: {
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  exportButton: {
+    backgroundColor: '#10b981',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  exportButtonDisabled: {
+    opacity: 0.6,
+  },
+  exportButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

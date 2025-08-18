@@ -13,3 +13,5 @@ pytest-asyncio
 httpx
 pytest-cov
 slowapi
+reportlab
+weasyprint

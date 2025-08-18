@@ -100,6 +100,20 @@ export default function ScheduleScreen() {
     router.push('/checkout');
   };
 
+  // Inject the selected schedule back into the Home tab for editing
+  const handleEditSchedule = (schedule: SavedSchedule) => {
+    // Persist itinerary so the Home screen can pick it up
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('currentItinerary', JSON.stringify(schedule.itinerary));
+    }
+
+    // Close the details modal before navigating
+    setShowScheduleDetails(false);
+
+    // Navigate to the Home tab so the user can modify the schedule
+    router.push('/');
+  };
+
   const handleDeleteSchedule = (scheduleId: string) => {
     const updatedSchedules = savedSchedules.filter(s => s.id !== scheduleId);
     setSavedSchedules(updatedSchedules);
@@ -294,6 +308,12 @@ export default function ScheduleScreen() {
                       onPress={() => handleCheckout(selectedSchedule)}
                     >
                       <Text style={styles.checkoutButtonText}>💳 Checkout</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.editButton}
+                      onPress={() => handleEditSchedule(selectedSchedule)}
+                    >
+                      <Text style={styles.checkoutButtonText}>✏️ Edit</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
@@ -635,6 +655,12 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: '#f59e0b',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 12,
+  },
+  editButton: {
+    backgroundColor: '#10b981',
     paddingVertical: 12,
     paddingHorizontal: 25,
     borderRadius: 12,

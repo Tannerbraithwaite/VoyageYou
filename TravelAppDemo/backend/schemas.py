@@ -42,6 +42,11 @@ class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
 
+# PDF Export schemas
+class ExportItineraryRequest(BaseModel):
+    itinerary_data: dict
+    email_pdf: bool = False  # True for mobile (email), False for web (download)
+
 class OAuthRequest(BaseModel):
     id_token: str
     provider: str  # "google" or "apple"

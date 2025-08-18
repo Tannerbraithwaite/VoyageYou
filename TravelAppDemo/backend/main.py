@@ -39,7 +39,7 @@ from schemas import (
     ItineraryRequest, ItineraryResponse,
     Recommendation, LoginRequest, LoginResponse, TokenResponse, RefreshTokenRequest, OAuthRequest,
     SignupRequest, VerificationRequest, SignupResponse,
-    ChatRequest, ChatResponse, ChatMessage
+    ChatRequest, ChatResponse, ChatMessage, ExportItineraryRequest
 )
 from services import UserService, TripService, ActivityService, ItineraryService, RecommendationService, ChatbotService
 from auth import AuthService
@@ -873,6 +873,54 @@ def get_chat_history(user_id: int, limit: int = 20, db: Session = Depends(get_db
         raise HTTPException(status_code=403, detail="Forbidden")
     """Get chat history for a user"""
     return ChatbotService.get_chat_history(db, user_id, limit)
+
+# PDF Export endpoints
+@app.post("/itinerary/export")
+async def export_itinerary(
+    export_request: ExportItineraryRequest,
+    current_user: User = Depends(get_current_user_from_cookies)
+):
+    """Export itinerary as PDF - email on mobile, download on web"""
+    try:
+        from pdf_service import pdf_service
+        
+        # Generate PDF
+        pdf_buffer = pdf_service.generate_itinerary_pdf(
+            export_request.itinerary_data, 
+            current_user.email
+        )
+        
+        destination = export_request.itinerary_data.get('destination', 'Travel')
+        filename = pdf_service.generate_filename(destination, current_user.id)
+        
+        if export_request.email_pdf:
+            # Mobile: Email the PDF
+            pdf_bytes = pdf_buffer.getvalue()
+            email_sent = await email_service.send_itinerary_pdf_email(
+                current_user.email,
+                current_user.name or "Traveler",
+                pdf_bytes,
+                filename,
+                destination
+            )
+            
+            if email_sent:
+                return {"message": f"Itinerary PDF has been sent to {current_user.email}"}
+            else:
+                raise HTTPException(status_code=500, detail="Failed to send email")
+        else:
+            # Web: Return PDF for download
+            from fastapi.responses import StreamingResponse
+            
+            pdf_buffer.seek(0)
+            return StreamingResponse(
+                iter([pdf_buffer.getvalue()]),
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename={filename}"}
+            )
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error exporting itinerary: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

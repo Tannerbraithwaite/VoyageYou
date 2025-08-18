@@ -43,6 +43,26 @@ class EmailService:
         except Exception as e:
             print(f"Error sending password reset email: {e}")
             return False
+    
+    async def send_itinerary_pdf_email(self, recipient_email: str, recipient_name: str, 
+                                     pdf_buffer: bytes, filename: str, destination: str) -> bool:
+        """Send itinerary PDF email (simplified stub for development)"""
+        try:
+            print(f"Would send itinerary PDF email to {recipient_email}")
+            print(f"  - PDF filename: {filename}")
+            print(f"  - Destination: {destination}")
+            print(f"  - PDF size: {len(pdf_buffer)} bytes")
+            print("  - Subject: Your Travel Itinerary")
+            print("  - Body: Please find your travel itinerary attached as a PDF.")
+            
+            # In production, this would:
+            # 1. Create email with PDF attachment
+            # 2. Send via SMTP
+            # 3. Return success/failure
+            return True
+        except Exception as e:
+            print(f"Error sending itinerary PDF email: {e}")
+            return False
 
 # Create a singleton instance
 email_service = EmailService() 
