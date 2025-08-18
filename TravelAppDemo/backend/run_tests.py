@@ -26,7 +26,7 @@ def run_backend_tests():
     try:
         result = subprocess.run([
             sys.executable, "-m", "pytest", 
-            "test_main.py", "test_database.py",
+            "test_main.py", "test_database.py", "test_password_reset.py",
             "-v", "--cov=.", "--cov-report=term-missing",
             "--cov-report=html:htmlcov"
         ], check=True)
