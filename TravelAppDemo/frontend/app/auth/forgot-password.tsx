@@ -63,7 +63,7 @@ export default function ForgotPasswordScreen() {
         <View style={styles.successContainer}>
           <Text style={styles.successText}>{successMessage}</Text>
           {Platform.OS === 'web' && (
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.push('/auth/login')}>
               <Text style={styles.backButtonText}>Back to Login</Text>
             </TouchableOpacity>
           )}
