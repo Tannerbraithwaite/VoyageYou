@@ -537,21 +537,23 @@ const styles = StyleSheet.create({
     borderColor: '#333',
   },
   successText: {
-    color: '#4CAF50',
+    color: '#a78bfa',
     fontSize: 16,
     fontWeight: 'bold',
   },
   errorText: {
-    color: '#F44336',
+    color: '#f87171',
     fontSize: 16,
     fontWeight: 'bold',
   },
   logoutButton: {
-    backgroundColor: '#dc3545',
+    backgroundColor: '#7c3aed',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#8b5cf6',
   },
   logoutButtonText: {
     color: 'white',

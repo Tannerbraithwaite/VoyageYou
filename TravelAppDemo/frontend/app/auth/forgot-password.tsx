@@ -118,26 +118,28 @@ const styles = StyleSheet.create({
   successContainer: {
     marginTop: 20,
     padding: 16,
-    backgroundColor: '#1a3a1a',
+    backgroundColor: '#2a1a3a',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#4ade80',
+    borderColor: '#8b5cf6',
   },
   successText: {
     fontSize: 14,
-    color: '#4ade80',
+    color: '#a78bfa',
     textAlign: 'center',
     marginBottom: 12,
   },
   backButton: {
-    backgroundColor: '#4ade80',
+    backgroundColor: '#8b5cf6',
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#a78bfa',
   },
   backButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a3a1a',
+    color: 'white',
   },
 });
