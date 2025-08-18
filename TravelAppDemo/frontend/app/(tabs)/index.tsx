@@ -1104,15 +1104,15 @@ export default function HomeScreen() {
               </View>
             </GlassCard>
 
+            {/* Save Schedule Button */}
+            <TouchableOpacity style={styles.saveScheduleButton} onPress={handleSaveSchedule}>
+              <Text style={styles.saveScheduleButtonText}>💾 Save This Schedule</Text>
+            </TouchableOpacity>
+
             {/* Checkout Button */}
             <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
               <Text style={styles.checkoutButtonText}>Checkout Now</Text>
             </TouchableOpacity>
-
-            {/* Save Schedule Button */}
-            <TouchableOpacity style={styles.saveScheduleButton} onPress={handleSaveSchedule}>
-              <Text style={styles.saveScheduleButtonText}>💾 Save This Schedule</Text>
-                            </TouchableOpacity>
             </GlassCard>
         )}
 
@@ -1613,11 +1613,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   checkoutButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 15,
-    borderRadius: 25,
+    backgroundColor: '#6366f1',
+    paddingVertical: 16,
+    borderRadius: 16,
     alignItems: 'center',
     marginBottom: 30,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   checkoutButtonText: {
     color: '#ffffff',
@@ -2280,16 +2285,18 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   saveScheduleButton: {
-    backgroundColor: '#6366f1',
-    paddingVertical: 15,
-    borderRadius: 25,
+    backgroundColor: 'transparent',
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#8b5cf6',
   },
   saveScheduleButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: '#8b5cf6',
+    fontSize: 14,
+    fontWeight: '600',
   },
   exportActions: {
     marginTop: 15,

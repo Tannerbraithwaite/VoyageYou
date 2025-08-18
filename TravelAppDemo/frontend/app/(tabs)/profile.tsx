@@ -547,18 +547,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   logoutButton: {
-    backgroundColor: '#7c3aed',
     padding: 15,
-    borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#8b5cf6',
   },
   logoutButtonText: {
-    color: 'white',
+    color: '#8b5cf6',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   loadingContainer: {
     backgroundColor: '#1a1a1a',

@@ -301,19 +301,13 @@ export default function ScheduleScreen() {
                     ))}
                   </GlassCard>
 
-                  {/* Actions */}
-                  <View style={styles.modalActions}>
-                    <TouchableOpacity 
-                      style={styles.checkoutButton}
-                      onPress={() => handleCheckout(selectedSchedule)}
-                    >
-                      <Text style={styles.checkoutButtonText}>💳 Checkout</Text>
-                    </TouchableOpacity>
+                  {/* Secondary Actions */}
+                  <View style={styles.secondaryActions}>
                     <TouchableOpacity 
                       style={styles.editButton}
                       onPress={() => handleEditSchedule(selectedSchedule)}
                     >
-                      <Text style={styles.checkoutButtonText}>✏️ Edit</Text>
+                      <Text style={styles.editButtonText}>✏️ Edit</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
@@ -334,6 +328,16 @@ export default function ScheduleScreen() {
                       }}
                     >
                       <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Primary Action */}
+                  <View style={styles.primaryAction}>
+                    <TouchableOpacity 
+                      style={styles.checkoutButton}
+                      onPress={() => handleCheckout(selectedSchedule)}
+                    >
+                      <Text style={styles.checkoutButtonText}>💳 Checkout</Text>
                     </TouchableOpacity>
                   </View>
                 </ScrollView>
@@ -634,40 +638,59 @@ const styles = StyleSheet.create({
   starFilled: {
     color: '#FFD700',
   },
-  modalActions: {
+  secondaryActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginTop: 20,
     paddingTop: 15,
     borderTopWidth: 1,
     borderTopColor: '#333',
+    marginBottom: 15,
+  },
+  primaryAction: {
+    paddingHorizontal: 20,
   },
   checkoutButton: {
     backgroundColor: '#6366f1',
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   checkoutButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: 'white',
   },
   deleteButton: {
-    backgroundColor: '#f59e0b',
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 12,
+    backgroundColor: '#dc2626',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ef4444',
   },
   editButton: {
-    backgroundColor: '#10b981',
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 12,
+    backgroundColor: 'transparent',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#8b5cf6',
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8b5cf6',
   },
   deleteButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: 'white',
   },
 });
