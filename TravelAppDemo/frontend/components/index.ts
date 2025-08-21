@@ -9,6 +9,7 @@ export { HelloWave } from './HelloWave';
 export { default as ParallaxScrollView } from './ParallaxScrollView';
 export { ThemedText } from './ThemedText';
 export { ThemedView } from './ThemedView';
+export { AlternativesSelector } from './AlternativesSelector';
 
 // UI components
 export { IconSymbol } from './ui/IconSymbol';

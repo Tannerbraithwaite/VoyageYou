@@ -203,6 +203,36 @@ export default function CheckoutScreen() {
 
   const handleSubmit = () => {
     if (validateStep(activeStep)) {
+      // Mark the trip as booked in localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          const storedItinerary = sessionStorage.getItem('currentItinerary');
+          if (storedItinerary) {
+            const itineraryData = JSON.parse(storedItinerary);
+            
+            // Find the saved schedule and update its status
+            const existingSchedules = JSON.parse(localStorage.getItem('savedSchedules') || '[]');
+            const updatedSchedules = existingSchedules.map((schedule: any) => {
+              // Match by destination and duration to find the right schedule
+              if (schedule.destination === itineraryData.destination && 
+                  schedule.duration === itineraryData.duration) {
+                return {
+                  ...schedule,
+                  status: 'booked',
+                  checkoutDate: new Date().toISOString()
+                };
+              }
+              return schedule;
+            });
+            
+            localStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+            console.log('✅ Trip marked as booked:', itineraryData.destination);
+          }
+        } catch (error) {
+          console.error('Error updating trip status:', error);
+        }
+      }
+
       Alert.alert(
         'Booking Confirmed!',
         'Your trip has been successfully booked. You will receive a confirmation email shortly.',

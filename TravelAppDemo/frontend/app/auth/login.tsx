@@ -150,25 +150,11 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity 
-            style={[styles.socialButton, isGoogleLoading && styles.socialButtonDisabled]} 
-            onPress={handleGoogleSignIn}
-            disabled={isGoogleLoading}
-          >
-            <Text style={styles.socialButtonText}>
-              {isGoogleLoading ? 'Signing in with Google...' : 'Continue with Google'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.socialButton, isAppleLoading && styles.socialButtonDisabled]} 
-            onPress={handleAppleSignIn}
-            disabled={isAppleLoading}
-          >
-            <Text style={styles.socialButtonText}>
-              {isAppleLoading ? 'Signing in with Apple...' : 'Continue with Apple'}
-            </Text>
-          </TouchableOpacity>
+          {/* Temporarily disabled OAuth buttons to fix login issues */}
+          <View style={styles.disabledOAuthContainer}>
+            <Text style={styles.disabledOAuthText}>OAuth temporarily disabled</Text>
+            <Text style={styles.disabledOAuthSubtext}>Please use email/password login above</Text>
+          </View>
         </View>
 
         <View style={styles.footer}>
@@ -334,5 +320,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6366f1',
     fontWeight: '700',
+  },
+  disabledOAuthContainer: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  disabledOAuthText: {
+    color: '#999',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  disabledOAuthSubtext: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
   },
 }); 

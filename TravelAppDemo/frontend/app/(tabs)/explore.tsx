@@ -18,8 +18,24 @@ interface SavedSchedule {
   duration: string;
   savedAt: string;
   status: 'unbooked' | 'booked' | 'past';
-  itinerary: any;
-  schedule: Activity[][];
+  itinerary: any; // Keep as any for now to avoid type conflicts
+  schedule: any[]; // Changed to match the corrected type
+  
+  // Trip status fields
+  checkoutDate?: string;
+  tripStartDate?: string;
+  tripEndDate?: string;
+  
+  // Enhanced information fields
+  flights: any[];
+  hotels: any[];
+  activities: any[];
+  dates: string[];
+  costBreakdown: {
+    total: number;
+    bookable: number;
+    estimated: number;
+  };
 }
 
 export default function ScheduleScreen() {
@@ -28,19 +44,46 @@ export default function ScheduleScreen() {
   const [showScheduleDetails, setShowScheduleDetails] = useState(false);
   const [activityRatings, setActivityRatings] = useState<Record<string, number>>({});
 
+  // Function to automatically determine trip status
+  const determineTripStatus = (schedule: any): 'unbooked' | 'booked' | 'past' => {
+    const now = new Date();
+    
+    // FIRST PRIORITY: Check if trip dates have passed (time takes precedence)
+    if (schedule.tripEndDate) {
+      try {
+        const tripEnd = new Date(schedule.tripEndDate);
+        
+        if (tripEnd < now) {
+          return 'past';
+        }
+      } catch (error) {
+        console.log(`Error parsing trip end date: ${error}`);
+      }
+    }
+    
+    // SECOND PRIORITY: If not past, then check checkout status
+    if (schedule.checkoutDate) {
+      return 'booked';
+    } else {
+      return 'unbooked';
+    }
+  };
+
   // Load saved schedules from localStorage
   const loadSavedSchedules = () => {
     if (typeof window !== 'undefined') {
       try {
-        const storedSchedules = localStorage.getItem('savedSchedules');
-        if (storedSchedules) {
-          const schedules = JSON.parse(storedSchedules);
-          setSavedSchedules(schedules);
-          console.log('📱 Loaded saved schedules:', schedules.length);
-        }
-        const storedRatings = localStorage.getItem('activityRatings');
-        if (storedRatings) {
-          try { setActivityRatings(JSON.parse(storedRatings)); } catch {}
+        const stored = localStorage.getItem('savedSchedules');
+        if (stored) {
+          const schedules = JSON.parse(stored);
+          
+          // Apply automatic status assignment to all schedules
+          const updatedSchedules = schedules.map((schedule: any) => ({
+            ...schedule,
+            status: determineTripStatus(schedule)
+          }));
+          
+          setSavedSchedules(updatedSchedules);
         }
       } catch (error) {
         console.error('Error loading saved schedules:', error);
@@ -212,27 +255,65 @@ export default function ScheduleScreen() {
                       <Text style={styles.statusIcon}>{getStatusIcon(schedule.status)}</Text>
                       <Text style={styles.statusText}>{schedule.status}</Text>
                     </View>
+                    {/* Status description */}
+                    <Text style={styles.statusDescription}>
+                      {schedule.status === 'unbooked' ? 'Ready to book' : 
+                       schedule.status === 'booked' ? 'Confirmed' : 'Completed'}
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.scheduleActions}>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() => handleStatusChange(schedule.id, 'unbooked')}
-                  >
-                    <Text style={styles.actionButtonText}>⏳ Unbooked</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() => handleStatusChange(schedule.id, 'booked')}
-                  >
-                    <Text style={styles.actionButtonText}>✅ Booked</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() => handleStatusChange(schedule.id, 'past')}
-                  >
-                    <Text style={styles.actionButtonText}>📅 Past</Text>
-                  </TouchableOpacity>
+                  {/* Only show status change buttons for unbooked trips */}
+                  {schedule.status === 'unbooked' && (
+                    <>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => handleStatusChange(schedule.id, 'booked')}
+                      >
+                        <Text style={styles.actionButtonText}>✅ Booked</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => handleStatusChange(schedule.id, 'past')}
+                      >
+                        <Text style={styles.actionButtonText}>📅 Past</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {/* Show status change buttons for booked trips */}
+                  {schedule.status === 'booked' && (
+                    <>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => handleStatusChange(schedule.id, 'unbooked')}
+                      >
+                        <Text style={styles.actionButtonText}>⏳ Unbooked</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => handleStatusChange(schedule.id, 'past')}
+                      >
+                        <Text style={styles.actionButtonText}>📅 Past</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {/* Show status change buttons for past trips */}
+                  {schedule.status === 'past' && (
+                    <>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => handleStatusChange(schedule.id, 'unbooked')}
+                      >
+                        <Text style={styles.actionButtonText}>⏳ Unbooked</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => handleStatusChange(schedule.id, 'booked')}
+                      >
+                        <Text style={styles.actionButtonText}>✅ Booked</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </View>
               </TouchableOpacity>
             ))
@@ -270,27 +351,96 @@ export default function ScheduleScreen() {
                     <Text style={styles.detailText}>Saved: {formatDate(selectedSchedule.savedAt)}</Text>
                   </GlassCard>
 
+                  {/* Enhanced Information Sections */}
+                  {/* Flights */}
+                  {selectedSchedule.flights && selectedSchedule.flights.length > 0 && (
+                    <GlassCard style={styles.detailSection}>
+                      <Text style={styles.detailTitle}>✈️ Flight Information</Text>
+                      {selectedSchedule.flights.map((flight, index) => (
+                        <View key={index} style={styles.infoItem}>
+                          <Text style={styles.infoLabel}>{flight.type === 'outbound' ? 'Departure' : 'Return'}</Text>
+                          <Text style={styles.infoText}>{flight.airline} {flight.flight}</Text>
+                          <Text style={styles.infoSubtext}>{flight.departure} at {flight.time}</Text>
+                          <Text style={styles.infoPrice}>${flight.price}</Text>
+                        </View>
+                      ))}
+                    </GlassCard>
+                  )}
+
+                  {/* Hotels */}
+                  {selectedSchedule.hotels && selectedSchedule.hotels.length > 0 && (
+                    <GlassCard style={styles.detailSection}>
+                      <Text style={styles.detailTitle}>🏨 Hotel Information</Text>
+                      {selectedSchedule.hotels.map((hotel, index) => (
+                        <View key={index} style={styles.infoItem}>
+                          <Text style={styles.infoText}>{hotel.name}</Text>
+                          <Text style={styles.infoSubtext}>{hotel.address}</Text>
+                          <Text style={styles.infoSubtext}>Check-in: {hotel.check_in} | Check-out: {hotel.check_out}</Text>
+                          <Text style={styles.infoSubtext}>Room: {hotel.room_type} | Nights: {hotel.total_nights}</Text>
+                          <Text style={styles.infoPrice}>${hotel.price}/night</Text>
+                        </View>
+                      ))}
+                    </GlassCard>
+                  )}
+
+                  {/* Cost Breakdown */}
+                  {selectedSchedule.costBreakdown && (
+                    <GlassCard style={styles.detailSection}>
+                      <Text style={styles.detailTitle}>💰 Cost Breakdown</Text>
+                      <View style={styles.costRow}>
+                        <Text style={styles.costLabel}>Total Cost:</Text>
+                        <Text style={styles.costTotal}>${selectedSchedule.costBreakdown.total}</Text>
+                      </View>
+                      <View style={styles.costRow}>
+                        <Text style={styles.costLabel}>Bookable Activities:</Text>
+                        <Text style={styles.costAmount}>${selectedSchedule.costBreakdown.bookable}</Text>
+                      </View>
+                      <View style={styles.costRow}>
+                        <Text style={styles.costLabel}>Estimated Activities:</Text>
+                        <Text style={styles.costAmount}>${selectedSchedule.costBreakdown.estimated}</Text>
+                      </View>
+                    </GlassCard>
+                  )}
+
+                  {/* Trip Dates */}
+                  {selectedSchedule.dates && selectedSchedule.dates.length > 0 && (
+                    <GlassCard style={styles.detailSection}>
+                      <Text style={styles.detailTitle}>📅 Trip Dates</Text>
+                      {selectedSchedule.dates.map((date, index) => (
+                        <Text key={index} style={styles.dateText}>
+                          Day {index + 1}: {date}
+                        </Text>
+                      ))}
+                    </GlassCard>
+                  )}
+
                   {/* Daily Schedule */}
                   <GlassCard style={styles.detailSection}>
                     <Text style={styles.detailTitle}>📅 Daily Schedule</Text>
-                    {selectedSchedule.schedule.map((dayActivities, dayIndex) => (
+                    {selectedSchedule.schedule.map((day, dayIndex) => (
                       <View key={dayIndex} style={styles.daySection}>
                         <Text style={styles.dayTitle}>Day {dayIndex + 1}</Text>
-                        {dayActivities.map((activity, activityIndex) => {
-                          const key = `${selectedSchedule.id}|${dayIndex}|${activityIndex}|${activity.time}|${activity.activity}`;
+                        {day.activities.map((activity: any, activityIndex: number) => {
+                          const key = `${selectedSchedule.id}|${dayIndex}|${activityIndex}|${activity.time}|${activity.name}`;
                           return (
                             <View key={activityIndex} style={styles.activityItem}>
-                              <Text style={styles.activityTime}>{activity.time}</Text>
-                              <View style={styles.activityContent}>
-                                <Text style={styles.activityName}>{activity.activity}</Text>
-                                <View style={styles.activityDetails}>
-                                  <Text style={styles.activityPrice}>${activity.price}</Text>
-                                  <View style={[styles.typeBadge, activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge]}>
-                                    <Text style={styles.typeText}>
-                                      {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
-                                    </Text>
-                                  </View>
+                              <View style={styles.activityTimeSection}>
+                                <Text style={styles.activityTime}>{activity.time}</Text>
+                                <View style={[styles.typeBadge, activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge]}>
+                                  <Text style={styles.typeText}>
+                                    {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
+                                  </Text>
                                 </View>
+                              </View>
+                              <View style={styles.activityContent}>
+                                <Text style={styles.activityName}>{activity.name}</Text>
+                                <Text style={styles.activityPrice}>${activity.price}</Text>
+                                {/* Show activity description if available */}
+                                {activity.description && (
+                                  <Text style={styles.activityDescription}>
+                                    {activity.description}
+                                  </Text>
+                                )}
                               </View>
                               {/* Ratings visible only for past schedules */}
                               {selectedSchedule.status === 'past' && renderStars(key)}
@@ -303,42 +453,71 @@ export default function ScheduleScreen() {
 
                   {/* Secondary Actions */}
                   <View style={styles.secondaryActions}>
-                    <TouchableOpacity 
-                      style={styles.editButton}
-                      onPress={() => handleEditSchedule(selectedSchedule)}
-                    >
-                      <Text style={styles.editButtonText}>✏️ Edit</Text>
-                    </TouchableOpacity>
                     
-                    <TouchableOpacity 
-                      style={styles.deleteButton}
-                      onPress={() => {
-                        Alert.alert(
-                          'Delete Schedule',
-                          'Are you sure you want to delete this schedule?',
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            { 
-                              text: 'Delete', 
-                              style: 'destructive',
-                              onPress: () => handleDeleteSchedule(selectedSchedule.id)
-                            }
-                          ]
-                        );
-                      }}
-                    >
-                      <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
-                    </TouchableOpacity>
+                    {/* Edit button - only for unbooked and booked trips */}
+                    {(selectedSchedule.status === 'unbooked' || selectedSchedule.status === 'booked') && (
+                      <TouchableOpacity 
+                        style={styles.editButton}
+                        onPress={() => {
+                          handleEditSchedule(selectedSchedule);
+                        }}
+                      >
+                        <Text style={styles.editButtonText}>✏️ Edit</Text>
+                      </TouchableOpacity>
+                    )}
+                    
+                    {/* Delete button - only for unbooked trips */}
+                    {selectedSchedule.status === 'unbooked' && (
+                      <TouchableOpacity 
+                        style={styles.deleteButton}
+                        onPress={() => {
+                          Alert.alert(
+                            'Delete Schedule',
+                            'Are you sure you want to delete this schedule?',
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              { 
+                                text: 'Delete', 
+                                style: 'destructive',
+                                onPress: () => {
+                                  handleDeleteSchedule(selectedSchedule.id);
+                                }
+                              }
+                            ]
+                          );
+                        }}
+                      >
+                        <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
 
                   {/* Primary Action */}
                   <View style={styles.primaryAction}>
-                    <TouchableOpacity 
-                      style={styles.checkoutButton}
-                      onPress={() => handleCheckout(selectedSchedule)}
-                    >
-                      <Text style={styles.checkoutButtonText}>💳 Checkout</Text>
-                    </TouchableOpacity>
+                    {/* Checkout button - only for unbooked trips */}
+                    {selectedSchedule.status === 'unbooked' && (
+                      <TouchableOpacity 
+                        style={styles.checkoutButton}
+                        onPress={() => {
+                          handleCheckout(selectedSchedule);
+                        }}
+                      >
+                        <Text style={styles.checkoutButtonText}>💳 Checkout</Text>
+                      </TouchableOpacity>
+                    )}
+                    
+                    {/* Status info for booked and past trips */}
+                    {selectedSchedule.status === 'booked' && (
+                      <View style={[styles.checkoutButton, { backgroundColor: '#10b981' }]}>
+                        <Text style={styles.checkoutButtonText}>✅ Already Booked</Text>
+                      </View>
+                    )}
+                    
+                    {selectedSchedule.status === 'past' && (
+                      <View style={[styles.checkoutButton, { backgroundColor: '#6b7280' }]}>
+                        <Text style={styles.checkoutButtonText}>📅 Trip Completed</Text>
+                      </View>
+                    )}
                   </View>
                 </ScrollView>
               </>
@@ -444,6 +623,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: 'white',
+  },
+  statusDescription: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 4,
+    textAlign: 'center',
   },
   scheduleActions: {
     flexDirection: 'row',
@@ -564,53 +749,65 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   daySection: {
-    marginBottom: 16,
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: '#111',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#333',
   },
   dayTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 12,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#6366f1',
+    marginBottom: 16,
+    textAlign: 'center',
+    letterSpacing: -0.5,
   },
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
   },
-  activityTime: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6366f1',
-    width: 60,
-    textAlign: 'center',
-  },
   activityContent: {
     flex: 1,
     marginLeft: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   activityName: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '600',
     color: 'white',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  activityDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  activityDescription: {
+    fontSize: 13,
+    color: '#ccc',
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  activityTimeSection: {
     alignItems: 'center',
+    marginRight: 15,
+    minWidth: 80,
   },
-  activityPrice: {
-    fontSize: 14,
+  activityTime: {
+    fontSize: 16,
     fontWeight: '700',
     color: '#6366f1',
-    marginRight: 8,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  activityPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6366f1',
+    marginTop: 4,
   },
   typeBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
-    marginLeft: 8,
+    borderRadius: 6,
+    backgroundColor: '#333',
   },
   bookableBadge: {
     backgroundColor: '#10b981',
@@ -619,9 +816,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#475569',
   },
   typeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: 'white',
+    textAlign: 'center',
   },
   ratingRow: {
     flexDirection: 'row',
@@ -692,5 +890,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: 'white',
+  },
+  infoItem: {
+    marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 4,
+  },
+  infoText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: 4,
+  },
+  infoSubtext: {
+    fontSize: 12,
+    color: '#ccc',
+    marginBottom: 4,
+  },
+  infoPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6366f1',
+    marginTop: 8,
+  },
+  costRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  costLabel: {
+    fontSize: 14,
+    color: '#999',
+  },
+  costTotal: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6366f1',
+  },
+  costAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6366f1',
+  },
+  dateText: {
+    fontSize: 14,
+    color: 'white',
+    marginBottom: 8,
   },
 });

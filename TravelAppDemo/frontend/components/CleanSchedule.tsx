@@ -6,7 +6,13 @@ interface Activity {
   time: string;
   activity: string;
   price: number;
-  type: 'bookable' | 'estimated';
+  type: 'bookable' | 'estimated' | 'transport';
+  transport_details?: {
+    type: 'flight' | 'train' | 'bus';
+    carrier: string;
+    departure: string;
+    time: string;
+  };
 }
 
 interface Day {
@@ -297,16 +303,30 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                               )}
                               <View style={[
                                 styles.typeBadge,
-                                activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge
+                                activity.type === 'bookable' ? styles.bookableBadge : 
+                                activity.type === 'transport' ? styles.transportBadge : styles.estimatedBadge
                               ]}>
                                 <Text style={[
                                   styles.typeText,
-                                  activity.type === 'bookable' ? styles.bookableText : styles.estimatedText
+                                  activity.type === 'bookable' ? styles.bookableText : 
+                                  activity.type === 'transport' ? styles.transportText : styles.estimatedText
                                 ]}>
-                                  {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
+                                  {activity.type === 'bookable' ? 'Bookable' : 
+                                   activity.type === 'transport' ? 'Transport' : 'Estimated'}
                                 </Text>
                               </View>
                             </View>
+                            
+                            {/* Show transport details for transport activities */}
+                            {activity.type === 'transport' && activity.transport_details && (
+                              <View style={styles.transportDetails}>
+                                <Text style={styles.transportInfo}>
+                                  {activity.transport_details.carrier} • {activity.transport_details.departure}
+                                </Text>
+                                <Text style={styles.transportTime}>{activity.transport_details.time}</Text>
+                              </View>
+                            )}
+                            
                             <Text style={styles.editHint}>Tap to edit</Text>
                           </TouchableOpacity>
                           
@@ -362,7 +382,7 @@ const styles = {
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: 'bold' as const,
     color: '#ffffff',
     marginBottom: 15,
   },
@@ -371,7 +391,7 @@ const styles = {
     color: '#cccccc',
     marginTop: 10,
     marginBottom: 15,
-    textAlign: 'center',
+    textAlign: 'center' as const,
   },
   dayContainer: {
     backgroundColor: '#1a1a1a',
@@ -380,16 +400,16 @@ const styles = {
     marginBottom: 15,
   },
   dayHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
   dayTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: 'bold' as const,
     color: '#ffffff',
   },
   dayDate: {
@@ -397,88 +417,100 @@ const styles = {
     color: '#cccccc',
   },
   scheduledActivityContainer: {
-    marginBottom: 12,
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#333',
+    marginBottom: 15,
+  },
+  activityTimeHeader: {
+    marginBottom: 8,
+  },
+  activityTime: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#6366f1',
   },
   activityCard: {
     backgroundColor: '#2a2a2a',
     borderRadius: 8,
-    padding: 12,
+    overflow: 'hidden',
   },
-  activityTimeHeader: {
-    padding: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-    backgroundColor: '#3a3a3a',
-    borderTopLeftRadius: 7,
-    borderTopRightRadius: 7,
-  },
-  activityTime: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6366f1',
-    textAlign: 'center',
-  },
-
   activityContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
   },
   activityClickable: {
     flex: 1,
-    paddingVertical: 4,
+    padding: 15,
   },
   activityText: {
-    fontSize: 14,
-    color: 'white',
-    marginBottom: 4,
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#ffffff',
+    marginBottom: 8,
   },
   activityDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     marginBottom: 8,
   },
   priceText: {
     fontSize: 14,
-    color: '#6366f1',
-    fontWeight: '600',
-    marginRight: 8,
+    fontWeight: '600' as const,
+    color: '#10b981',
   },
   typeBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 80,
+    alignItems: 'center' as const,
   },
   bookableBadge: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#10b981',
   },
   estimatedBadge: {
     backgroundColor: '#475569',
   },
+  transportBadge: {
+    backgroundColor: '#FF9800',
+  },
   typeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: 'white',
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#ffffff',
   },
   bookableText: {
-    color: 'white',
+    color: '#ffffff',
   },
   estimatedText: {
+    color: '#ffffff',
+  },
+  transportText: {
+    color: '#ffffff',
+  },
+  transportDetails: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  transportInfo: {
+    fontSize: 12,
     color: '#ccc',
+    marginBottom: 2,
+  },
+  transportTime: {
+    fontSize: 12,
+    color: '#6366f1',
+    fontWeight: '600' as const,
   },
   editHint: {
-    fontSize: 11,
-    color: '#6366f1',
-    fontStyle: 'italic',
-    marginTop: 4,
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic' as const,
   },
   activityActions: {
-    flexDirection: 'row',
-    marginLeft: 10,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
   },
   editButton: {
     padding: 8,
@@ -488,86 +520,164 @@ const styles = {
     fontSize: 16,
   },
   deleteButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    alignItems: 'center',
+    padding: 8,
   },
   deleteButtonText: {
-    color: '#ffffff',
     fontSize: 16,
-    fontWeight: 'bold',
   },
   emptyDayContainer: {
+    alignItems: 'center' as const,
     padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#333',
-    marginBottom: 15,
   },
   emptyDayText: {
-    fontSize: 14,
-    color: 'white',
-    marginBottom: 4,
-    fontWeight: '600',
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 5,
   },
   emptyDaySubtext: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#999',
-    textAlign: 'center',
+    textAlign: 'center' as const,
   },
   addActivityButton: {
     backgroundColor: '#6366f1',
-    paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 25,
-    alignItems: 'center',
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center' as const,
     marginTop: 15,
-    marginBottom: 10,
-    borderWidth: 2,
-    borderColor: '#4f46e5',
   },
   addActivityButtonText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '600' as const,
   },
   totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    paddingTop: 10,
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginTop: 20,
+    paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: '#333',
   },
   totalLabel: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: 'bold' as const,
     color: '#ffffff',
-    fontWeight: 'bold',
   },
   totalAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: 'bold' as const,
     color: '#6366f1',
   },
-  // New styles for ActivityEditForm
-  activityEditForm: {
+  editFormContainer: {
     padding: 15,
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#333',
   },
   editFormTitle: {
     fontSize: 18,
     fontWeight: 'bold' as const,
     color: '#ffffff',
     marginBottom: 15,
-    textAlign: 'center' as const,
+  },
+  inputGroup: {
+    marginBottom: 15,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#cccccc',
+    marginBottom: 5,
+  },
+  textInput: {
+    backgroundColor: '#333',
+    color: '#ffffff',
+    padding: 12,
+    borderRadius: 8,
+    fontSize: 16,
+  },
+  alternativesSection: {
+    marginTop: 15,
+  },
+  alternativesTitle: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#ffffff',
+    marginBottom: 10,
+  },
+  alternativesSubtitle: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 10,
+  },
+  alternativeItem: {
+    backgroundColor: '#2a2a2a',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  alternativeItemSelected: {
+    backgroundColor: '#6366f1',
+  },
+  alternativeHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 5,
+  },
+  alternativeName: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#ffffff',
+  },
+  alternativePrice: {
+    fontSize: 14,
+    color: '#10b981',
+    fontWeight: '600' as const,
+  },
+  alternativeDescription: {
+    fontSize: 12,
+    color: '#cccccc',
+    marginBottom: 8,
+  },
+  editFormActions: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    marginTop: 20,
+  },
+  saveButton: {
+    backgroundColor: '#10b981',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 10,
+    alignItems: 'center' as const,
+  },
+  saveButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600' as const,
+  },
+  cancelButton: {
+    backgroundColor: '#6b7280',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 10,
+    alignItems: 'center' as const,
+  },
+  cancelButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600' as const,
+  },
+  activityEditForm: {
+    padding: 15,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#333',
   },
   timeInputRow: {
     flexDirection: 'row' as const,
@@ -593,21 +703,6 @@ const styles = {
     alignItems: 'center' as const,
     marginBottom: 10,
   },
-  inputLabel: {
-    fontSize: 14,
-    color: '#cccccc',
-    marginRight: 10,
-    width: 60,
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: '#333',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    color: '#ffffff',
-    fontSize: 14,
-  },
   typeSelection: {
     flexDirection: 'row' as const,
     backgroundColor: '#333',
@@ -629,93 +724,5 @@ const styles = {
   },
   typeOptionTextSelected: {
     color: '#ffffff',
-  },
-  alternativesSection: {
-    marginTop: 15,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-  },
-  alternativesTitle: {
-    fontSize: 14,
-    fontWeight: 'bold' as const,
-    color: '#ffffff',
-    marginBottom: 8,
-  },
-  alternativesSubtitle: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 10,
-  },
-  alternativeItem: {
-    backgroundColor: '#333',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  alternativeItemSelected: {
-    backgroundColor: '#6366f1',
-    borderColor: '#6366f1',
-  },
-  alternativeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  alternativeName: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: '#ffffff',
-  },
-  alternativePrice: {
-    fontSize: 12,
-    color: '#6366f1',
-    fontWeight: '600' as const,
-  },
-  alternativeDescription: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  editFormActions: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-around' as const,
-    marginTop: 20,
-  },
-  saveButton: {
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    alignItems: 'center' as const,
-    flex: 1,
-    marginRight: 10,
-    borderWidth: 2,
-    borderColor: '#4f46e5',
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600' as const,
-  },
-  cancelButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    alignItems: 'center' as const,
-    flex: 1,
-    marginLeft: 10,
-    borderWidth: 2,
-    borderColor: '#E1301F',
-  },
-  cancelButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600' as const,
   },
 };

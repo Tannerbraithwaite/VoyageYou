@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr
-from typing import List, Optional, ForwardRef
+from pydantic import BaseModel, EmailStr, Field
+from typing import List, Optional, ForwardRef, Union
 from datetime import datetime
 
 # Base schemas
@@ -322,6 +322,7 @@ class ItineraryActivity(BaseModel):
 class ItineraryDay(BaseModel):
     day: int
     date: str
+    city: Optional[str] = None  # For multi-city trips
     activities: List[ItineraryActivity]
 
 class FlightInfo(BaseModel):
@@ -331,8 +332,10 @@ class FlightInfo(BaseModel):
     time: str
     price: float
     type: str  # "outbound" or "return"
+    alternatives: Optional[List['FlightInfo']] = []
 
 class HotelInfo(BaseModel):
+    city: Optional[str] = None  # For multi-city trips
     name: str
     address: str
     check_in: str
@@ -340,8 +343,21 @@ class HotelInfo(BaseModel):
     room_type: str
     price: float
     total_nights: int
+    alternatives: Optional[List['HotelInfo']] = []
 
-class EnhancedItineraryResponse(BaseModel):
+class InterCityTransport(BaseModel):
+    from_location: str
+    to: str
+    type: str  # "flight", "train", "bus"
+    carrier: str
+    departure_time: str
+    arrival_time: str
+    price: float
+    description: str
+
+# Single City Itinerary
+class SingleCityItinerary(BaseModel):
+    trip_type: str = "single_city"
     destination: str
     duration: str
     description: str
@@ -351,6 +367,23 @@ class EnhancedItineraryResponse(BaseModel):
     total_cost: float
     bookable_cost: float
     estimated_cost: float
+
+# Multi-City Itinerary
+class MultiCityItinerary(BaseModel):
+    trip_type: str = "multi_city"
+    destinations: List[str]
+    duration: str
+    description: str
+    flights: List[FlightInfo]
+    hotels: List[HotelInfo]
+    inter_city_transport: List[InterCityTransport]
+    schedule: List[ItineraryDay]
+    total_cost: float
+    bookable_cost: float
+    estimated_cost: float
+
+# Union type for both itinerary types
+EnhancedItineraryResponse = Union[SingleCityItinerary, MultiCityItinerary]
 
 # Update forward references
 # Note: model_rebuild() is not needed in newer Pydantic versions 

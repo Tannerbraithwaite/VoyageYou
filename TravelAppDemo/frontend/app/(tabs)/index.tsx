@@ -3,14 +3,15 @@ import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert,
 import { useFocusEffect } from '@react-navigation/native';
 import GlassCard from '@/components/ui/GlassCard';
 import { router, useLocalSearchParams } from 'expo-router';
-import { DatePicker, CleanSchedule } from '@/components';
-import { TripDates, EnhancedItinerary, ItineraryActivity } from '@/types';
+import { DatePicker, CleanSchedule, AlternativesSelector } from '@/components';
+import { TripDates, EnhancedItinerary, ItineraryActivity, FlightInfo, HotelInfo, ItineraryDay, MultiCityItinerary, SingleCityItinerary } from '@/types';
 import { formatDateForChat, calculateTripDuration } from '@/utils';
 import exportService from '@/services/export';
 
+
 interface Activity {
   time: string;
-  activity: string;
+  name: string;
   price: number;
   type: 'bookable' | 'estimated';
 }
@@ -30,7 +31,22 @@ interface SavedSchedule {
   savedAt: string;
   status: 'unbooked' | 'booked' | 'past';
   itinerary: EnhancedItinerary;
-  schedule: Activity[][];
+  schedule: ItineraryDay[]; // Changed from Activity[][] to ItineraryDay[]
+  // New fields for automatic status assignment
+  checkoutDate?: string; // When the trip was checked out
+  tripStartDate?: string; // When the trip starts
+  tripEndDate?: string; // When the trip ends
+  
+  // Enhanced information fields
+  flights: FlightInfo[];
+  hotels: HotelInfo[];
+  activities: ItineraryActivity[];
+  dates: string[];
+  costBreakdown: {
+    total: number;
+    bookable: number;
+    estimated: number;
+  };
 }
 
 interface EditingTime {
@@ -48,6 +64,7 @@ interface EditingDay {
 // Activity Edit Form Component will be defined inside the main component
 
 export default function HomeScreen() {
+  console.log('🏠 HomeScreen component loaded!');
   const params = useLocalSearchParams();
   const chatScrollRef = useRef<ScrollView>(null);
   const [message, setMessage] = useState('');
@@ -65,16 +82,17 @@ export default function HomeScreen() {
   const [showAlternatives, setShowAlternatives] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
-  const [schedule, setSchedule] = useState([
+  const [schedule, setSchedule] = useState<ItineraryDay[]>([
     {
       day: 1,
       date: 'July 15, 2024',
+      city: 'Default City',
       activities: [
-        { time: '09:00', activity: 'Arrive at Hotel', price: 0, type: 'bookable' as const },
-        { time: '10:30', activity: 'City Walking Tour', price: 25, type: 'bookable' as const },
-        { time: '13:00', activity: 'Lunch at Local Bistro', price: 35, type: 'estimated' as const },
-        { time: '15:00', activity: 'Museum Visit', price: 18, type: 'bookable' as const },
-        { time: '18:00', activity: 'Dinner & Wine Tasting', price: 65, type: 'estimated' as const },
+        { time: '09:00', name: 'Arrive at Hotel', price: 0, type: 'bookable' as const },
+        { time: '10:30', name: 'City Walking Tour', price: 25, type: 'bookable' as const },
+        { time: '13:00', name: 'Lunch at Local Bistro', price: 35, type: 'estimated' as const },
+        { time: '15:00', name: 'Museum Visit', price: 18, type: 'bookable' as const },
+        { time: '18:00', name: 'Dinner & Wine Tasting', price: 65, type: 'estimated' as const },
       ]
     }
   ]);
@@ -203,7 +221,7 @@ export default function HomeScreen() {
         <View style={styles.currentActivitySection}>
           <Text style={styles.sectionLabel}>Current Activity:</Text>
           <View style={styles.currentActivityCard}>
-            <Text style={styles.currentActivityName}>{activity.activity}</Text>
+            <Text style={styles.currentActivityName}>{activity.name}</Text>
             <Text style={styles.currentActivityPrice}>${activity.price}</Text>
             <Text style={styles.currentActivityType}>{activity.type}</Text>
           </View>
@@ -325,10 +343,32 @@ export default function HomeScreen() {
 
   // Old drag and drop functions removed - replaced with new interactive system
 
+  // Debug: Log when component mounts
+  useEffect(() => {
+    console.log('🎯 HomeScreen useEffect - component mounted');
+    console.log('Current message state:', message);
+    console.log('Current response state:', response);
+    
+    // Try Alert as backup debugging
+    try {
+      Alert.alert('Debug', 'HomeScreen component mounted!');
+    } catch (e) {
+      console.log('Alert failed:', e);
+    }
+  }, []);
+
   const handleSendMessage = async () => {
-    if (!message.trim()) return;
+    console.log('🚀 handleSendMessage called!');
+    console.log('Current message:', message);
+    console.log('Message trimmed:', message.trim());
+    
+    if (!message.trim()) {
+      console.log('❌ Message is empty, returning early');
+      return;
+    }
     
     const userMessage = message.trim();
+    console.log('✅ User message:', userMessage);
     setMessage('');
     setIsLoading(true);
     
@@ -388,17 +428,41 @@ export default function HomeScreen() {
       if (response.ok) {
         const result = await response.json();
         console.log('Enhanced API response:', result);
+        console.log('Response status:', response.status);
+        console.log('Response type:', typeof result);
+        console.log('Result keys:', Object.keys(result));
         
         // Store the itinerary data
         setCurrentItinerary(result);
         
         // Create a user-friendly response message
-        const botResponse = `I've created a detailed itinerary for your trip to ${result.destination}!\n\n` +
-          `📅 Duration: ${result.duration}\n` +
-          `✈️ Flights: ${result.flights.length} flights included\n` +
-          `🏨 Hotel: ${result.hotel.name}\n` +
-          `💰 Total Cost: $${result.total_cost}\n\n` +
-          `Your schedule has been loaded below. You can continue chatting with me to make changes or ask questions!`;
+        let botResponse = '';
+        
+        if (result.trip_type === 'multi_city') {
+          // Multi-city trip
+          const destinations = result.destinations.join(' and ');
+          const hotelCount = result.hotels.length;
+          const flightCount = result.flights.length;
+          
+          botResponse = `I've created a detailed multi-city itinerary for your trip to ${destinations}!\n\n` +
+            `📅 Duration: ${result.duration}\n` +
+            `✈️ Flights: ${flightCount} flights with multiple options\n` +
+            `🏨 Hotels: ${hotelCount} hotels with alternatives to choose from\n` +
+            `🚄 Inter-city transport included\n` +
+            `💰 Total Cost: $${result.total_cost}\n\n` +
+            `💡 **Tip**: Click on flights and hotels to see alternative options!\n\n` +
+            `Your chronological schedule has been loaded below. You can continue chatting with me to make changes or ask questions!`;
+        } else {
+          // Single city trip
+          const flightCount = result.flights.length;
+          botResponse = `I've created a detailed itinerary for your trip to ${result.destination}!\n\n` +
+            `📅 Duration: ${result.duration}\n` +
+            `✈️ Flights: ${flightCount} flights with multiple options\n` +
+            `🏨 Hotel: ${result.hotel.name} with alternatives\n` +
+            `💰 Total Cost: $${result.total_cost}\n\n` +
+            `💡 **Tip**: Click on flights and hotels to see alternative options!\n\n` +
+            `Your chronological schedule has been loaded below. You can continue chatting with me to make changes or ask questions!`;
+        }
         
         setResponse(botResponse);
         setChatHistory(prev => [...prev, { message: botResponse, isBot: true }]);
@@ -411,6 +475,8 @@ export default function HomeScreen() {
           sessionStorage.setItem('currentItinerary', JSON.stringify(result));
         }
       } else {
+        console.log('⚠️ Enhanced endpoint failed, falling back to regular chat endpoint');
+        console.log('Response status was:', response.status);
         // Fallback to regular chat endpoint
         const fallbackResponse = await fetch('http://localhost:8000/chat/', {
           method: 'POST',
@@ -425,8 +491,8 @@ export default function HomeScreen() {
 
         if (fallbackResponse.ok) {
           const fallbackResult = await fallbackResponse.json();
-          setResponse(fallbackResult.response);
-          setChatHistory(prev => [...prev, { message: fallbackResult.response, isBot: true }]);
+          setResponse(fallbackResult.bot_response);
+          setChatHistory(prev => [...prev, { message: fallbackResult.bot_response, isBot: true }]);
         } else {
           throw new Error(`HTTP ${fallbackResponse.status}`);
         }
@@ -446,9 +512,10 @@ export default function HomeScreen() {
     const newSchedule = itinerary.schedule.map((day: any) => ({
       day: day.day,
       date: day.date,
+      city: day.city,
       activities: sortActivitiesByTime(day.activities.map((activity: any) => ({
         time: activity.time,
-        activity: activity.name,
+        name: activity.name,
         price: activity.price,
         type: activity.type as 'bookable' | 'estimated'
       })))
@@ -520,7 +587,7 @@ export default function HomeScreen() {
       alternatives.forEach(alt => {
         // Check if this alternative is already in the schedule
         const isInSchedule = schedule.some(day => 
-          day.activities.some(activity => activity.activity === alt.name)
+          day.activities.some(activity => activity.name === alt.name)
         );
         
         // Only include alternatives that aren't already scheduled
@@ -559,8 +626,8 @@ export default function HomeScreen() {
         prevSchedule.map(day => ({
           ...day,
           activities: day.activities.map(act => 
-            act.activity === selectedActivity.activity 
-              ? { ...act, activity: alternative.name, price: alternative.price, type: alternative.type }
+            act.name === selectedActivity.name 
+              ? { ...act, name: alternative.name, price: alternative.price, type: alternative.type }
               : act
           )
         }))
@@ -678,7 +745,7 @@ export default function HomeScreen() {
     const activity = schedule[dayIndex].activities[activityIndex];
     
     if (Platform.OS === 'web') {
-      const ok = typeof window !== 'undefined' ? window.confirm(`Delete "${activity.activity}" from Day ${dayIndex + 1}?`) : true;
+      const ok = typeof window !== 'undefined' ? window.confirm(`Delete "${activity.name}" from Day ${dayIndex + 1}?`) : true;
       if (ok) {
         performDeleteActivity(dayIndex, activityIndex);
       }
@@ -687,7 +754,7 @@ export default function HomeScreen() {
 
     Alert.alert(
       'Delete Activity',
-      `Are you sure you want to delete "${activity.activity}" from Day ${dayIndex + 1}?`,
+      `Are you sure you want to delete "${activity.name}" from Day ${dayIndex + 1}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -695,7 +762,7 @@ export default function HomeScreen() {
           style: 'destructive',
           onPress: () => {
             performDeleteActivity(dayIndex, activityIndex);
-            Alert.alert('Activity Deleted', `"${activity.activity}" has been successfully deleted from Day ${dayIndex + 1}`, [{ text: 'OK' }]);
+            Alert.alert('Activity Deleted', `"${activity.name}" has been successfully deleted from Day ${dayIndex + 1}`, [{ text: 'OK' }]);
           }
         }
       ]
@@ -703,7 +770,7 @@ export default function HomeScreen() {
   };
 
   const handleAddActivity = (dayIndex: number) => {
-    const newActivity: Activity = { time: '12:00', activity: 'New Activity', price: 0, type: 'estimated' };
+    const newActivity: Activity = { time: '12:00', name: 'New Activity', price: 0, type: 'estimated' };
     setSchedule(prevSchedule => 
       prevSchedule.map((day, index) => 
         index === dayIndex ? { 
@@ -718,7 +785,18 @@ export default function HomeScreen() {
 
   // Calculate totals
   const totalFlights = currentItinerary?.flights.reduce((sum, flight) => sum + flight.price, 0) || 1700;
-  const totalHotel = currentItinerary?.hotel ? currentItinerary.hotel.price * currentItinerary.hotel.total_nights : 540;
+  
+  // Handle both single-city and multi-city hotel calculations
+  const totalHotel = (() => {
+    if (!currentItinerary) return 540;
+    if (currentItinerary.trip_type === 'multi_city' && 'hotels' in currentItinerary) {
+      return currentItinerary.hotels.reduce((sum, hotel) => sum + (hotel.price * hotel.total_nights), 0);
+    } else if (currentItinerary.trip_type === 'single_city' && 'hotel' in currentItinerary) {
+      return currentItinerary.hotel.price * currentItinerary.hotel.total_nights;
+    }
+    return 540; // fallback
+  })();
+  
   const bookableActivities = schedule.flatMap(day => 
     day.activities.filter(activity => activity.type === 'bookable')
   ).reduce((sum, activity) => sum + activity.price, 0);
@@ -751,11 +829,27 @@ export default function HomeScreen() {
       acc[flight.type] = flight.price;
       return acc;
     }, {} as Record<string, number>),
-    hotelInfo: currentItinerary?.hotel ? {
-      price: currentItinerary.hotel.price,
-      totalNights: currentItinerary.hotel.total_nights,
-      total: currentItinerary.hotel.price * currentItinerary.hotel.total_nights
-    } : null
+    hotelInfo: (() => {
+      if (!currentItinerary) return null;
+      if (currentItinerary.trip_type === 'multi_city' && 'hotels' in currentItinerary) {
+        return {
+          type: 'multi_city',
+          hotels: currentItinerary.hotels.map(h => ({
+            price: h.price,
+            totalNights: h.total_nights,
+            total: h.price * h.total_nights
+          }))
+        };
+      } else if (currentItinerary.trip_type === 'single_city' && 'hotel' in currentItinerary) {
+        return {
+          type: 'single_city',
+          price: currentItinerary.hotel.price,
+          totalNights: currentItinerary.hotel.total_nights,
+          total: currentItinerary.hotel.price * currentItinerary.hotel.total_nights
+        };
+      }
+      return null;
+    })()
   });
 
   const handleSaveSchedule = () => {
@@ -765,21 +859,102 @@ export default function HomeScreen() {
     }
 
     // Set default name and show modal
-    setScheduleName(`${currentItinerary.destination} Trip`);
+    const destinationName = currentItinerary.trip_type === 'multi_city' 
+      ? currentItinerary.destinations?.join(' → ') || 'Multi-City Trip'
+      : currentItinerary.destination || 'Trip';
+    
+    setScheduleName(`${destinationName} Trip`);
     setShowSaveModal(true);
   };
 
   const handleSaveScheduleConfirm = () => {
     if (scheduleName && scheduleName.trim()) {
+      // Extract and format trip dates properly
+      let tripStartDate = new Date().toISOString();
+      let tripEndDate = new Date().toISOString();
+      
+      if (schedule.length > 0) {
+        try {
+          // Try to parse the first and last day dates
+          if (schedule[0]?.date) {
+            console.log('📅 First day date:', schedule[0].date);
+            // If it's already a date string, use it; otherwise create a future date
+            if (schedule[0].date.includes(',')) {
+              // Human readable format like "July 15, 2024" - create a future date
+              const futureDate = new Date();
+              futureDate.setDate(futureDate.getDate() + 30); // 30 days from now
+              tripStartDate = futureDate.toISOString();
+            } else {
+              tripStartDate = new Date(schedule[0].date).toISOString();
+            }
+          }
+          
+          if (schedule[schedule.length - 1]?.date) {
+            console.log('📅 Last day date:', schedule[schedule.length - 1].date);
+            // If it's already a date string, use it; otherwise create a future date
+            if (schedule[schedule.length - 1].date.includes(',')) {
+              // Human readable format like "July 15, 2024" - create a future date
+              const futureDate = new Date();
+              futureDate.setDate(futureDate.getDate() + 30 + schedule.length); // 30+ days from now
+              tripEndDate = futureDate.toISOString();
+            } else {
+              tripEndDate = new Date(schedule[schedule.length - 1].date).toISOString();
+            }
+          }
+        } catch (error) {
+          console.log('📅 Error parsing dates, using fallback dates:', error);
+        }
+      }
+      
+      console.log('📅 Final trip dates - Start:', tripStartDate, 'End:', tripEndDate);
+      
+      // Log enhanced information being saved
+      console.log('💾 Enhanced Schedule Info:');
+      console.log('  Flights:', currentItinerary?.flights);
+      console.log('  Hotels:', currentItinerary?.trip_type === 'multi_city' 
+        ? (currentItinerary as MultiCityItinerary).hotels 
+        : currentItinerary?.trip_type === 'single_city' 
+          ? [(currentItinerary as SingleCityItinerary).hotel]
+          : []);
+      console.log('  Activities from currentItinerary.schedule:', currentItinerary?.schedule?.flatMap(day => day.activities));
+      console.log('  Activities count:', currentItinerary?.schedule?.flatMap(day => day.activities).length || 0);
+      console.log('  Dates from currentItinerary.schedule:', currentItinerary?.schedule?.map(day => day.date));
+      console.log('  Schedule structure being saved:', currentItinerary?.schedule);
+      console.log('  Cost breakdown:', {
+        total: currentItinerary?.total_cost || 0,
+        bookable: currentItinerary?.bookable_cost || 0,
+        estimated: currentItinerary?.estimated_cost || 0
+      });
+      
       const newSchedule: SavedSchedule = {
         id: Date.now().toString(),
         name: scheduleName.trim(),
-        destination: currentItinerary!.destination,
+        destination: currentItinerary!.trip_type === 'multi_city' 
+          ? currentItinerary!.destinations?.join(' → ') || 'Multi-City Trip'
+          : currentItinerary!.destination || 'Trip',
         duration: currentItinerary!.duration,
         savedAt: new Date().toISOString(),
         status: 'unbooked',
         itinerary: currentItinerary!,
-        schedule: schedule.map(day => day.activities)
+        schedule: currentItinerary?.schedule || [],
+        // Add trip dates for automatic status assignment
+        tripStartDate: tripStartDate,
+        tripEndDate: tripEndDate,
+        
+        // Enhanced information fields
+        flights: currentItinerary?.flights || [],
+        hotels: currentItinerary?.trip_type === 'multi_city' 
+          ? (currentItinerary as MultiCityItinerary).hotels 
+          : currentItinerary?.trip_type === 'single_city' 
+            ? [(currentItinerary as SingleCityItinerary).hotel]
+            : [],
+        activities: currentItinerary?.schedule?.flatMap(day => day.activities) || [],
+        dates: currentItinerary?.schedule?.map(day => day.date) || [],
+        costBreakdown: {
+          total: currentItinerary?.total_cost || 0,
+          bookable: currentItinerary?.bookable_cost || 0,
+          estimated: currentItinerary?.estimated_cost || 0
+        }
       };
 
       // Add to local state
@@ -828,6 +1003,20 @@ export default function HomeScreen() {
     }
   };
 
+  // Map ItineraryDay to Day format for CleanSchedule component
+  const mapItineraryToSchedule = (itineraryDays: ItineraryDay[]) => {
+    return itineraryDays.map(day => ({
+      day: day.day,
+      date: day.date,
+      activities: day.activities.map(activity => ({
+        time: activity.time,
+        activity: activity.name, // Map 'name' to 'activity' for CleanSchedule
+        price: activity.price,
+        type: activity.type as 'bookable' | 'estimated' | 'transport'
+      }))
+    }));
+  };
+
   return (
     <View style={styles.container}>
               {/* Header */}
@@ -844,6 +1033,14 @@ export default function HomeScreen() {
         {/* Chat Section */}
         <GlassCard style={styles.chatSection}>
           <Text style={styles.sectionTitle}>Chat with AI Assistant</Text>
+
+          {/* Debug Info - Visual debugging */}
+          <View style={styles.debugInfo}>
+            <Text style={styles.debugText}>🔍 Debug: Component loaded</Text>
+            <Text style={styles.debugText}>Message state: "{message}"</Text>
+            <Text style={styles.debugText}>Response state: "{response}"</Text>
+            <Text style={styles.debugText}>Loading: {isLoading ? 'Yes' : 'No'}</Text>
+          </View>
 
           {/* Quick Purchase Options (adjust before/while chatting) */}
           <View style={styles.quickOptionsCard}>
@@ -936,7 +1133,10 @@ export default function HomeScreen() {
               placeholder="Ask me about your trip..."
               placeholderTextColor="#666"
               value={message}
-              onChangeText={setMessage}
+              onChangeText={(text) => {
+                console.log('📝 Message input changed:', text);
+                setMessage(text);
+              }}
               multiline
               maxLength={500}
               returnKeyType="send"
@@ -966,33 +1166,31 @@ export default function HomeScreen() {
               <Text style={styles.debugText}>First day activities: {schedule[0]?.activities?.length || 0}</Text>
             </View>
             
-            {/* Trip Summary */}
+            {/* Trip Summary Header */}
             <GlassCard style={styles.tripSummary}>
-              <Text style={styles.destinationTitle}>{currentItinerary.destination}</Text>
-              <Text style={styles.durationText}>{currentItinerary.duration}</Text>
-              <Text style={styles.descriptionText}>{currentItinerary.description}</Text>
+              <Text style={styles.tripTitle}>
+                {currentItinerary.trip_type === 'multi_city' 
+                  ? `🌍 ${currentItinerary.destinations?.join(' → ') || 'Multi-City Trip'}`
+                  : `🌍 ${currentItinerary.destination || 'Trip'}`
+                }
+              </Text>
+              <Text style={styles.tripDuration}>{currentItinerary.duration}</Text>
+              <Text style={styles.tripDescription}>{currentItinerary.description}</Text>
               
-              {/* Export Actions */}
-              <View style={styles.exportActions}>
-                <TouchableOpacity 
-                  style={[styles.exportButton, isExporting && styles.exportButtonDisabled]} 
-                  onPress={handleExportItinerary}
-                  disabled={isExporting}
-                >
-                  <Text style={styles.exportButtonText}>
-                    {isExporting 
-                      ? 'Exporting...' 
-                      : Platform.OS === 'web' 
-                        ? '📄 Download PDF' 
-                        : '📧 Email PDF'
-                    }
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              {/* Export Button */}
+              <TouchableOpacity 
+                style={styles.exportButton} 
+                onPress={handleExportItinerary}
+                disabled={isExporting}
+              >
+                <Text style={styles.exportButtonText}>
+                  {isExporting ? 'Exporting...' : Platform.OS === 'web' ? '📥 Download PDF' : '📧 Email PDF'}
+                </Text>
+              </TouchableOpacity>
             </GlassCard>
 
             {/* Flight Information */}
-            {includeFlights && (
+            {includeFlights && currentItinerary.flights && currentItinerary.flights.length > 0 && (
               <GlassCard style={styles.section}>
                 <Text style={styles.sectionTitle}>✈️ Flight Information</Text>
                 
@@ -1003,6 +1201,46 @@ export default function HomeScreen() {
                     <Text style={styles.route}>{currentItinerary.flights[0]?.departure}</Text>
                     <Text style={styles.timeText}>{currentItinerary.flights[0]?.time}</Text>
                     <Text style={styles.priceText}>${currentItinerary.flights[0]?.price}</Text>
+                    
+                    {/* Alternatives Selector for Outbound Flight */}
+                    {currentItinerary.flights[0]?.alternatives && currentItinerary.flights[0].alternatives.length > 0 && (
+                      <AlternativesSelector
+                        title="Outbound Flight Alternatives"
+                        currentOption={currentItinerary.flights[0]}
+                        alternatives={currentItinerary.flights[0].alternatives}
+                        onSelect={(option: FlightInfo | HotelInfo) => {
+                          // Update the itinerary with the selected flight
+                          const selectedFlight = option as FlightInfo;
+                          
+                          // Preserve the alternatives array for the new flight
+                          const updatedFlight = {
+                            ...selectedFlight,
+                            alternatives: currentItinerary.flights[0].alternatives
+                          };
+                          
+                          if (currentItinerary && currentItinerary.trip_type === 'multi_city') {
+                            const updatedItinerary = {
+                              ...currentItinerary,
+                              flights: [
+                                updatedFlight, // Replace outbound flight with alternatives preserved
+                                currentItinerary.flights[1] // Keep return flight
+                              ]
+                            };
+                            setCurrentItinerary(updatedItinerary);
+                          } else if (currentItinerary && currentItinerary.trip_type === 'single_city') {
+                            const updatedItinerary = {
+                              ...currentItinerary,
+                              flights: [
+                                updatedFlight, // Replace outbound flight with alternatives preserved
+                                currentItinerary.flights[1] // Keep return flight
+                              ]
+                            };
+                            setCurrentItinerary(updatedItinerary);
+                          }
+                        }}
+                        type="flight"
+                      />
+                    )}
                   </GlassCard>
                   
                   <GlassCard style={styles.flightCard}>
@@ -1011,6 +1249,46 @@ export default function HomeScreen() {
                     <Text style={styles.route}>{currentItinerary.flights[1]?.departure}</Text>
                     <Text style={styles.timeText}>{currentItinerary.flights[1]?.time}</Text>
                     <Text style={styles.priceText}>${currentItinerary.flights[1]?.price}</Text>
+                    
+                    {/* Alternatives Selector for Return Flight */}
+                    {currentItinerary.flights[1]?.alternatives && currentItinerary.flights[1].alternatives.length > 0 && (
+                      <AlternativesSelector
+                        title="Return Flight Alternatives"
+                        currentOption={currentItinerary.flights[1]}
+                        alternatives={currentItinerary.flights[1].alternatives}
+                        onSelect={(option: FlightInfo | HotelInfo) => {
+                          // Update the itinerary with the selected flight
+                          const selectedFlight = option as FlightInfo;
+                          
+                          // Preserve the alternatives array for the new flight
+                          const updatedFlight = {
+                            ...selectedFlight,
+                            alternatives: currentItinerary.flights[1].alternatives
+                          };
+                          
+                          if (currentItinerary && currentItinerary.trip_type === 'multi_city') {
+                            const updatedItinerary = {
+                              ...currentItinerary,
+                              flights: [
+                                currentItinerary.flights[0], // Keep outbound flight
+                                updatedFlight // Replace return flight with alternatives preserved
+                              ]
+                            };
+                            setCurrentItinerary(updatedItinerary);
+                          } else if (currentItinerary && currentItinerary.trip_type === 'single_city') {
+                            const updatedItinerary = {
+                              ...currentItinerary,
+                              flights: [
+                                currentItinerary.flights[0], // Keep outbound flight
+                                updatedFlight // Replace return flight with alternatives preserved
+                              ]
+                            };
+                            setCurrentItinerary(updatedItinerary);
+                          }
+                        }}
+                        type="flight"
+                      />
+                    )}
                   </GlassCard>
                 </View>
                 
@@ -1021,40 +1299,178 @@ export default function HomeScreen() {
               </GlassCard>
             )}
 
-            {/* Hotel Information */}
+            {/* Hotel Information - Handle both single and multi-city */}
             {includeHotel && (
               <GlassCard style={styles.section}>
                 <Text style={styles.sectionTitle}>🏨 Hotel Information</Text>
                 
-                <GlassCard style={styles.hotelCard}>
-                  <Text style={styles.hotelName}>{currentItinerary.hotel.name}</Text>
-                  <Text style={styles.hotelAddress}>{currentItinerary.hotel.address}</Text>
-                  <Text style={styles.hotelDetails}>{currentItinerary.hotel.room_type}</Text>
-                  <Text style={styles.hotelDates}>Check-in: {currentItinerary.hotel.check_in}</Text>
-                  <Text style={styles.hotelDates}>Check-out: {currentItinerary.hotel.check_out}</Text>
-                  <View style={styles.hotelPriceRow}>
-                    <Text style={styles.hotelPriceLabel}>${currentItinerary.hotel.price}/night × {currentItinerary.hotel.total_nights} nights</Text>
-                    <Text style={styles.hotelPriceTotal}>${currentItinerary.hotel.price * currentItinerary.hotel.total_nights}</Text>
+                {currentItinerary.trip_type === 'multi_city' && currentItinerary.hotels ? (
+                  // Multi-city hotels
+                  <View>
+                    {currentItinerary.hotels.map((hotel, index) => (
+                      <GlassCard key={index} style={styles.hotelCard}>
+                        <Text style={styles.hotelCity}>{hotel.city || `City ${index + 1}`}</Text>
+                        <Text style={styles.hotelName}>{hotel.name}</Text>
+                        <Text style={styles.hotelAddress}>{hotel.address}</Text>
+                        <Text style={styles.hotelDetails}>{hotel.room_type}</Text>
+                        <Text style={styles.hotelDates}>Check-in: {hotel.check_in}</Text>
+                        <Text style={styles.hotelDates}>Check-out: {hotel.check_out}</Text>
+                        <View style={styles.hotelPriceRow}>
+                          <Text style={styles.hotelPriceLabel}>${hotel.price}/night × {hotel.total_nights} nights</Text>
+                          <Text style={styles.hotelPriceTotal}>${hotel.price * hotel.total_nights}</Text>
+                        </View>
+                        
+                        {/* Alternatives Selector for Hotel */}
+                        {hotel.alternatives && hotel.alternatives.length > 0 && (
+                          <AlternativesSelector
+                            title={`${hotel.city || `City ${index + 1}`} Hotel Alternatives`}
+                            currentOption={hotel}
+                            alternatives={hotel.alternatives}
+                            onSelect={(option: FlightInfo | HotelInfo) => {
+                              // Update the itinerary with the selected hotel
+                              const selectedHotel = option as HotelInfo;
+                              
+                              // Preserve the alternatives array for the new hotel
+                              const updatedHotel = {
+                                ...selectedHotel,
+                                alternatives: hotel.alternatives
+                              };
+                              
+                              if (currentItinerary && currentItinerary.trip_type === 'multi_city') {
+                                const updatedItinerary = {
+                                  ...currentItinerary,
+                                  hotels: currentItinerary.hotels.map((h, i) => 
+                                    i === index ? updatedHotel : h
+                                  )
+                                };
+                                setCurrentItinerary(updatedItinerary);
+                              }
+                            }}
+                            type="hotel"
+                          />
+                        )}
+                      </GlassCard>
+                    ))}
                   </View>
-                </GlassCard>
+                ) : (
+                  // Single city hotel
+                  <GlassCard style={styles.hotelCard}>
+                    {currentItinerary.trip_type === 'single_city' && 'hotel' in currentItinerary ? (
+                      <>
+                        <Text style={styles.hotelName}>{currentItinerary.hotel.name}</Text>
+                        <Text style={styles.hotelAddress}>{currentItinerary.hotel.address}</Text>
+                        <Text style={styles.hotelDetails}>{currentItinerary.hotel.room_type}</Text>
+                        <Text style={styles.hotelDates}>Check-in: {currentItinerary.hotel.check_in}</Text>
+                        <Text style={styles.hotelDates}>Check-out: {currentItinerary.hotel.check_out}</Text>
+                        <View style={styles.hotelPriceRow}>
+                          <Text style={styles.hotelPriceLabel}>${currentItinerary.hotel.price}/night × {currentItinerary.hotel.total_nights} nights</Text>
+                          <Text style={styles.hotelPriceTotal}>${currentItinerary.hotel.price * currentItinerary.hotel.total_nights}</Text>
+                        </View>
+                        
+                        {/* Alternatives Selector for Single City Hotel */}
+                        {currentItinerary.hotel.alternatives && currentItinerary.hotel.alternatives.length > 0 && (
+                          <AlternativesSelector
+                            title="Hotel Alternatives"
+                            currentOption={currentItinerary.hotel}
+                            alternatives={currentItinerary.hotel.alternatives}
+                            onSelect={(option: FlightInfo | HotelInfo) => {
+                              // Update the itinerary with the selected hotel
+                              const selectedHotel = option as HotelInfo;
+                              
+                              // Preserve the alternatives array for the new hotel
+                              const updatedHotel = {
+                                ...selectedHotel,
+                                alternatives: currentItinerary.hotel.alternatives
+                              };
+                              
+                              if (currentItinerary && currentItinerary.trip_type === 'single_city') {
+                                const updatedItinerary = {
+                                  ...currentItinerary,
+                                  hotel: updatedHotel
+                                };
+                                setCurrentItinerary(updatedItinerary);
+                              }
+                            }}
+                            type="hotel"
+                          />
+                        )}
+                      </>
+                    ) : (
+                      <Text style={styles.hotelName}>Hotel information not available</Text>
+                    )}
+                  </GlassCard>
+                )}
               </GlassCard>
             )}
-            
-            {/* Interactive Daily Schedule (hide when Activities are excluded) */}
-            {includeActivities && (
-              <CleanSchedule
-                schedule={schedule}
-                onEditActivity={handleActivityEdit}
-                onDeleteActivity={handleDeleteActivity}
-                onAddActivity={handleAddActivity}
-                totalActivities={totalActivities}
-                editingActivity={editingActivity}
-                alternativeActivities={{ all: getAllAvailableAlternatives() }}
-                onActivityEditSave={handleActivityEditSave}
-                onActivityEditCancel={handleActivityEditCancel}
-              />
+
+            {/* Inter-City Transportation for Multi-City Trips */}
+            {currentItinerary.trip_type === 'multi_city' && currentItinerary.inter_city_transport && currentItinerary.inter_city_transport.length > 0 && (
+              <GlassCard style={styles.section}>
+                <Text style={styles.sectionTitle}>🚄 Inter-City Transportation</Text>
+                
+                {currentItinerary.inter_city_transport.map((transport, index) => (
+                  <GlassCard key={index} style={styles.transportCard}>
+                    <View style={styles.transportHeader}>
+                      <Text style={styles.transportType}>{transport.type.toUpperCase()}</Text>
+                      <Text style={styles.transportPrice}>${transport.price}</Text>
+                    </View>
+                    <Text style={styles.transportCarrier}>{transport.carrier}</Text>
+                    <Text style={styles.transportRoute}>{transport.from_location} → {transport.to}</Text>
+                    <Text style={styles.transportTime}>{transport.departure_time} - {transport.arrival_time}</Text>
+                    <Text style={styles.transportDescription}>{transport.description}</Text>
+                  </GlassCard>
+                ))}
+              </GlassCard>
             )}
-              
+
+            {/* Interactive Schedules - Separate for each city */}
+            {includeActivities && (
+              <>
+                {/* Schedule for First Location */}
+                <GlassCard style={styles.section}>
+                  <Text style={styles.sectionTitle}>
+                    📅 {currentItinerary.trip_type === 'multi_city' 
+                      ? `Activities in ${currentItinerary.hotels?.[0]?.city || 'City 1'}`
+                      : 'Daily Activities'
+                    }
+                  </Text>
+                  <CleanSchedule
+                    schedule={mapItineraryToSchedule(currentItinerary.trip_type === 'multi_city' 
+                      ? schedule.filter(day => day.city === currentItinerary.hotels?.[0]?.city)
+                      : schedule
+                    )}
+                    onEditActivity={handleActivityEdit}
+                    onDeleteActivity={handleDeleteActivity}
+                    onAddActivity={handleAddActivity}
+                    totalActivities={totalActivities}
+                    editingActivity={editingActivity}
+                    alternativeActivities={{ all: getAllAvailableAlternatives() }}
+                    onActivityEditSave={handleActivityEditSave}
+                    onActivityEditCancel={handleActivityEditCancel}
+                  />
+                </GlassCard>
+
+                {/* Schedule for Second Location (Multi-city only) */}
+                {currentItinerary.trip_type === 'multi_city' && currentItinerary.hotels && currentItinerary.hotels.length > 1 && (
+                  <GlassCard style={styles.section}>
+                    <Text style={styles.sectionTitle}>
+                      📅 Activities in {currentItinerary.hotels[1]?.city || 'City 2'}
+                    </Text>
+                    <CleanSchedule
+                      schedule={mapItineraryToSchedule(schedule.filter(day => day.city === currentItinerary.hotels[1]?.city))}
+                      onEditActivity={handleActivityEdit}
+                      onDeleteActivity={handleDeleteActivity}
+                      onAddActivity={handleAddActivity}
+                      totalActivities={totalActivities}
+                      editingActivity={editingActivity}
+                      alternativeActivities={{ all: getAllAvailableAlternatives() }}
+                      onActivityEditSave={handleActivityEditSave}
+                      onActivityEditCancel={handleActivityEditCancel}
+                    />
+                  </GlassCard>
+                )}
+              </>
+            )}
 
             {/* Purchase Options */}
             <GlassCard style={styles.section}>
@@ -1113,87 +1529,85 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
               <Text style={styles.checkoutButtonText}>Checkout Now</Text>
             </TouchableOpacity>
-            </GlassCard>
+          </GlassCard>
         )}
-
-
       </ScrollView>
 
-      {/* Alternatives Modal */}
-      <Modal visible={showAlternatives} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <GlassCard style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Alternative Activities</Text>
-            <ScrollView style={styles.alternativesList}>
-              {selectedActivity && alternativeActivities[selectedActivity.activity]?.map((alternative, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.alternativeItem}
-                  onPress={() => handleSelectAlternative(alternative)}
-                >
-                  <Text style={styles.alternativeName}>{alternative.name}</Text>
-                  <Text style={styles.alternativePrice}>${alternative.price}</Text>
-                  <Text style={styles.alternativeDescription}>{alternative.description}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity style={styles.modalButton} onPress={() => setShowAlternatives(false)}>
+    {/* Alternatives Modal */}
+    <Modal visible={showAlternatives} transparent={true} animationType="slide">
+      <View style={styles.modalOverlay}>
+        <GlassCard style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Alternative Activities</Text>
+          <ScrollView style={styles.alternativesList}>
+            {selectedActivity && alternativeActivities[selectedActivity.name]?.map((alternative, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.alternativeItem}
+                onPress={() => handleSelectAlternative(alternative)}
+              >
+                <Text style={styles.alternativeName}>{alternative.name}</Text>
+                <Text style={styles.alternativePrice}>${alternative.price}</Text>
+                <Text style={styles.alternativeDescription}>{alternative.description}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <TouchableOpacity style={styles.modalButton} onPress={() => setShowAlternatives(false)}>
+            <Text style={styles.modalButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </GlassCard>
+      </View>
+    </Modal>
+
+    {/* Old Trips Modal */}
+    <Modal visible={showOldTrips} transparent={true} animationType="slide">
+      <View style={styles.modalOverlay}>
+        <GlassCard style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Past Trips</Text>
+          <ScrollView style={styles.oldTripsList}>
+            {oldTripsState.map((trip) => (
+              <GlassCard key={trip.id} style={styles.tripItem}>
+                <Text style={styles.tripDestination}>{trip.destination}</Text>
+                <Text style={styles.tripDate}>{trip.date}</Text>
+                {trip.activities.map((activity, index) => (
+                  <View key={index} style={styles.activityRating}>
+                    <Text style={styles.activityName}>{activity.name}</Text>
+                    {renderStars(activity.rating, handleRateActivity, activity.name, trip.id)}
+                  </View>
+                ))}
+              </GlassCard>
+            ))}
+          </ScrollView>
+          <TouchableOpacity style={styles.modalButton} onPress={() => setShowOldTrips(false)}>
+            <Text style={styles.modalButtonText}>Close</Text>
+          </TouchableOpacity>
+        </GlassCard>
+      </View>
+    </Modal>
+
+    {/* Save Schedule Modal */}
+    <Modal visible={showSaveModal} transparent={true} animationType="slide">
+      <View style={styles.modalOverlay}>
+        <GlassCard style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Save Schedule</Text>
+          <TextInput
+            style={styles.timeInput}
+            placeholder="Enter schedule name"
+            placeholderTextColor="#666"
+            value={scheduleName}
+            onChangeText={setScheduleName}
+            autoFocus
+          />
+          <View style={styles.timePickerButtons}>
+            <TouchableOpacity style={[styles.modalButton, styles.timePickerCancelButton]} onPress={() => setShowSaveModal(false)}>
               <Text style={styles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
-          </GlassCard>
-        </View>
-      </Modal>
-
-      {/* Old Trips Modal */}
-      <Modal visible={showOldTrips} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <GlassCard style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Past Trips</Text>
-            <ScrollView style={styles.oldTripsList}>
-              {oldTripsState.map((trip) => (
-                <GlassCard key={trip.id} style={styles.tripItem}>
-                  <Text style={styles.tripDestination}>{trip.destination}</Text>
-                  <Text style={styles.tripDate}>{trip.date}</Text>
-                  {trip.activities.map((activity, index) => (
-                    <View key={index} style={styles.activityRating}>
-                      <Text style={styles.activityName}>{activity.name}</Text>
-                      {renderStars(activity.rating, handleRateActivity, activity.name, trip.id)}
-                    </View>
-                  ))}
-                </GlassCard>
-              ))}
-            </ScrollView>
-            <TouchableOpacity style={styles.modalButton} onPress={() => setShowOldTrips(false)}>
-              <Text style={styles.modalButtonText}>Close</Text>
+            <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handleSaveScheduleConfirm}>
+              <Text style={styles.modalButtonText}>Save</Text>
             </TouchableOpacity>
-          </GlassCard>
-        </View>
-      </Modal>
-
-      {/* Save Schedule Modal */}
-      <Modal visible={showSaveModal} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <GlassCard style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Save Schedule</Text>
-            <TextInput
-              style={styles.timeInput}
-              placeholder="Enter schedule name"
-              placeholderTextColor="#666"
-              value={scheduleName}
-              onChangeText={setScheduleName}
-              autoFocus
-            />
-            <View style={styles.timePickerButtons}>
-              <TouchableOpacity style={[styles.modalButton, styles.timePickerCancelButton]} onPress={() => setShowSaveModal(false)}>
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handleSaveScheduleConfirm}>
-                <Text style={styles.modalButtonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </GlassCard>
-        </View>
-      </Modal>
+          </View>
+        </GlassCard>
+      </View>
+    </Modal>
 
 
     </View>
@@ -1252,6 +1666,20 @@ const styles = StyleSheet.create({
   },
   chatSection: {
     marginBottom: 30,
+  },
+  debugInfo: {
+    backgroundColor: '#FF6B6B',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 15,
+    borderWidth: 2,
+    borderColor: '#FF0000',
+  },
+  debugText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 2,
   },
   quickOptionsCard: {
     backgroundColor: '#1a1a1a',
@@ -2321,5 +2749,76 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  transportCard: {
+    flex: 1,
+    marginHorizontal: 5,
+    backgroundColor: '#1a1a1a',
+    padding: 15,
+    borderRadius: 10,
+  },
+  transportHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  transportType: {
+    fontSize: 14,
+    color: '#cccccc',
+    fontWeight: 'bold',
+  },
+  transportPrice: {
+    fontSize: 12,
+    color: '#6366f1',
+    fontWeight: '600',
+  },
+  transportCarrier: {
+    fontSize: 14,
+    color: '#ffffff',
+    marginBottom: 2,
+  },
+  transportRoute: {
+    fontSize: 12,
+    color: '#cccccc',
+    marginBottom: 2,
+  },
+  transportTime: {
+    fontSize: 12,
+    color: '#cccccc',
+    marginBottom: 2,
+  },
+  transportDescription: {
+    fontSize: 12,
+    color: '#cccccc',
+  },
+  hotelCity: {
+    fontSize: 14,
+    color: '#cccccc',
+    fontWeight: 'bold',
+  },
+  tripTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 5,
+  },
+  tripDuration: {
+    fontSize: 16,
+    color: '#cccccc',
+    marginBottom: 10,
+  },
+  tripDescription: {
+    fontSize: 14,
+    color: '#9ca3af',
+    textAlign: 'center',
+    marginTop: 5,
+  },
+  scheduleNote: {
+    fontSize: 14,
+    color: '#9ca3af',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    padding: 20,
   },
 });

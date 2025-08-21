@@ -49,14 +49,21 @@ export interface ItineraryActivity {
   name: string;
   time: string;
   price: number;
-  type: 'bookable' | 'estimated';
+  type: 'bookable' | 'estimated' | 'transport';
   description?: string;
   alternatives?: ItineraryActivity[];
+  transport_details?: {
+    type: 'flight' | 'train' | 'bus';
+    carrier: string;
+    departure: string;
+    time: string;
+  };
 }
 
 export interface ItineraryDay {
   day: number;
   date: string;
+  city?: string; // For multi-city trips
   activities: ItineraryActivity[];
 }
 
@@ -67,9 +74,11 @@ export interface FlightInfo {
   time: string;
   price: number;
   type: 'outbound' | 'return';
+  alternatives?: FlightInfo[];
 }
 
 export interface HotelInfo {
+  city?: string; // For multi-city trips
   name: string;
   address: string;
   check_in: string;
@@ -77,9 +86,23 @@ export interface HotelInfo {
   room_type: string;
   price: number;
   total_nights: number;
+  alternatives?: HotelInfo[];
 }
 
-export interface EnhancedItinerary {
+export interface InterCityTransport {
+  from_location: string;
+  to: string;
+  type: 'flight' | 'train' | 'bus';
+  carrier: string;
+  departure_time: string;
+  arrival_time: string;
+  price: number;
+  description: string;
+}
+
+// Single City Itinerary
+export interface SingleCityItinerary {
+  trip_type: 'single_city';
   destination: string;
   duration: string;
   description: string;
@@ -89,4 +112,22 @@ export interface EnhancedItinerary {
   total_cost: number;
   bookable_cost: number;
   estimated_cost: number;
-} 
+}
+
+// Multi-City Itinerary
+export interface MultiCityItinerary {
+  trip_type: 'multi_city';
+  destinations: string[];
+  duration: string;
+  description: string;
+  flights: FlightInfo[];
+  hotels: HotelInfo[];
+  inter_city_transport: InterCityTransport[];
+  schedule: ItineraryDay[];
+  total_cost: number;
+  bookable_cost: number;
+  estimated_cost: number;
+}
+
+// Union type for both itinerary types
+export type EnhancedItinerary = SingleCityItinerary | MultiCityItinerary; 

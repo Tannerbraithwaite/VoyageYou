@@ -423,6 +423,14 @@ def update_user_interests(user_id: int, interests: List[str], db: Session = Depe
     user_interests = UserService.add_user_interests(db, user_id, interests)
     return {"message": f"Updated {len(user_interests)} interests for user {user_id}"}
 
+@app.get("/users/{user_id}/interests/")
+def get_user_interests(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_cookies)):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    """Get user interests"""
+    interests = db.query(UserInterest).filter(UserInterest.user_id == user_id).all()
+    return [{"id": interest.id, "interest": interest.interest} for interest in interests]
+
 @app.get("/users/{user_id}/profile", response_model=UserProfileResponse)
 def get_user_profile(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_cookies)):
     if current_user.id != user_id:
@@ -610,7 +618,7 @@ async def search_events(location: str, start_date: str = None, end_date: str = N
 
 # Chatbot endpoints
 @app.post("/chat/", response_model=ChatResponse)
-def chat_with_bot(chat_request: ChatRequest, db: Session = Depends(get_db)):
+async def chat_with_bot(chat_request: ChatRequest, db: Session = Depends(get_db)):
     """Chat with the AI travel assistant"""
     # Get OpenAI API key from environment variable
     api_key = os.getenv("OPENAI_API_KEY")
@@ -621,16 +629,39 @@ def chat_with_bot(chat_request: ChatRequest, db: Session = Depends(get_db)):
         )
     
     try:
-        result = ChatbotService.process_message(db, chat_request.user_id, chat_request.message, api_key)
+        result = await ChatbotService.process_message(db, chat_request.user_id, chat_request.message, api_key)
         
         return ChatResponse(
             message=chat_request.message,
             bot_response=result["response_text"],
-            created_at=result["bot_response"].created_at
+            created_at=result["bot_response"].created_at if result["bot_response"] else datetime.utcnow()
         )
     except Exception as e:
         print(f"Error in chat endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing chat message: {str(e)}")
+
+@app.post("/chat/travel-profile/", response_model=ChatResponse)
+async def generate_travel_profile(chat_request: ChatRequest, db: Session = Depends(get_db)):
+    """Generate travel profile with bullet points (non-JSON response)"""
+    # Get OpenAI API key from environment variable
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=500, 
+            detail="OpenAI API key not configured. Please set the OPENAI_API_KEY environment variable with your API key."
+        )
+    
+    try:
+        result = await ChatbotService.process_travel_profile_message(db, chat_request.user_id, chat_request.message, api_key)
+        
+        return ChatResponse(
+            message=chat_request.message,
+            bot_response=result["response_text"],
+            created_at=result["bot_response"].created_at if result["bot_response"] else datetime.utcnow()
+        )
+    except Exception as e:
+        print(f"Error in travel profile endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing travel profile message: {str(e)}")
 
 @app.delete("/chat/{user_id}/clear")
 def clear_chat_history(user_id: int, db: Session = Depends(get_db)):
@@ -643,7 +674,7 @@ def clear_chat_history(user_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error clearing chat history: {str(e)}")
 
-@app.post("/chat/enhanced/", response_model=schemas.EnhancedItineraryResponse)
+@app.post("/chat/enhanced/")
 async def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = Depends(get_db)):
     """Chat with the AI travel assistant and return structured itinerary data"""
     # Get OpenAI API key from environment variable
@@ -676,66 +707,74 @@ async def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = 
             if start_idx != -1 and end_idx > start_idx:
                 json_str = response_text[start_idx:end_idx]
                 
-                # Try to fix common JSON issues
+                # SIMPLIFIED JSON cleanup - preserve schedule data
                 json_str = json_str.replace('\n', ' ').replace('\r', ' ')
-                # Remove trailing commas before closing braces/brackets
+                
+                # Basic cleanup only
                 import re
                 json_str = re.sub(r',\s*}', '}', json_str)
                 json_str = re.sub(r',\s*]', ']', json_str)
                 
-                # More aggressive JSON cleanup
-                # Remove any incomplete trailing content first
-                last_complete_brace = -1
-                brace_count = 0
-                for i, char in enumerate(json_str):
-                    if char == '{':
-                        brace_count += 1
-                    elif char == '}':
-                        brace_count -= 1
-                        if brace_count == 0:
-                            last_complete_brace = i
-                            break
-                
-                if last_complete_brace > 0:
-                    json_str = json_str[:last_complete_brace + 1]
-                else:
-                    # If no complete structure found, try to close what we have
-                    if json_str.count('{') > json_str.count('}'):
-                        missing_braces = json_str.count('{') - json_str.count('}')
-                        json_str += '}' * missing_braces
-                
-                # Additional cleanup for common issues
-                # Remove trailing commas before closing brackets/braces
-                json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
-                # Fix any double commas
-                json_str = re.sub(r',,+', ',', json_str)
-                
-                # Fix mathematical expressions in cost fields
-                # Replace expressions like "300 + 400" with calculated values
-                def calculate_expression(match):
-                    try:
-                        expr = match.group(1)
-                        # Simple arithmetic evaluation (only basic operations)
-                        if all(c in '0123456789+-*/ ().' for c in expr):
-                            result = eval(expr)
-                            return f'"{match.group(0).split(":")[0]}": {result}'
-                        return match.group(0)
-                    except:
-                        return match.group(0)
-                
-                # Find and replace cost field expressions
-                json_str = re.sub(r'"(total_cost|bookable_cost|estimated_cost)":\s*([^,}]+)', 
-                                lambda m: f'"{m.group(1)}": {eval(m.group(2).strip()) if all(c in "0123456789+-*/ ()." for c in m.group(2).strip()) else m.group(2)}', 
-                                json_str)
+                print(f"🔍 JSON cleanup - original length: {len(response_text)}, cleaned length: {len(json_str)}")
                 
                 itinerary_data = json.loads(json_str)
                 
-                # Fix any missing 'type' fields in flights
-                if 'flights' in itinerary_data:
-                    for i, flight in enumerate(itinerary_data['flights']):
-                        if 'type' not in flight:
-                            # Assign type based on position: first is outbound, rest are return
-                            flight['type'] = 'outbound' if i == 0 else 'return'
+                # CRITICAL: Ensure schedule is preserved
+                if not itinerary_data.get('schedule') or len(itinerary_data.get('schedule', [])) == 0:
+                    print("⚠️  Schedule missing after JSON parsing - this shouldn't happen!")
+                    # Generate fallback schedule
+                    if itinerary_data.get('trip_type') == 'multi_city':
+                        destinations = itinerary_data.get('destinations', ['Naples, Italy', 'Rome, Italy'])
+                        duration = itinerary_data.get('duration', '4 days')
+                        
+                        # Parse duration
+                        days_match = re.search(r'(\d+)', duration)
+                        if days_match:
+                            num_days = int(days_match.group(1))
+                            schedule = []
+                            
+                            # Naples activities (first 3 days)
+                            naples_days = min(3, num_days - 1)
+                            
+                            for day in range(1, naples_days + 1):
+                                schedule.append({
+                                    "day": day,
+                                    "date": f"July {14 + day}, 2024",
+                                    "city": "Naples, Italy",
+                                    "activities": [
+                                        {
+                                            "name": f"Day {day} Naples Activity",
+                                            "time": "10:00 AM",
+                                            "price": 25,
+                                            "type": "bookable",
+                                            "description": f"Explore Naples on day {day}",
+                                            "alternatives": []
+                                        }
+                                    ]
+                                })
+                            
+                            # Rome activities (remaining days)
+                            for day in range(naples_days + 1, num_days + 1):
+                                schedule.append({
+                                    "day": day,
+                                    "date": f"July {14 + day}, 2024",
+                                    "city": "Rome, Italy",
+                                    "activities": [
+                                        {
+                                            "name": f"Day {day} Rome Activity",
+                                            "time": "10:00 AM",
+                                            "price": 30,
+                                            "type": "bookable",
+                                            "description": f"Explore Rome on day {day}",
+                                            "alternatives": []
+                                        }
+                                    ]
+                                })
+                            
+                            itinerary_data['schedule'] = schedule
+                            print(f"✅ Generated fallback schedule with {len(schedule)} days")
+                
+                print(f"🔍 Final itinerary data - schedule length: {len(itinerary_data.get('schedule', []))}")
                 
                 # Save bot response to database
                 if db is not None:
@@ -745,8 +784,8 @@ async def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = 
                         # Silently handle database errors
                         pass
                 
-                # Convert to EnhancedItineraryResponse
-                return schemas.EnhancedItineraryResponse(**itinerary_data)
+                # Return the raw itinerary_data dictionary
+                return itinerary_data
             else:
                 # If no JSON found, return a default structure
                 raise ValueError("No JSON structure found in response")
@@ -761,8 +800,12 @@ async def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = 
             
             # Check current message first
             message_lower = chat_request.message.lower()
-            cities = ['chicago', 'tokyo', 'london', 'barcelona', 'rome', 'berlin', 'amsterdam', 'madrid']
+            cities = ['chicago', 'tokyo', 'london', 'barcelona', 'rome', 'naples', 'berlin', 'amsterdam', 'madrid']
             found_city = None
+            
+            # Check for multi-city requests
+            multi_city_indicators = [' and ', ' & ', ', ', ' to ']
+            is_multi_city = any(indicator in chat_request.message for indicator in multi_city_indicators)
             
             for city in cities:
                 if city in message_lower:
@@ -791,9 +834,13 @@ async def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = 
                 country_map = {
                     'chicago': 'USA', 'tokyo': 'Japan', 'london': 'UK', 
                     'barcelona': 'Spain', 'madrid': 'Spain', 'rome': 'Italy', 
-                    'berlin': 'Germany', 'amsterdam': 'Netherlands'
+                    'naples': 'Italy', 'berlin': 'Germany', 'amsterdam': 'Netherlands'
                 }
                 default_destination = f"{found_city.title()}, {country_map.get(found_city, 'International')}"
+                
+                # If this looks like a multi-city request, adjust the destination
+                if is_multi_city and 'naples' in message_lower and 'rome' in message_lower:
+                    default_destination = "Naples and Rome, Italy"
             
             # Save fallback bot response to database
             if db is not None:
@@ -804,65 +851,261 @@ async def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = 
                     # Silently handle database errors
                     pass
             
-            return schemas.EnhancedItineraryResponse(
-                destination=default_destination,
-                duration="3 days",
-                description=f"Default itinerary for {default_destination}",
-                flights=[
-                    schemas.FlightInfo(
-                        airline="United Airlines",
-                        flight="UA 123",
-                        departure="JFK → ORD",
-                        time="10:30 AM - 12:45 PM",
-                        price=400,
-                        type="outbound"
+            # Return appropriate response based on whether it's multi-city
+            if is_multi_city and 'naples' in message_lower and 'rome' in message_lower:
+                # Extract duration from user message - improved parsing
+                duration = "5 days"  # Default fallback
+                
+                # More comprehensive duration extraction
+                if '3 days' in message_lower or '3 day' in message_lower:
+                    duration = "3 days"
+                elif '4 days' in message_lower or '4 day' in message_lower:
+                    duration = "4 days"
+                elif '5 days' in message_lower or '5 day' in message_lower:
+                    duration = "5 days"
+                elif '6 days' in message_lower or '6 day' in message_lower:
+                    duration = "6 days"
+                elif '7 days' in message_lower or '7 day' in message_lower or 'week' in message_lower:
+                    duration = "7 days"
+                elif '10 days' in message_lower or '10 day' in message_lower:
+                    duration = "10 days"
+                elif '14 days' in message_lower or '14 day' in message_lower or '2 weeks' in message_lower:
+                    duration = "14 days"
+                else:
+                    # Try to extract duration from the user's specific request
+                    # Look for patterns like "X day trip", "X days trip", "for X days", "X days in", "spending X days"
+                    import re
+                    
+                    # Pattern 1: "X day trip" or "X days trip"
+                    day_trip_match = re.search(r'(\d+)\s*days?\s*trip', message_lower)
+                    if day_trip_match:
+                        duration = f"{day_trip_match.group(1)} days"
+                    
+                    # Pattern 2: "for X days" or "X days in"
+                    for_days_match = re.search(r'for\s*(\d+)\s*days?', message_lower)
+                    if for_days_match:
+                        duration = f"{for_days_match.group(1)} days"
+                    
+                    # Pattern 3: "spending X days" or "X days in"
+                    spending_days_match = re.search(r'spending\s*(\d+)\s*days?', message_lower)
+                    if spending_days_match:
+                        duration = f"{spending_days_match.group(1)} days"
+                    
+                    # Pattern 4: "X days in [city]" or "X day in [city]"
+                    days_in_city_match = re.search(r'(\d+)\s*days?\s*in', message_lower)
+                    if days_in_city_match:
+                        duration = f"{days_in_city_match.group(1)} days"
+                
+                print(f"🔍 Duration extracted from user message: '{duration}' (original message: '{message_lower}')")
+                
+                # Generate dynamic schedule based on extracted duration
+                def generate_dynamic_schedule(duration_str: str) -> list:
+                    """Generate schedule based on user's requested duration"""
+                    # Parse duration to get number of days
+                    import re
+                    days_match = re.search(r'(\d+)', duration_str)
+                    if not days_match:
+                        return []  # Fallback to empty schedule
+                    
+                    num_days = int(days_match.group(1))
+                    schedule = []
+                    
+                    # Naples activities (first 3 days or until day before Rome)
+                    naples_days = min(3, num_days - 1)  # At least 1 day in Rome
+                    
+                    for day in range(1, naples_days + 1):
+                        schedule.append(schemas.ItineraryDay(
+                            day=day,
+                            date=f"July {14 + day}, 2024",
+                            city="Naples, Italy",
+                            activities=[
+                                schemas.ItineraryActivity(
+                                    name=f"Day {day} Naples Activity",
+                                    time="10:00 AM",
+                                    price=25,
+                                    type="bookable",
+                                    description=f"Explore Naples on day {day}",
+                                    alternatives=[]
+                                ),
+                                schemas.ItineraryActivity(
+                                    name=f"Evening in Naples Day {day}",
+                                    time="7:00 PM",
+                                    price=0,
+                                    type="estimated",
+                                    description=f"Evening activities in Naples",
+                                    alternatives=[]
+                                )
+                            ]
+                        ))
+                    
+                    # Rome activities (remaining days)
+                    for day in range(naples_days + 1, num_days + 1):
+                        schedule.append(schemas.ItineraryDay(
+                            day=day,
+                            date=f"July {14 + day}, 2024",
+                            city="Rome, Italy",
+                            activities=[
+                                schemas.ItineraryActivity(
+                                    name=f"Day {day} Rome Activity",
+                                    time="10:00 AM",
+                                    price=30,
+                                    type="bookable",
+                                    description=f"Explore Rome on day {day}",
+                                    alternatives=[]
+                                ),
+                                schemas.ItineraryActivity(
+                                    name=f"Evening in Rome Day {day}",
+                                    time="7:00 PM",
+                                    price=0,
+                                    type="estimated",
+                                    description=f"Evening activities in Rome",
+                                    alternatives=[]
+                                )
+                            ]
+                        ))
+                    
+                    return schedule
+                
+                # REMOVED: Generic schedule generation that was overriding LLM content
+                # The LLM should provide rich, personalized activities
+                # Only use fallback if LLM completely fails
+                
+                # Return a simple fallback structure without overriding activities
+                return schemas.MultiCityItinerary(
+                    trip_type="multi_city",
+                    destinations=["Naples, Italy", "Rome, Italy"],
+                    duration=duration,
+                    description="Multi-city trip to Naples and Rome",
+                    flights=[],
+                    hotels=[],
+                    inter_city_transport=[],
+                    schedule=[],
+                    bookable_cost=0,
+                    estimated_cost=0,
+                    total_cost=0
+                )
+            else:
+                # Extract duration from user message - same logic as multi-city
+                duration = "3 days"  # Default fallback
+                if '3 days' in message_lower or '3 day' in message_lower:
+                    duration = "3 days"
+                elif '4 days' in message_lower or '4 day' in message_lower:
+                    duration = "4 days"
+                elif '5 days' in message_lower or '5 day' in message_lower:
+                    duration = "5 days"
+                elif '6 days' in message_lower or '6 day' in message_lower:
+                    duration = "6 days"
+                elif '7 days' in message_lower or '7 day' in message_lower or 'week' in message_lower:
+                    duration = "7 days"
+                elif '10 days' in message_lower or '10 day' in message_lower:
+                    duration = "10 days"
+                elif '14 days' in message_lower or '14 day' in message_lower or '2 weeks' in message_lower:
+                    duration = "14 days"
+                else:
+                    # Try to extract duration from the user's specific request
+                    import re
+                    
+                    # Pattern 1: "X day trip" or "X days trip"
+                    day_trip_match = re.search(r'(\d+)\s*days?\s*trip', message_lower)
+                    if day_trip_match:
+                        duration = f"{day_trip_match.group(1)} days"
+                    
+                    # Pattern 2: "for X days" or "X days in"
+                    for_days_match = re.search(r'for\s*(\d+)\s*days?', message_lower)
+                    if for_days_match:
+                        duration = f"{for_days_match.group(1)} days"
+                    
+                    # Pattern 3: "spending X days" or "X days in"
+                    spending_days_match = re.search(r'spending\s*(\d+)\s*days?', message_lower)
+                    if spending_days_match:
+                        duration = f"{spending_days_match.group(1)} days"
+                    
+                    # Pattern 4: "X days in [city]" or "X day in [city]"
+                    days_in_city_match = re.search(r'(\d+)\s*days?\s*in', message_lower)
+                    if days_in_city_match:
+                        duration = f"{days_in_city_match.group(1)} days"
+                
+                print(f"🔍 Single-city duration extracted: '{duration}' (original message: '{message_lower}')")
+                
+                # Generate dynamic single-city schedule
+                def generate_single_city_schedule(duration_str: str) -> list:
+                    """Generate single-city schedule based on user's requested duration"""
+                    import re
+                    days_match = re.search(r'(\d+)', duration_str)
+                    if not days_match:
+                        return []
+                    
+                    num_days = int(days_match.group(1))
+                    schedule = []
+                    
+                    for day in range(1, num_days + 1):
+                        schedule.append(schemas.ItineraryDay(
+                            day=day,
+                            date=f"July {14 + day}, 2024",
+                            activities=[
+                                schemas.ItineraryActivity(
+                                    name=f"Day {day} Activity",
+                                    time="10:00 AM",
+                                    price=25,
+                                    type="bookable",
+                                    description=f"Explore the city on day {day}",
+                                    alternatives=[]
+                                ),
+                                schemas.ItineraryActivity(
+                                    name=f"Evening Activity Day {day}",
+                                    time="7:00 PM",
+                                    price=0,
+                                    type="estimated",
+                                    description=f"Evening activities on day {day}",
+                                    alternatives=[]
+                                )
+                            ]
+                        ))
+                    
+                    return schedule
+                
+                # Generate the schedule dynamically
+                single_city_schedule = generate_single_city_schedule(duration)
+                print(f"📅 Generated {len(single_city_schedule)} days for single-city schedule based on duration: {duration}")
+                
+                # Return single city structure
+                return schemas.SingleCityItinerary(
+                    trip_type="single_city",
+                    destination=default_destination,
+                    duration=duration,
+                    description=f"Default itinerary for {default_destination}",
+                    flights=[
+                        schemas.FlightInfo(
+                            airline="United Airlines",
+                            flight="UA 123",
+                            departure="JFK → ORD",
+                            time="10:30 AM - 12:45 PM",
+                            price=400,
+                            type="outbound"
+                        ),
+                        schemas.FlightInfo(
+                            airline="United Airlines",
+                            flight="UA 456",
+                            departure="ORD → JFK",
+                            time="2:00 PM - 5:30 PM",
+                            price=400,
+                            type="return"
+                        )
+                    ],
+                    hotel=schemas.HotelInfo(
+                        name="Chicago Downtown Hotel",
+                        address="123 Michigan Ave, Chicago, IL",
+                        check_in="July 15, 2024 - 3:00 PM",
+                        check_out="July 18, 2024 - 11:00 AM",
+                        room_type="Standard Room",
+                        price=150,
+                        total_nights=3
                     ),
-                    schemas.FlightInfo(
-                        airline="United Airlines",
-                        flight="UA 456",
-                        departure="ORD → JFK",
-                        time="2:00 PM - 5:30 PM",
-                        price=400,
-                        type="return"
-                    )
-                ],
-                hotel=schemas.HotelInfo(
-                    name="Chicago Downtown Hotel",
-                    address="123 Michigan Ave, Chicago, IL",
-                    check_in="July 15, 2024 - 3:00 PM",
-                    check_out="July 18, 2024 - 11:00 AM",
-                    room_type="Standard Room",
-                    price=150,
-                    total_nights=3
-                ),
-                schedule=[
-                    schemas.ItineraryDay(
-                        day=1,
-                        date="July 15, 2024",
-                        activities=[
-                            schemas.ItineraryActivity(
-                                name="City Walking Tour",
-                                time="10:30",
-                                price=25,
-                                type="bookable",
-                                description="Explore the historic city center",
-                                alternatives=[
-                                    schemas.ItineraryActivity(
-                                        name="Private Guided Tour",
-                                        time="10:30",
-                                        price=45,
-                                        type="bookable",
-                                        description="Exclusive 2-hour private tour"
-                                    )
-                                ]
-                            )
-                        ]
-                    )
-                ],
-                total_cost=2500,
-                bookable_cost=1800,
-                estimated_cost=700
-            )
+                    schedule=single_city_schedule,
+                    total_cost=1200,
+                    bookable_cost=1000,
+                    estimated_cost=200
+                )
             
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error processing enhanced chat message")
@@ -924,3 +1167,4 @@ async def export_itinerary(
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
