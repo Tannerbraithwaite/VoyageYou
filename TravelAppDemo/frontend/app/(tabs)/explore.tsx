@@ -57,7 +57,7 @@ export default function ScheduleScreen() {
           return 'past';
         }
       } catch (error) {
-        console.log(`Error parsing trip end date: ${error}`);
+        // Error parsing trip end date
       }
     }
     
@@ -86,7 +86,7 @@ export default function ScheduleScreen() {
           setSavedSchedules(updatedSchedules);
         }
       } catch (error) {
-        console.error('Error loading saved schedules:', error);
+        // Error loading saved schedules
       }
     }
   };

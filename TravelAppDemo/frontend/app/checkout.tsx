@@ -2,6 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { EnhancedItinerary } from '@/types';
+import { 
+  validateEmail, 
+  validatePhone, 
+  validateName, 
+  validateCreditCard, 
+  validateExpiryDate, 
+  validateCVV, 
+  validatePassportNumber, 
+  validateDate,
+  formatCreditCard,
+  formatExpiryDate,
+  ValidationResult 
+} from '@/utils';
 
 interface TravelerInfo {
   firstName: string;
@@ -87,6 +100,9 @@ export default function CheckoutScreen() {
     phone: '',
     emergencyContact: ''
   });
+  
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string[]}>({});
 
   useEffect(() => {
     // Load itinerary data from session storage
@@ -148,10 +164,56 @@ export default function CheckoutScreen() {
   };
 
   const updatePaymentInfo = (field: keyof PaymentInfo, value: string) => {
-    setPaymentInfo({ ...paymentInfo, [field]: value });
+    let formattedValue = value;
+    
+    // Format and validate input
+    if (field === 'cardNumber') {
+      formattedValue = formatCreditCard(value);
+      const validation = validateCreditCard(formattedValue);
+      setValidationErrors(prev => ({
+        ...prev,
+        cardNumber: validation.isValid ? [] : validation.errors
+      }));
+    } else if (field === 'expiryDate') {
+      formattedValue = formatExpiryDate(value);
+      const validation = validateExpiryDate(formattedValue);
+      setValidationErrors(prev => ({
+        ...prev,
+        expiryDate: validation.isValid ? [] : validation.errors
+      }));
+    } else if (field === 'cvv') {
+      const validation = validateCVV(value);
+      setValidationErrors(prev => ({
+        ...prev,
+        cvv: validation.isValid ? [] : validation.errors
+      }));
+    } else if (field === 'cardholderName') {
+      const validation = validateName(value);
+      setValidationErrors(prev => ({
+        ...prev,
+        cardholderName: validation.isValid ? [] : validation.errors
+      }));
+    }
+    
+    setPaymentInfo({ ...paymentInfo, [field]: formattedValue });
   };
 
   const updateContactInfo = (field: string, value: string) => {
+    // Validate contact info
+    if (field === 'email') {
+      const validation = validateEmail(value);
+      setValidationErrors(prev => ({
+        ...prev,
+        email: validation.isValid ? [] : validation.errors
+      }));
+    } else if (field === 'phone') {
+      const validation = validatePhone(value);
+      setValidationErrors(prev => ({
+        ...prev,
+        phone: validation.isValid ? [] : validation.errors
+      }));
+    }
+    
     setContactInfo({ ...contactInfo, [field]: value });
   };
 
@@ -356,7 +418,11 @@ export default function CheckoutScreen() {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Contact Information</Text>
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          validationErrors.email?.length > 0 && styles.inputError,
+          contactInfo.email.length > 0 && validationErrors.email?.length === 0 && styles.inputSuccess
+        ]}
         placeholder="Email Address"
         placeholderTextColor="#666"
         value={contactInfo.email}
@@ -364,14 +430,25 @@ export default function CheckoutScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
       />
+      {validationErrors.email?.map((error, index) => (
+        <Text key={index} style={styles.errorText}>{error}</Text>
+      ))}
+      
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          validationErrors.phone?.length > 0 && styles.inputError,
+          contactInfo.phone.length > 0 && validationErrors.phone?.length === 0 && styles.inputSuccess
+        ]}
         placeholder="Phone Number"
         placeholderTextColor="#666"
         value={contactInfo.phone}
         onChangeText={(text) => updateContactInfo('phone', text)}
         keyboardType="phone-pad"
       />
+      {validationErrors.phone?.map((error, index) => (
+        <Text key={index} style={styles.errorText}>{error}</Text>
+      ))}
       <TextInput
         style={styles.input}
         placeholder="Emergency Contact"
@@ -577,43 +654,76 @@ export default function CheckoutScreen() {
       <Text style={styles.sectionTitle}>Payment Information</Text>
       
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          validationErrors.cardNumber?.length > 0 && styles.inputError,
+          paymentInfo.cardNumber.length > 0 && validationErrors.cardNumber?.length === 0 && styles.inputSuccess
+        ]}
         placeholder="Card Number"
         placeholderTextColor="#666"
         value={paymentInfo.cardNumber}
-        onChangeText={(text) => updatePaymentInfo('cardNumber', formatCardNumber(text))}
+        onChangeText={(text) => updatePaymentInfo('cardNumber', text)}
         keyboardType="numeric"
         maxLength={19}
       />
+      {validationErrors.cardNumber?.map((error, index) => (
+        <Text key={index} style={styles.errorText}>{error}</Text>
+      ))}
       
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          validationErrors.cardholderName?.length > 0 && styles.inputError,
+          paymentInfo.cardholderName.length > 0 && validationErrors.cardholderName?.length === 0 && styles.inputSuccess
+        ]}
         placeholder="Cardholder Name"
         placeholderTextColor="#666"
         value={paymentInfo.cardholderName}
         onChangeText={(text) => updatePaymentInfo('cardholderName', text)}
         autoCapitalize="words"
       />
+      {validationErrors.cardholderName?.map((error, index) => (
+        <Text key={index} style={styles.errorText}>{error}</Text>
+      ))}
       
       <View style={styles.row}>
-        <TextInput
-          style={[styles.input, styles.halfInput]}
-          placeholder="Expiry Date (MM/YY)"
-          placeholderTextColor="#666"
-          value={paymentInfo.expiryDate}
-          onChangeText={(text) => updatePaymentInfo('expiryDate', formatExpiryDate(text))}
-          keyboardType="numeric"
-          maxLength={5}
-        />
-        <TextInput
-          style={[styles.input, styles.halfInput]}
-          placeholder="CVV"
-          placeholderTextColor="#666"
-          value={paymentInfo.cvv}
-          onChangeText={(text) => updatePaymentInfo('cvv', text)}
-          keyboardType="numeric"
-          maxLength={4}
-        />
+        <View style={styles.halfInput}>
+          <TextInput
+            style={[
+              styles.input,
+              validationErrors.expiryDate?.length > 0 && styles.inputError,
+              paymentInfo.expiryDate.length > 0 && validationErrors.expiryDate?.length === 0 && styles.inputSuccess
+            ]}
+            placeholder="Expiry Date (MM/YY)"
+            placeholderTextColor="#666"
+            value={paymentInfo.expiryDate}
+            onChangeText={(text) => updatePaymentInfo('expiryDate', text)}
+            keyboardType="numeric"
+            maxLength={5}
+          />
+          {validationErrors.expiryDate?.map((error, index) => (
+            <Text key={index} style={styles.errorText}>{error}</Text>
+          ))}
+        </View>
+        
+        <View style={styles.halfInput}>
+          <TextInput
+            style={[
+              styles.input,
+              validationErrors.cvv?.length > 0 && styles.inputError,
+              paymentInfo.cvv.length > 0 && validationErrors.cvv?.length === 0 && styles.inputSuccess
+            ]}
+            placeholder="CVV"
+            placeholderTextColor="#666"
+            value={paymentInfo.cvv}
+            onChangeText={(text) => updatePaymentInfo('cvv', text)}
+            keyboardType="numeric"
+            maxLength={4}
+          />
+          {validationErrors.cvv?.map((error, index) => (
+            <Text key={index} style={styles.errorText}>{error}</Text>
+          ))}
+        </View>
       </View>
       
       <TextInput
@@ -988,6 +1098,21 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     marginBottom: 16,
+  },
+  inputError: {
+    borderColor: '#ef4444',
+    borderWidth: 2,
+  },
+  inputSuccess: {
+    borderColor: '#10b981',
+    borderWidth: 2,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#ef4444',
+    marginTop: -12,
+    marginBottom: 8,
+    fontWeight: '500',
   },
   halfInput: {
     flex: 1,

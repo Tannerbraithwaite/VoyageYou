@@ -45,7 +45,7 @@ export default function SuggestionsScreen() {
           const profileData = JSON.parse(savedProfile);
           setUserInsights(profileData.insights);
           setHasGeneratedProfile(true);
-          console.log('✅ Loaded saved travel profile');
+
         }
 
         // Load saved recommendations
@@ -54,7 +54,7 @@ export default function SuggestionsScreen() {
           const recommendationsData = JSON.parse(savedRecommendations);
           setPersonalizedRecommendations(recommendationsData.recommendations);
           setHasGeneratedRecommendations(true);
-          console.log('✅ Loaded saved trip recommendations');
+
         }
       }
     } catch (error) {
@@ -71,7 +71,7 @@ export default function SuggestionsScreen() {
           generatedAt: new Date().toISOString()
         };
         localStorage.setItem('userTravelProfile', JSON.stringify(profileData));
-        console.log('💾 Travel profile saved to localStorage');
+
       }
     } catch (error) {
       console.error('Error saving travel profile:', error);
@@ -87,7 +87,7 @@ export default function SuggestionsScreen() {
           generatedAt: new Date().toISOString()
         };
         localStorage.setItem('userTripRecommendations', JSON.stringify(recommendationsData));
-        console.log('💾 Trip recommendations saved to localStorage');
+
       }
     } catch (error) {
       console.error('Error saving trip recommendations:', error);
@@ -241,7 +241,7 @@ Return ONLY valid JSON in this exact format (remove duration and estimatedCost f
 
 Return ONLY the JSON array, no other text.`;
 
-      console.log('🎯 Trip Recommendations Prompt (High Creativity Mode):', tripRecommendationsPrompt);
+
       
       // Send to LLM
       const response = await fetch('http://localhost:8000/chat/', {
@@ -592,7 +592,7 @@ Return ONLY the JSON array, no other text.`;
         if (typeof window !== 'undefined') {
           localStorage.removeItem('userTripRecommendations');
         }
-        console.log('🔄 Updating travel profile - cleared old recommendations');
+
       }
 
       // Fetch user profile data
@@ -679,7 +679,7 @@ Return ONLY a bullet-point list of insights about the user's travel preferences,
 
 Make the insights specific, data-driven, and actionable for future trip planning. Keep each bullet point concise and insightful.`;
 
-      console.log(`🎯 Travel Profile Prompt (${hasGeneratedProfile ? 'UPDATE' : 'INITIAL GENERATION'}):`, travelProfilePrompt);
+
       
       // Send to LLM using the travel profile endpoint
       const response = await fetch('http://localhost:8000/chat/travel-profile/', {
@@ -695,7 +695,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ Travel Profile Response:', result);
+
         
         // Parse the response to extract bullet points
         const responseText = result.bot_response;
@@ -776,7 +776,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
     // Override duration inside prompt to chosenDays
     let tripPrompt = createTripPrompt(recommendation);
 
-    const dates = tripDatesPerRec[recommendation.id];
+    const dates = tripDatesPerRec[(recommendation as any).id || 0];
     if (dates?.startDate && dates.endDate) {
       const diffDays = calculateTripDuration(dates.startDate, dates.endDate);
       // replace original duration text in prompt
@@ -788,8 +788,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
       update({ startDate: dates.startDate, days: diffDays });
     }
     
-    console.log('🎯 Planning trip to:', recommendation.destination);
-    console.log('📝 Trip prompt:', tripPrompt);
+
     
     // Start planning state
     setIsPlanning(true);
@@ -1019,12 +1018,12 @@ Make the insights specific, data-driven, and actionable for future trip planning
           ) : personalizedRecommendations.length > 0 ? (
             <>
               {personalizedRecommendations.map((recommendation, index) => {
-            const dates = tripDatesPerRec[index];
+            const dates = tripDatesPerRec[(recommendation as any).id || index];
             const startDate = dates?.startDate ?? null;
             const endDate = dates?.endDate ?? null;
             const days = startDate && endDate ? calculateTripDuration(startDate, endDate) : parseInt(recommendation.duration);
             return (
-              <View key={recommendation.id} style={styles.recommendationCard}>
+              <View key={(recommendation as any).id || index} style={styles.recommendationCard}>
                 <View style={styles.recommendationHeader}>
                   <View style={styles.destinationInfo}>
                     <Text style={styles.destinationName}>{recommendation.destination}</Text>
@@ -1055,7 +1054,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
                 {/* Start date selector */}
                 <DatePicker
                   tripDates={dates ?? { startDate: null, endDate: null, isFlexible: false }}
-                  onDatesChange={(d: TripDates) => setTripDatesPerRec(prev => ({ ...prev, [index]: d }))}
+                  onDatesChange={(d: TripDates) => setTripDatesPerRec(prev => ({ ...prev, [(recommendation as any).id || index]: d }))}
                 />
 
                 {/* Plan button uses days variable already */}

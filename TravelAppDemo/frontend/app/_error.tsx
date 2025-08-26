@@ -19,8 +19,10 @@ export default class GlobalErrorBoundary extends React.Component<any, ErrorBound
 
   componentDidCatch(error: any, errorInfo: any) {
     this.setState({ errorInfo });
-    // Log error to console for debugging
-    console.error('Global Error Boundary caught an error:', error, errorInfo);
+    // Error caught by global boundary - logged for development
+    if (__DEV__) {
+      console.error('Global Error Boundary caught an error:', error, errorInfo);
+    }
   }
 
   render() {

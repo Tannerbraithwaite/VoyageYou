@@ -674,6 +674,50 @@ def clear_chat_history(user_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error clearing chat history: {str(e)}")
 
+@app.post("/chat/tools/")
+async def chat_with_function_calling(chat_request: ChatRequest, db: Session = Depends(get_db)):
+    """Chat with AI using function calling tools for real-time API data"""
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=500, 
+            detail="OpenAI API key not configured."
+        )
+    
+    try:
+        from chat_tools import function_calling_chat_service
+        
+        # Use function calling chat service
+        response_text = await function_calling_chat_service.chat_with_tools(
+            chat_request.message, 
+            chat_request.user_id
+        )
+        
+        # Parse and return JSON response
+        import json
+        try:
+            itinerary_data = json.loads(response_text)
+            return itinerary_data
+        except json.JSONDecodeError:
+            # Fallback if response isn't valid JSON
+            return {
+                "trip_type": "single_city",
+                "destination": "Error",
+                "duration": "0 days",
+                "description": "Error processing request",
+                "flights": [],
+                "hotel": {},
+                "schedule": [],
+                "total_cost": 0,
+                "bookable_cost": 0,
+                "estimated_cost": 0,
+                "error": "Invalid response format"
+            }
+            
+    except Exception as e:
+        print(f"❌ Error in function calling chat: {e}")
+        raise HTTPException(status_code=500, detail=f"Error processing chat: {str(e)}")
+
 @app.post("/chat/enhanced/")
 async def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = Depends(get_db)):
     """Chat with the AI travel assistant and return structured itinerary data"""

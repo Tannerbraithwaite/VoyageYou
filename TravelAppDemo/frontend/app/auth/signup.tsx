@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
+import { validateEmail, validatePassword, validateName, ValidationResult } from '@/utils';
 
 export default function SignupScreen() {
   const [name, setName] = useState('');
@@ -9,20 +10,66 @@ export default function SignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Validation states
+  const [nameValidation, setNameValidation] = useState<ValidationResult>({ isValid: true, errors: [] });
+  const [emailValidation, setEmailValidation] = useState<ValidationResult>({ isValid: true, errors: [] });
+  const [passwordValidation, setPasswordValidation] = useState<ValidationResult>({ isValid: true, errors: [] });
+  const [confirmPasswordValidation, setConfirmPasswordValidation] = useState<ValidationResult>({ isValid: true, errors: [] });
+  
+  // Real-time validation
+  useEffect(() => {
+    if (name.length > 0) {
+      setNameValidation(validateName(name));
+    } else {
+      setNameValidation({ isValid: true, errors: [] });
+    }
+  }, [name]);
+  
+  useEffect(() => {
+    if (email.length > 0) {
+      setEmailValidation(validateEmail(email));
+    } else {
+      setEmailValidation({ isValid: true, errors: [] });
+    }
+  }, [email]);
+  
+  useEffect(() => {
+    if (password.length > 0) {
+      setPasswordValidation(validatePassword(password));
+    } else {
+      setPasswordValidation({ isValid: true, errors: [] });
+    }
+  }, [password]);
+  
+  useEffect(() => {
+    if (confirmPassword.length > 0) {
+      const errors: string[] = [];
+      if (password !== confirmPassword) {
+        errors.push('Passwords do not match');
+      }
+      setConfirmPasswordValidation({ isValid: errors.length === 0, errors });
+    } else {
+      setConfirmPasswordValidation({ isValid: true, errors: [] });
+    }
+  }, [password, confirmPassword]);
 
   const handleSignup = async () => {
-    if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
+    // Force validation for all fields
+    const nameVal = validateName(name);
+    const emailVal = validateEmail(email);
+    const passwordVal = validatePassword(password);
+    const confirmVal = password !== confirmPassword ? { isValid: false, errors: ['Passwords do not match'] } : { isValid: true, errors: [] };
+    
+    setNameValidation(nameVal);
+    setEmailValidation(emailVal);
+    setPasswordValidation(passwordVal);
+    setConfirmPasswordValidation(confirmVal);
+    
+    // Check if all validations pass
+    if (!nameVal.isValid || !emailVal.isValid || !passwordVal.isValid || !confirmVal.isValid) {
+      const allErrors = [...nameVal.errors, ...emailVal.errors, ...passwordVal.errors, ...confirmVal.errors];
+      Alert.alert('Validation Error', allErrors[0]); // Show first error
       return;
     }
 
@@ -81,12 +128,19 @@ export default function SignupScreen() {
             <TextInput
               value={name}
               onChangeText={setName}
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                name.length > 0 && !nameValidation.isValid && styles.textInputError,
+                name.length > 0 && nameValidation.isValid && styles.textInputSuccess
+              ]}
               placeholder="Enter your full name"
               placeholderTextColor="#666"
               autoCapitalize="words"
               autoCorrect={false}
             />
+            {!nameValidation.isValid && nameValidation.errors.map((error, index) => (
+              <Text key={index} style={styles.errorText}>{error}</Text>
+            ))}
           </View>
 
           <View style={styles.inputContainer}>
@@ -94,13 +148,20 @@ export default function SignupScreen() {
             <TextInput
               value={email}
               onChangeText={setEmail}
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                email.length > 0 && !emailValidation.isValid && styles.textInputError,
+                email.length > 0 && emailValidation.isValid && styles.textInputSuccess
+              ]}
               placeholder="Enter your email"
               placeholderTextColor="#666"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
             />
+            {!emailValidation.isValid && emailValidation.errors.map((error, index) => (
+              <Text key={index} style={styles.errorText}>{error}</Text>
+            ))}
           </View>
 
           <View style={styles.inputContainer}>
@@ -108,14 +169,24 @@ export default function SignupScreen() {
             <TextInput
               value={password}
               onChangeText={setPassword}
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                password.length > 0 && !passwordValidation.isValid && styles.textInputError,
+                password.length > 0 && passwordValidation.isValid && styles.textInputSuccess
+              ]}
               placeholder="Create a password"
               placeholderTextColor="#666"
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
             />
-            <Text style={styles.passwordHint}>Must be at least 8 characters</Text>
+            {passwordValidation.isValid ? (
+              <Text style={styles.passwordHint}>Must contain 8+ chars, uppercase, lowercase, number, special char</Text>
+            ) : (
+              passwordValidation.errors.map((error, index) => (
+                <Text key={index} style={styles.errorText}>{error}</Text>
+              ))
+            )}
           </View>
 
           <View style={styles.inputContainer}>
@@ -123,13 +194,20 @@ export default function SignupScreen() {
             <TextInput
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                confirmPassword.length > 0 && !confirmPasswordValidation.isValid && styles.textInputError,
+                confirmPassword.length > 0 && confirmPasswordValidation.isValid && styles.textInputSuccess
+              ]}
               placeholder="Confirm your password"
               placeholderTextColor="#666"
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
             />
+            {!confirmPasswordValidation.isValid && confirmPasswordValidation.errors.map((error, index) => (
+              <Text key={index} style={styles.errorText}>{error}</Text>
+            ))}
           </View>
 
           <View style={styles.termsContainer}>
@@ -167,12 +245,22 @@ export default function SignupScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Continue with Google</Text>
+          <TouchableOpacity style={[styles.socialButton, styles.googleButton]}>
+            <View style={styles.socialButtonContent}>
+              <View style={styles.googleLogo}>
+                <Text style={styles.googleLogoText}>G</Text>
+              </View>
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
+            </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialButtonText}>Continue with Apple</Text>
+          <TouchableOpacity style={[styles.socialButton, styles.appleButton]}>
+            <View style={styles.socialButtonContent}>
+              <View style={styles.appleLogo}>
+                <Text style={styles.appleLogoText}>⌘</Text>
+              </View>
+              <Text style={styles.socialButtonText}>Continue with Apple</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -240,6 +328,20 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
     fontStyle: 'italic',
+  },
+  textInputError: {
+    borderColor: '#ef4444',
+    borderWidth: 2,
+  },
+  textInputSuccess: {
+    borderColor: '#10b981',
+    borderWidth: 2,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#ef4444',
+    marginTop: 4,
+    fontWeight: '500',
   },
   termsContainer: {
     marginBottom: 24,
@@ -330,6 +432,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  socialButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleButton: {
+    borderColor: '#4285f4',
+    backgroundColor: '#1a1a1a',
+  },
+  appleButton: {
+    borderColor: '#000000',
+    backgroundColor: '#000000',
+  },
+  googleLogo: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#4285f4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  googleLogoText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'Arial',
+  },
+  appleLogo: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  appleLogoText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   footer: {
     flexDirection: 'row',

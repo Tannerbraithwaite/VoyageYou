@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import authService from '@/services/auth';
 import oauthService from '@/services/oauth';
+import { validateEmail, ValidationResult } from '@/utils';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -11,10 +12,31 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
+  
+  // Validation states
+  const [emailValidation, setEmailValidation] = useState<ValidationResult>({ isValid: true, errors: [] });
+  
+  // Real-time validation
+  useEffect(() => {
+    if (email.length > 0) {
+      setEmailValidation(validateEmail(email));
+    } else {
+      setEmailValidation({ isValid: true, errors: [] });
+    }
+  }, [email]);
 
   const handleLogin = async () => {
+    // Force validation
+    const emailVal = validateEmail(email);
+    setEmailValidation(emailVal);
+    
     if (!email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    
+    if (!emailVal.isValid) {
+      Alert.alert('Validation Error', emailVal.errors[0]);
       return;
     }
 
@@ -95,13 +117,20 @@ export default function LoginScreen() {
             <TextInput
               value={email}
               onChangeText={setEmail}
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                email.length > 0 && !emailValidation.isValid && styles.textInputError,
+                email.length > 0 && emailValidation.isValid && styles.textInputSuccess
+              ]}
               placeholder="Enter your email"
               placeholderTextColor="#666"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
             />
+            {!emailValidation.isValid && emailValidation.errors.map((error, index) => (
+              <Text key={index} style={styles.errorText}>{error}</Text>
+            ))}
           </View>
 
           <View style={styles.inputContainer}>
@@ -150,11 +179,36 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Temporarily disabled OAuth buttons to fix login issues */}
-          <View style={styles.disabledOAuthContainer}>
-            <Text style={styles.disabledOAuthText}>OAuth temporarily disabled</Text>
-            <Text style={styles.disabledOAuthSubtext}>Please use email/password login above</Text>
-          </View>
+          {/* OAuth Buttons */}
+          <TouchableOpacity
+            style={[styles.socialButton, styles.googleButton, isGoogleLoading && styles.socialButtonDisabled]}
+            onPress={handleGoogleSignIn}
+            disabled={isGoogleLoading}
+          >
+            <View style={styles.socialButtonContent}>
+              <View style={styles.googleLogo}>
+                <Text style={styles.googleLogoText}>G</Text>
+              </View>
+              <Text style={styles.socialButtonText}>
+                {isGoogleLoading ? 'Signing in with Google...' : 'Continue with Google'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.socialButton, styles.appleButton, isAppleLoading && styles.socialButtonDisabled]}
+            onPress={handleAppleSignIn}
+            disabled={isAppleLoading}
+          >
+            <View style={styles.socialButtonContent}>
+              <View style={styles.appleLogo}>
+                <Text style={styles.appleLogoText}>⌘</Text>
+              </View>
+              <Text style={styles.socialButtonText}>
+                {isAppleLoading ? 'Signing in with Apple...' : 'Continue with Apple'}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
@@ -214,6 +268,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#1a1a1a',
     color: 'white',
+  },
+  textInputError: {
+    borderColor: '#ef4444',
+    borderWidth: 2,
+  },
+  textInputSuccess: {
+    borderColor: '#10b981',
+    borderWidth: 2,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#ef4444',
+    marginTop: 4,
+    fontWeight: '500',
   },
   optionsContainer: {
     flexDirection: 'row',
@@ -307,6 +375,48 @@ const styles = StyleSheet.create({
   socialButtonDisabled: {
     opacity: 0.6,
   },
+  socialButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleButton: {
+    borderColor: '#4285f4',
+    backgroundColor: '#1a1a1a',
+  },
+  appleButton: {
+    borderColor: '#000000',
+    backgroundColor: '#000000',
+  },
+  googleLogo: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#4285f4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  googleLogoText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'Arial',
+  },
+  appleLogo: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  appleLogoText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -321,23 +431,5 @@ const styles = StyleSheet.create({
     color: '#6366f1',
     fontWeight: '700',
   },
-  disabledOAuthContainer: {
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  disabledOAuthText: {
-    color: '#999',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  disabledOAuthSubtext: {
-    color: '#666',
-    fontSize: 14,
-    textAlign: 'center',
-  },
+
 }); 

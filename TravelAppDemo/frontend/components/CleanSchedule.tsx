@@ -4,9 +4,10 @@ import GlassCard from './ui/GlassCard';
 
 interface Activity {
   time: string;
-  activity: string;
+  name: string;
   price: number;
   type: 'bookable' | 'estimated' | 'transport';
+  description?: string;
   transport_details?: {
     type: 'flight' | 'train' | 'bus';
     carrier: string;
@@ -39,7 +40,7 @@ interface CleanScheduleProps {
     activityIndex: number;
     isEditing: boolean;
   } | null;
-  alternativeActivities: { all: AlternativeActivity[] };
+  alternativeActivities: Record<string, AlternativeActivity[]>;
   onActivityEditSave: (dayIndex: number, activityIndex: number, updatedActivity: Activity) => void;
   onActivityEditCancel: () => void;
 }
@@ -140,8 +141,8 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
           <Text style={styles.inputLabel}>Activity:</Text>
           <TextInput
             style={styles.textInput}
-            value={editedActivity.activity}
-            onChangeText={(text) => setEditedActivity(prev => ({ ...prev, activity: text }))}
+            value={editedActivity.name}
+            onChangeText={(text) => setEditedActivity(prev => ({ ...prev, name: text }))}
             placeholder="Activity name"
             placeholderTextColor="#666"
           />
@@ -296,7 +297,7 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                             style={styles.activityClickable}
                             onPress={() => onEditActivity(dayIndex, activityIndex)}
                           >
-                            <Text style={styles.activityText}>{activity.activity}</Text>
+                            <Text style={styles.activityText}>{activity.name}</Text>
                             <View style={styles.activityDetails}>
                               {activity.price > 0 && (
                                 <Text style={styles.priceText}>${activity.price}</Text>
@@ -326,6 +327,75 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                                 <Text style={styles.transportTime}>{activity.transport_details.time}</Text>
                               </View>
                             )}
+                            
+                            {/* Show alternatives if available */}
+                            {(() => {
+                              // Get alternatives for this specific activity
+                              const specificAlternatives = alternativeActivities[activity.name] || [];
+                              
+                              // Get alternatives from other activities that could be good substitutes
+                              const allAlternatives = Object.values(alternativeActivities).flat();
+                              const relevantAlternatives = allAlternatives.filter(alt => 
+                                alt.name !== activity.name && // Don't show the current activity as an alternative
+                                !schedule.some(day => 
+                                  day.activities.some(act => act.name === alt.name) // Don't show already scheduled activities
+                                )
+                              );
+                              
+                              // Combine specific alternatives with relevant ones, prioritizing specific ones
+                              const combinedAlternatives = [...specificAlternatives, ...relevantAlternatives.slice(0, 3)];
+                              
+                              console.log('🔍 Checking alternatives for activity:', {
+                                activity: activity,
+                                activityName: activity.name,
+                                specificAlternatives: specificAlternatives.length,
+                                relevantAlternatives: relevantAlternatives.length,
+                                combinedAlternatives: combinedAlternatives.length,
+                                alternativeActivities: alternativeActivities
+                              });
+                              
+                              return combinedAlternatives.length > 0 ? (
+                                <View style={styles.alternativesPreview}>
+                                  <Text style={styles.alternativesPreviewTitle}>💡 Alternatives available</Text>
+                                  <View style={styles.alternativesPreviewList}>
+                                    {combinedAlternatives.slice(0, 2).map((alternative, altIndex) => (
+                                      <TouchableOpacity
+                                        key={altIndex}
+                                        style={styles.alternativePreviewItem}
+                                        onPress={() => {
+                                          console.log('🔄 Replacing activity with alternative:', {
+                                            original: activity,
+                                            alternative: alternative,
+                                            dayIndex,
+                                            activityIndex
+                                          });
+                                          
+                                          // Directly replace the activity with the alternative
+                                          const updatedActivity = {
+                                            time: activity.time,
+                                            name: alternative.name,
+                                            price: alternative.price,
+                                            type: alternative.type as 'bookable' | 'estimated',
+                                            description: alternative.description || ''
+                                          };
+                                          
+                                          console.log('🔄 Updated activity to save:', updatedActivity);
+                                          onActivityEditSave(dayIndex, activityIndex, updatedActivity);
+                                        }}
+                                      >
+                                        <Text style={styles.alternativePreviewName}>{alternative.name}</Text>
+                                        <Text style={styles.alternativePreviewPrice}>${alternative.price}</Text>
+                                      </TouchableOpacity>
+                                    ))}
+                                    {combinedAlternatives.length > 2 && (
+                                      <Text style={styles.alternativesPreviewMore}>
+                                        +{combinedAlternatives.length - 2} more
+                                      </Text>
+                                    )}
+                                  </View>
+                                </View>
+                              ) : null;
+                            })()}
                             
                             <Text style={styles.editHint}>Tap to edit</Text>
                           </TouchableOpacity>
@@ -707,7 +777,7 @@ const styles = {
     flexDirection: 'row' as const,
     backgroundColor: '#333',
     borderRadius: 8,
-    overflow: 'hidden' as const,
+    overflow: 'hidden',
   },
   typeOption: {
     flex: 1,
@@ -724,5 +794,49 @@ const styles = {
   },
   typeOptionTextSelected: {
     color: '#ffffff',
+  },
+  alternativesPreview: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  alternativesPreviewTitle: {
+    fontSize: 12,
+    color: '#10b981',
+    fontWeight: '600' as const,
+    marginBottom: 8,
+  },
+  alternativesPreviewList: {
+    gap: 8,
+  },
+  alternativePreviewItem: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    padding: 8,
+    backgroundColor: '#333',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  alternativePreviewName: {
+    fontSize: 12,
+    color: '#ffffff',
+    flex: 1,
+  },
+  alternativePreviewPrice: {
+    fontSize: 12,
+    color: '#10b981',
+    fontWeight: '600' as const,
+    marginLeft: 8,
+  },
+  alternativesPreviewMore: {
+    fontSize: 11,
+    color: '#888',
+    textAlign: 'center' as const,
+    marginTop: 4,
   },
 };

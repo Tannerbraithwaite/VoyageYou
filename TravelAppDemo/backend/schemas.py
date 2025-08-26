@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator, root_validator
 from typing import List, Optional, ForwardRef, Union
-from datetime import datetime
+from datetime import datetime, timedelta
+import re
 
 # Base schemas
 class Base(BaseModel):
@@ -39,8 +40,14 @@ class ForgotPasswordRequest(BaseModel):
 
 
 class ResetPasswordRequest(BaseModel):
-    token: str
-    new_password: str
+    token: str = Field(..., min_length=1, description="Reset token required")
+    new_password: str = Field(..., min_length=8, max_length=128, description="Strong password required")
+    
+    @validator('new_password')
+    def validate_new_password(cls, v):
+        if not re.search(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', v):
+            raise ValueError('Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character (@$!%*?&)')
+        return v
 
 # PDF Export schemas
 class ExportItineraryRequest(BaseModel):
@@ -52,9 +59,25 @@ class OAuthRequest(BaseModel):
     provider: str  # "google" or "apple"
 
 class SignupRequest(BaseModel):
-    name: str
-    email: str
-    password: str
+    name: str = Field(..., min_length=2, max_length=50, description="Full name (2-50 characters)")
+    email: EmailStr = Field(..., description="Valid email address required")
+    password: str = Field(..., min_length=8, max_length=128, description="Strong password required")
+    
+    @validator('password')
+    def validate_password(cls, v):
+        if not re.search(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', v):
+            raise ValueError('Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character (@$!%*?&)')
+        return v
+    
+    @validator('name')
+    def validate_name(cls, v):
+        if not v.strip():
+            raise ValueError('Name cannot be empty')
+        if len(v.strip()) < 2:
+            raise ValueError('Name must be at least 2 characters long')
+        if not re.match(r'^[a-zA-Z\s\-\']+$', v.strip()):
+            raise ValueError('Name can only contain letters, spaces, hyphens, and apostrophes')
+        return v.strip()
 
 class VerificationRequest(BaseModel):
     token: str
@@ -384,6 +407,128 @@ class MultiCityItinerary(BaseModel):
 
 # Union type for both itinerary types
 EnhancedItineraryResponse = Union[SingleCityItinerary, MultiCityItinerary]
+
+# Checkout and payment validation schemas
+class CreditCardInfo(BaseModel):
+    card_number: str = Field(..., pattern=r'^\d{13,19}$', description="13-19 digit card number")
+    cardholder_name: str = Field(..., min_length=2, max_length=50, description="Cardholder full name")
+    expiry_date: str = Field(..., pattern=r'^(0[1-9]|1[0-2])\/\d{2}$', description="MM/YY format")
+    cvv: str = Field(..., pattern=r'^\d{3,4}$', description="3-4 digit CVV")
+    billing_address: str = Field(..., min_length=10, max_length=200, description="Complete billing address")
+    
+    @validator('card_number')
+    def validate_card_number(cls, v):
+        # Luhn algorithm for credit card validation
+        def luhn_checksum(card_num):
+            def digits_of(n):
+                return [int(d) for d in str(n)]
+            digits = digits_of(card_num)
+            odd_digits = digits[-1::-2]
+            even_digits = digits[-2::-2]
+            checksum = sum(odd_digits)
+            for d in even_digits:
+                checksum += sum(digits_of(d*2))
+            return checksum % 10
+        
+        cleaned = v.replace(' ', '').replace('-', '')
+        if luhn_checksum(cleaned) != 0:
+            raise ValueError('Invalid credit card number')
+        return cleaned
+    
+    @validator('expiry_date')
+    def validate_expiry_date(cls, v):
+        try:
+            month, year = v.split('/')
+            month, year = int(month), int(f"20{year}")
+            exp_date = datetime(year, month, 1)
+            if exp_date < datetime.now():
+                raise ValueError('Card has expired')
+        except ValueError as e:
+            if 'Card has expired' in str(e):
+                raise e
+            raise ValueError('Invalid expiry date format. Use MM/YY')
+        return v
+    
+    @validator('cardholder_name')
+    def validate_cardholder_name(cls, v):
+        if not re.match(r'^[a-zA-Z\s\-\']+$', v.strip()):
+            raise ValueError('Cardholder name can only contain letters, spaces, hyphens, and apostrophes')
+        return v.strip()
+
+class TravelerInfo(BaseModel):
+    first_name: str = Field(..., min_length=1, max_length=50, description="First name")
+    last_name: str = Field(..., min_length=1, max_length=50, description="Last name") 
+    date_of_birth: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$', description="YYYY-MM-DD format")
+    passport_number: str = Field(..., min_length=6, max_length=15, description="Passport number")
+    passport_expiry: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$', description="YYYY-MM-DD format")
+    nationality: str = Field(..., min_length=2, max_length=50, description="Nationality")
+    
+    @validator('first_name', 'last_name')
+    def validate_names(cls, v):
+        if not re.match(r'^[a-zA-Z\s\-\']+$', v.strip()):
+            raise ValueError('Names can only contain letters, spaces, hyphens, and apostrophes')
+        return v.strip()
+    
+    @validator('date_of_birth')
+    def validate_date_of_birth(cls, v):
+        try:
+            birth_date = datetime.strptime(v, '%Y-%m-%d')
+            age = (datetime.now() - birth_date).days / 365.25
+            if age < 0:
+                raise ValueError('Birth date cannot be in the future')
+            if age > 120:
+                raise ValueError('Invalid birth date')
+        except ValueError as e:
+            if 'time data' in str(e):
+                raise ValueError('Invalid date format. Use YYYY-MM-DD')
+            raise e
+        return v
+    
+    @validator('passport_expiry')
+    def validate_passport_expiry(cls, v):
+        try:
+            exp_date = datetime.strptime(v, '%Y-%m-%d')
+            if exp_date < datetime.now() + timedelta(days=180):  # 6 months validity
+                raise ValueError('Passport must be valid for at least 6 months')
+        except ValueError as e:
+            if 'time data' in str(e):
+                raise ValueError('Invalid date format. Use YYYY-MM-DD')
+            raise e
+        return v
+    
+    @validator('passport_number')
+    def validate_passport_number(cls, v):
+        cleaned = v.strip().upper()
+        if not re.match(r'^[A-Z0-9]+$', cleaned):
+            raise ValueError('Passport number can only contain letters and numbers')
+        return cleaned
+
+class ContactInfo(BaseModel):
+    email: EmailStr = Field(..., description="Valid email address required")
+    phone: str = Field(..., description="Valid phone number")
+    emergency_contact_name: str = Field(..., min_length=2, max_length=50, description="Emergency contact name")
+    emergency_contact_phone: str = Field(..., description="Emergency contact phone")
+    
+    @validator('phone', 'emergency_contact_phone')
+    def validate_phone_numbers(cls, v):
+        # Remove common formatting characters
+        cleaned = re.sub(r'[\s()-]', '', v)
+        if not re.match(r'^\+?1?[0-9]{10,15}$', cleaned):
+            raise ValueError('Please enter a valid phone number')
+        return cleaned
+    
+    @validator('emergency_contact_name')
+    def validate_emergency_name(cls, v):
+        if not re.match(r'^[a-zA-Z\s\-\']+$', v.strip()):
+            raise ValueError('Emergency contact name can only contain letters, spaces, hyphens, and apostrophes')
+        return v.strip()
+
+class CheckoutRequest(BaseModel):
+    travelers: List[TravelerInfo] = Field(..., min_items=1, max_items=10, description="Traveler information")
+    payment_info: CreditCardInfo = Field(..., description="Payment information")
+    contact_info: ContactInfo = Field(..., description="Contact information")
+    itinerary_data: dict = Field(..., description="Trip itinerary data")
+    special_requests: Optional[str] = Field(None, max_length=1000, description="Special requests")
 
 # Update forward references
 # Note: model_rebuild() is not needed in newer Pydantic versions 

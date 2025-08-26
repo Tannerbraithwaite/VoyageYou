@@ -20,8 +20,9 @@ describe('DatePicker', () => {
       <DatePicker tripDates={mockTripDates} onDatesChange={mockOnDatesChange} />
     );
 
-    expect(getByText('Select Start Date')).toBeTruthy();
-    expect(getByText('Select End Date')).toBeTruthy();
+    expect(getByText('Trip Dates')).toBeTruthy();
+    expect(getByText('Select Start')).toBeTruthy();
+    expect(getByText('Select End')).toBeTruthy();
     expect(getByText('Flexible with dates')).toBeTruthy();
   });
 
@@ -36,8 +37,8 @@ describe('DatePicker', () => {
       <DatePicker tripDates={tripDatesWithDates} onDatesChange={mockOnDatesChange} />
     );
 
-    expect(getByText(/Start Date: Mon, Jul 15, 2024/)).toBeTruthy();
-    expect(getByText(/End Date: Thu, Jul 18, 2024/)).toBeTruthy();
+    expect(getByText(/Start: Mon, Jul 15, 2024/)).toBeTruthy();
+    expect(getByText(/End: Thu, Jul 18, 2024/)).toBeTruthy();
   });
 
   it('calls onDatesChange when start date is selected', async () => {
@@ -45,7 +46,7 @@ describe('DatePicker', () => {
       <DatePicker tripDates={mockTripDates} onDatesChange={mockOnDatesChange} />
     );
 
-    const startDateButton = getByText('Select Start Date');
+    const startDateButton = getByText('Select Start');
     fireEvent.press(startDateButton);
 
     await waitFor(() => {
@@ -58,7 +59,7 @@ describe('DatePicker', () => {
       <DatePicker tripDates={mockTripDates} onDatesChange={mockOnDatesChange} />
     );
 
-    const endDateButton = getByText('Select End Date');
+    const endDateButton = getByText('Select End');
     fireEvent.press(endDateButton);
 
     await waitFor(() => {
@@ -91,7 +92,7 @@ describe('DatePicker', () => {
       <DatePicker tripDates={tripDatesWithDates} onDatesChange={mockOnDatesChange} />
     );
 
-    const clearButton = getByText('Clear Dates');
+    const clearButton = getByText('Clear');
     fireEvent.press(clearButton);
 
     expect(mockOnDatesChange).toHaveBeenCalledWith({
@@ -112,6 +113,20 @@ describe('DatePicker', () => {
       <DatePicker tripDates={flexibleTripDates} onDatesChange={mockOnDatesChange} />
     );
 
-    expect(getByText('✓ Flexible')).toBeTruthy();
+    expect(getByText('(flexible)')).toBeTruthy();
+  });
+
+  it('shows duration when both dates are set', () => {
+    const tripDatesWithDates = {
+      startDate: new Date('2024-07-15'),
+      endDate: new Date('2024-07-18'),
+      isFlexible: false,
+    };
+
+    const { getByText } = render(
+      <DatePicker tripDates={tripDatesWithDates} onDatesChange={mockOnDatesChange} />
+    );
+
+    expect(getByText(/Duration: 3 days/)).toBeTruthy();
   });
 }); 

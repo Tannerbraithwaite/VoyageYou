@@ -46,6 +46,10 @@ class DuffelFlightService:
             passengers: Number of passengers
         """
         try:
+            print(f"✈️  Duffel Flight Search: {origin} → {destination}")
+            print(f"📅 Dates: {departure_date} {'→ ' + return_date if return_date else '(one-way)'}")
+            print(f"👥 Passengers: {passengers}")
+            
             # Create offer request
             slices = [
                 {
@@ -68,6 +72,10 @@ class DuffelFlightService:
                 "cabin_class": "economy"
             }
             
+            print(f"📋 Offer request data: {offer_request_data}")
+            print(f"🌐 Making API request to: {self.base_url}/air/offer_requests")
+            print(f"🔑 Using headers: {self.headers}")
+            
             async with httpx.AsyncClient() as client:
                 # Create offer request
                 response = await client.post(
@@ -77,14 +85,22 @@ class DuffelFlightService:
                     timeout=30.0
                 )
                 
+                print(f"🔍 Duffel offer request response status: {response.status_code}")
+                print(f"📡 Response headers: {dict(response.headers)}")
+                
                 if response.status_code != 201:
-                    print(f"Duffel API error: {response.status_code} - {response.text}")
+                    print(f"❌ Duffel API error: {response.status_code} - {response.text}")
                     return self._get_mock_flights(origin, destination, departure_date, return_date)
                 
                 offer_request = response.json()
+                print(f"📊 Offer request response structure: {list(offer_request.keys())}")
+                print(f"📄 Offer request response (first 500 chars): {str(offer_request)[:500]}...")
+                
                 offer_request_id = offer_request["data"]["id"]
+                print(f"🆔 Offer request ID: {offer_request_id}")
                 
                 # Get offers
+                print(f"🌐 Fetching offers from: {self.base_url}/air/offers")
                 offers_response = await client.get(
                     f"{self.base_url}/air/offers",
                     headers=self.headers,
@@ -92,32 +108,59 @@ class DuffelFlightService:
                     timeout=30.0
                 )
                 
+                print(f"🔍 Duffel offers response status: {offers_response.status_code}")
+                print(f"📡 Offers response headers: {dict(offers_response.headers)}")
+                
                 if offers_response.status_code != 200:
-                    print(f"Duffel offers error: {offers_response.status_code}")
+                    print(f"❌ Duffel offers error: {offers_response.status_code}")
+                    print(f"📄 Offers response body: {offers_response.text}")
                     return self._get_mock_flights(origin, destination, departure_date, return_date)
                 
                 offers_data = offers_response.json()
+                print(f"📊 Offers response structure: {list(offers_data.keys())}")
+                
+                # Log the full offers response for debugging (first 1000 chars to avoid spam)
+                offers_text = str(offers_data)
+                print(f"📄 Full offers response (first 1000 chars): {offers_text[:1000]}...")
                 
                 # Parse offers and return structured data
-                return self._parse_flight_offers(offers_data, origin, destination)
+                parsed_result = self._parse_flight_offers(offers_data, origin, destination)
+                print(f"✅ Parsed flight data: {parsed_result}")
+                return parsed_result
                 
         except Exception as e:
-            print(f"Error searching flights: {e}")
+            print(f"❌ Error searching flights: {e}")
+            import traceback
+            print(f"🔍 Full error traceback: {traceback.format_exc()}")
             return self._get_mock_flights(origin, destination, departure_date, return_date)
     
     def _parse_flight_offers(self, offers_data: Dict, origin: str, destination: str) -> Dict[str, Any]:
         """Parse Duffel API response into our format"""
         flights = []
         
+        print(f"🔍 Parsing flight offers for {origin} → {destination}")
+        print(f"📊 Offers data structure: {list(offers_data.keys())}")
+        
         if "data" in offers_data and offers_data["data"]:
+            print(f"📋 Found {len(offers_data['data'])} offers")
+            
             # Get the best offer (first one is usually cheapest)
             best_offer = offers_data["data"][0]
+            print(f"🏆 Best offer structure: {list(best_offer.keys())}")
+            print(f"💰 Total amount: {best_offer.get('total_amount', 'N/A')} {best_offer.get('total_currency', 'N/A')}")
+            print(f"✈️  Number of slices: {len(best_offer.get('slices', []))}")
             
             for i, slice_data in enumerate(best_offer["slices"]):
+                print(f"🔍 Processing slice {i+1}: {list(slice_data.keys())}")
+                
                 segments = slice_data["segments"]
                 if segments:
+                    print(f"   📍 Found {len(segments)} segments")
                     first_segment = segments[0]
                     last_segment = segments[-1]
+                    
+                    print(f"   🛫 First segment: {first_segment.get('origin', {}).get('iata_code', 'N/A')} → {first_segment.get('destination', {}).get('iata_code', 'N/A')}")
+                    print(f"   🛬 Last segment: {last_segment.get('origin', {}).get('iata_code', 'N/A')} → {last_segment.get('destination', {}).get('iata_code', 'N/A')}")
                     
                     flight_type = "outbound" if i == 0 else "return"
                     
@@ -133,11 +176,19 @@ class DuffelFlightService:
                         "price": int(float(best_offer["total_amount"]) / len(best_offer["slices"])),
                         "type": flight_type
                     }
+                    
+                    print(f"   ✈️  Parsed flight: {flight_info}")
                     flights.append(flight_info)
+                else:
+                    print(f"   ⚠️  No segments found in slice {i+1}")
+        else:
+            print("❌ No offers data found in response")
         
         if not flights:
+            print("⚠️  No flights parsed, returning mock data")
             return self._get_mock_flights(origin, destination)
         
+        print(f"✅ Successfully parsed {len(flights)} flights")
         return {"flights": flights}
     
     def _get_mock_flights(self, origin: str = "JFK", destination: str = "LHR", 
@@ -194,8 +245,7 @@ class HotelbedsHotelService:
         return {
             'Api-key': self.api_key,
             'X-Signature': signature,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Accept': 'application/json'
         }
     
     async def search_hotels(self, destination: str, checkin: str, checkout: str, 
@@ -255,6 +305,7 @@ class HotelbedsHotelService:
                 }
                 print(f"🗺️  Hotelbeds search → city: '{destination}' mapped code: '{dest_code}'")
 
+                # Use the correct Hotelbeds hotel availability endpoint
                 hotels_response = await client.post(
                     f"{self.base_url}/hotel-api/1.0/hotels",
                     headers=self._get_headers(),
@@ -262,8 +313,10 @@ class HotelbedsHotelService:
                     timeout=30.0
                 )
                 
+                print(f"🔍 Hotelbeds API response status: {hotels_response.status_code}")
                 if hotels_response.status_code != 200:
                     print(f"Hotelbeds hotels error: {hotels_response.status_code}")
+                    print(f"Response body: {hotels_response.text}")
                     return self._get_mock_hotel(destination, checkin, checkout)
                 
                 hotels_data = hotels_response.json()
@@ -286,12 +339,53 @@ class HotelbedsHotelService:
             
             # Extract real hotel data
             hotel_name = hotel_data.get("name", f"{destination} Downtown Hotel")
-            hotel_address = hotel_data.get("address", f"123 Main St, {destination}")
             min_rate = hotel_data.get("minRate", 150)
+            
+            # Better address extraction - try multiple possible fields
+            hotel_address = None
+            if "address" in hotel_data:
+                address_data = hotel_data["address"]
+                if isinstance(address_data, dict):
+                    # Address might be an object with multiple fields
+                    address_parts = []
+                    if "lines" in address_data and isinstance(address_data["lines"], list):
+                        address_parts.extend(address_data["lines"])
+                    if "cityName" in address_data:
+                        address_parts.append(address_data["cityName"])
+                    if "countryCode" in address_data:
+                        address_parts.append(address_data["countryCode"])
+                    
+                    if address_parts:
+                        hotel_address = ", ".join(filter(None, address_parts))
+                elif isinstance(address_data, str):
+                    hotel_address = address_data
+            
+            # If no address field, use available location data
+            if not hotel_address:
+                location_parts = []
+                
+                # Add zone name if available (e.g., "Midtown West", "Marble Arch")
+                if "zoneName" in hotel_data and hotel_data["zoneName"]:
+                    location_parts.append(hotel_data["zoneName"])
+                
+                # Add destination name if available (e.g., "New York Area - NY", "Paris", "London")
+                if "destinationName" in hotel_data and hotel_data["destinationName"]:
+                    location_parts.append(hotel_data["destinationName"])
+                
+                # Add coordinates if available
+                if "latitude" in hotel_data and "longitude" in hotel_data:
+                    lat = float(hotel_data["latitude"])
+                    lon = float(hotel_data["longitude"])
+                    location_parts.append(f"📍 {lat:.4f}, {lon:.4f}")
+                
+                if location_parts:
+                    hotel_address = " | ".join(location_parts)
+                else:
+                    hotel_address = f"Central {destination}"
             
             hotel_info = {
                 "name": hotel_name,
-                "address": hotel_address if isinstance(hotel_address, str) else f"Central {destination}",
+                "address": hotel_address,
                 "check_in": f"{checkin_date.strftime('%B %d, %Y')} - 3:00 PM",
                 "check_out": f"{checkout_date.strftime('%B %d, %Y')} - 11:00 AM",
                 "room_type": "Standard Room",
@@ -300,6 +394,7 @@ class HotelbedsHotelService:
             }
             
             print(f"🏨 Parsed REAL hotel data: {hotel_name} at ${min_rate}/night")
+            print(f"   📍 Address: {hotel_address}")
             return {"hotel": hotel_info}
         
         print(f"🏨 No real hotel data found, using mock for {destination}")

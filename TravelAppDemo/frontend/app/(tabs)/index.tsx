@@ -64,7 +64,6 @@ interface EditingDay {
 // Activity Edit Form Component will be defined inside the main component
 
 export default function HomeScreen() {
-  console.log('🏠 HomeScreen component loaded!');
   const params = useLocalSearchParams();
   const chatScrollRef = useRef<ScrollView>(null);
   const [message, setMessage] = useState('');
@@ -174,7 +173,7 @@ export default function HomeScreen() {
     }
   }, [includeFlights, includeHotel, includeActivities]);
 
-  console.log('HomeScreen rendering with isLoading:', isLoading, 'response:', response);
+
 
   // Activity Edit Form Component
   const ActivityEditForm = ({ 
@@ -183,12 +182,12 @@ export default function HomeScreen() {
     onSave, 
     onCancel 
   }: { 
-    activity: Activity; 
+    activity: ItineraryActivity; 
     alternatives: AlternativeActivity[]; 
-    onSave: (activity: Activity) => void; 
+    onSave: (activity: ItineraryActivity) => void; 
     onCancel: () => void; 
   }) => {
-    const [editedActivity, setEditedActivity] = useState<Activity>(activity);
+    const [editedActivity, setEditedActivity] = useState<ItineraryActivity>(activity);
     const [selectedAlternative, setSelectedAlternative] = useState<AlternativeActivity | null>(null);
     const [customTime, setCustomTime] = useState(activity.time);
 
@@ -207,7 +206,7 @@ export default function HomeScreen() {
         <View style={styles.timeInputRow}>
           <Text style={styles.timeInputLabel}>Time:</Text>
           <TextInput
-            style={styles.timeInput}
+            style={styles.timeInputMain}
             value={customTime}
             onChangeText={setCustomTime}
             placeholder="09:00"
@@ -270,12 +269,12 @@ export default function HomeScreen() {
       try {
         const response = await fetch('http://localhost:8000/');
         if (response.ok) {
-          console.log('Backend connection successful');
+          // Backend connection successful
         } else {
-          console.error('Backend connection failed');
+          // Backend connection failed
         }
       } catch (error) {
-        console.error('Backend connection error:', error);
+        // Backend connection error
         Alert.alert('Connection Error', 'Unable to connect to the travel assistant. Please check your internet connection.');
       }
     };
@@ -290,15 +289,11 @@ export default function HomeScreen() {
       if (storedItinerary) {
         try {
           const itinerary = JSON.parse(storedItinerary);
-          console.log('📱 Loading stored itinerary from sessionStorage:', itinerary);
           setCurrentItinerary(itinerary);
           updateScheduleFromItinerary(itinerary);
-          console.log('✅ Itinerary loaded and schedule updated from sessionStorage');
         } catch (error) {
-          console.error('Error parsing stored itinerary:', error);
+          // Error parsing stored itinerary - silent handling
         }
-      } else {
-        console.log('📱 No stored itinerary found in sessionStorage');
       }
     }
   }, []);
@@ -314,7 +309,7 @@ export default function HomeScreen() {
             setCurrentItinerary(itinerary);
             updateScheduleFromItinerary(itinerary);
           } catch (error) {
-            console.error('Error parsing stored itinerary on focus:', error);
+            // Error parsing stored itinerary on focus
           }
         }
       }
@@ -331,10 +326,9 @@ export default function HomeScreen() {
         if (storedSchedules) {
           const schedules = JSON.parse(storedSchedules);
           setSavedSchedules(schedules);
-          console.log('📱 Loaded saved schedules from localStorage:', schedules.length);
         }
       } catch (error) {
-        console.error('Error loading saved schedules:', error);
+        // Error loading saved schedules - silent handling
       }
     }
   }, []);
@@ -343,32 +337,17 @@ export default function HomeScreen() {
 
   // Old drag and drop functions removed - replaced with new interactive system
 
-  // Debug: Log when component mounts
+  // Component mount effect
   useEffect(() => {
-    console.log('🎯 HomeScreen useEffect - component mounted');
-    console.log('Current message state:', message);
-    console.log('Current response state:', response);
-    
-    // Try Alert as backup debugging
-    try {
-      Alert.alert('Debug', 'HomeScreen component mounted!');
-    } catch (e) {
-      console.log('Alert failed:', e);
-    }
+
   }, []);
 
-  const handleSendMessage = async () => {
-    console.log('🚀 handleSendMessage called!');
-    console.log('Current message:', message);
-    console.log('Message trimmed:', message.trim());
-    
+    const handleSendMessage = async () => {
     if (!message.trim()) {
-      console.log('❌ Message is empty, returning early');
       return;
     }
-    
+
     const userMessage = message.trim();
-    console.log('✅ User message:', userMessage);
     setMessage('');
     setIsLoading(true);
     
@@ -394,7 +373,7 @@ export default function HomeScreen() {
     }
     
     // Log full prompt for debugging
-    try { console.log('FULL_PROMPT:', enhancedMessage); } catch {}
+
     
     await sendMessageToAPI(enhancedMessage);
   };
@@ -408,7 +387,7 @@ export default function HomeScreen() {
   }, [chatHistory, isLoading]);
 
   const sendMessageToAPI = async (messageToSend: string) => {
-    console.log('Sending message to API:', messageToSend);
+
     try {
       // Try enhanced endpoint first
       const response = await fetch('http://localhost:8000/chat/enhanced/', {
@@ -422,15 +401,8 @@ export default function HomeScreen() {
         }),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
       if (response.ok) {
         const result = await response.json();
-        console.log('Enhanced API response:', result);
-        console.log('Response status:', response.status);
-        console.log('Response type:', typeof result);
-        console.log('Result keys:', Object.keys(result));
         
         // Store the itinerary data
         setCurrentItinerary(result);
@@ -475,8 +447,7 @@ export default function HomeScreen() {
           sessionStorage.setItem('currentItinerary', JSON.stringify(result));
         }
       } else {
-        console.log('⚠️ Enhanced endpoint failed, falling back to regular chat endpoint');
-        console.log('Response status was:', response.status);
+        // Enhanced endpoint failed, falling back to regular chat endpoint
         // Fallback to regular chat endpoint
         const fallbackResponse = await fetch('http://localhost:8000/chat/', {
           method: 'POST',
@@ -498,7 +469,7 @@ export default function HomeScreen() {
         }
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      // Error sending message - show user-friendly message
       const errorMessage = 'Sorry, I encountered an error. Please try again.';
       setResponse(errorMessage);
       setChatHistory(prev => [...prev, { message: errorMessage, isBot: true }]);
@@ -614,7 +585,7 @@ export default function HomeScreen() {
     router.push('/checkout');
   };
 
-  const handleChangeActivity = (activity: Activity) => {
+  const handleChangeActivity = (activity: ItineraryActivity) => {
     setSelectedActivity(activity);
     setShowAlternatives(true);
   };
@@ -626,8 +597,16 @@ export default function HomeScreen() {
         prevSchedule.map(day => ({
           ...day,
           activities: day.activities.map(act => 
-            act.name === selectedActivity.name 
-              ? { ...act, name: alternative.name, price: alternative.price, type: alternative.type }
+            act.name === selectedActivity.name && 
+            act.time === selectedActivity.time && 
+            act.price === selectedActivity.price
+              ? { 
+                  ...act, 
+                  name: alternative.name, 
+                  price: alternative.price, 
+                  type: alternative.type,
+                  description: alternative.description || act.description
+                }
               : act
           )
         }))
@@ -656,14 +635,18 @@ export default function HomeScreen() {
     setEditingActivity(null);
   };
 
-  const handleActivityEditSave = (dayIndex: number, activityIndex: number, updatedActivity: Activity) => {
-    console.log('🔄 handleActivityEditSave called:');
-    console.log('   dayIndex:', dayIndex);
-    console.log('   activityIndex:', activityIndex);
-    console.log('   updatedActivity:', updatedActivity);
-    console.log('   Current schedule before update:', schedule);
+    const handleActivityEditSave = (dayIndex: number, activityIndex: number, updatedActivity: ItineraryActivity) => {
+    console.log('🔄 handleActivityEditSave called with:', {
+      dayIndex,
+      activityIndex,
+      updatedActivity,
+      currentSchedule: schedule
+    });
     
+    // Update activity in schedule
     setSchedule(prevSchedule => {
+      console.log('🔄 Previous schedule:', prevSchedule);
+      
       const newSchedule = prevSchedule.map((day, index) => 
         index === dayIndex 
           ? {
@@ -673,14 +656,13 @@ export default function HomeScreen() {
               ))
             }
           : day
-    );
+      );
       
-      console.log('   New schedule after update:', newSchedule);
+      console.log('🔄 New schedule:', newSchedule);
       return newSchedule;
     });
     
     setEditingActivity(null);
-    console.log('✅ Activity edit saved successfully');
   };
 
   const handleDragStart = (dayIndex: number, activityIndex: number) => {
@@ -805,9 +787,7 @@ export default function HomeScreen() {
     sum + day.activities.reduce((daySum, activity) => daySum + activity.price, 0), 0
   );
   
-  console.log('🔄 Schedule updated, recalculating totals:');
-  console.log('   New schedule:', schedule);
-  console.log('   New totalActivities:', totalActivities);
+  // Schedule updated, recalculating totals
   
   const selectedFlights = includeFlights ? totalFlights : 0;
   const selectedHotel = includeHotel ? totalHotel : 0;
@@ -817,40 +797,7 @@ export default function HomeScreen() {
   const enhancedItineraryBookableCost = currentItinerary?.bookable_cost;
   const bookableTotal = selectedFlights + selectedHotel + selectedActivities;
 
-  console.log('Price Calculation Debug:', {
-    enhancedItinerary: !!currentItinerary,
-    enhancedItineraryBookableCost,
-    calculatedBookableTotal,
-    bookableTotal,
-    totalFlights,
-    totalHotel,
-    bookableActivities,
-    flightInfo: currentItinerary?.flights.reduce((acc, flight) => {
-      acc[flight.type] = flight.price;
-      return acc;
-    }, {} as Record<string, number>),
-    hotelInfo: (() => {
-      if (!currentItinerary) return null;
-      if (currentItinerary.trip_type === 'multi_city' && 'hotels' in currentItinerary) {
-        return {
-          type: 'multi_city',
-          hotels: currentItinerary.hotels.map(h => ({
-            price: h.price,
-            totalNights: h.total_nights,
-            total: h.price * h.total_nights
-          }))
-        };
-      } else if (currentItinerary.trip_type === 'single_city' && 'hotel' in currentItinerary) {
-        return {
-          type: 'single_city',
-          price: currentItinerary.hotel.price,
-          totalNights: currentItinerary.hotel.total_nights,
-          total: currentItinerary.hotel.price * currentItinerary.hotel.total_nights
-        };
-      }
-      return null;
-    })()
-  });
+
 
   const handleSaveSchedule = () => {
     if (!currentItinerary) {
@@ -877,7 +824,7 @@ export default function HomeScreen() {
         try {
           // Try to parse the first and last day dates
           if (schedule[0]?.date) {
-            console.log('📅 First day date:', schedule[0].date);
+  
             // If it's already a date string, use it; otherwise create a future date
             if (schedule[0].date.includes(',')) {
               // Human readable format like "July 15, 2024" - create a future date
@@ -890,7 +837,7 @@ export default function HomeScreen() {
           }
           
           if (schedule[schedule.length - 1]?.date) {
-            console.log('📅 Last day date:', schedule[schedule.length - 1].date);
+
             // If it's already a date string, use it; otherwise create a future date
             if (schedule[schedule.length - 1].date.includes(',')) {
               // Human readable format like "July 15, 2024" - create a future date
@@ -902,29 +849,11 @@ export default function HomeScreen() {
             }
           }
         } catch (error) {
-          console.log('📅 Error parsing dates, using fallback dates:', error);
+          // Error parsing dates, using fallback dates
         }
       }
       
-      console.log('📅 Final trip dates - Start:', tripStartDate, 'End:', tripEndDate);
-      
-      // Log enhanced information being saved
-      console.log('💾 Enhanced Schedule Info:');
-      console.log('  Flights:', currentItinerary?.flights);
-      console.log('  Hotels:', currentItinerary?.trip_type === 'multi_city' 
-        ? (currentItinerary as MultiCityItinerary).hotels 
-        : currentItinerary?.trip_type === 'single_city' 
-          ? [(currentItinerary as SingleCityItinerary).hotel]
-          : []);
-      console.log('  Activities from currentItinerary.schedule:', currentItinerary?.schedule?.flatMap(day => day.activities));
-      console.log('  Activities count:', currentItinerary?.schedule?.flatMap(day => day.activities).length || 0);
-      console.log('  Dates from currentItinerary.schedule:', currentItinerary?.schedule?.map(day => day.date));
-      console.log('  Schedule structure being saved:', currentItinerary?.schedule);
-      console.log('  Cost breakdown:', {
-        total: currentItinerary?.total_cost || 0,
-        bookable: currentItinerary?.bookable_cost || 0,
-        estimated: currentItinerary?.estimated_cost || 0
-      });
+
       
       const newSchedule: SavedSchedule = {
         id: Date.now().toString(),
@@ -966,7 +895,7 @@ export default function HomeScreen() {
         const updatedSchedules = [...existingSchedules, newSchedule];
         localStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
         
-        console.log('💾 Schedule saved:', newSchedule);
+
         Alert.alert('Success', `Schedule "${scheduleName.trim()}" has been saved!`);
       }
 
@@ -996,7 +925,7 @@ export default function HomeScreen() {
         }
       }
     } catch (error) {
-      console.error('Export error:', error);
+      // Export error
       Alert.alert('Export Failed', error instanceof Error ? error.message : 'Failed to export itinerary');
     } finally {
       setIsExporting(false);
@@ -1010,9 +939,10 @@ export default function HomeScreen() {
       date: day.date,
       activities: day.activities.map(activity => ({
         time: activity.time,
-        activity: activity.name, // Map 'name' to 'activity' for CleanSchedule
+        name: activity.name, // Use 'name' directly for CleanSchedule
         price: activity.price,
-        type: activity.type as 'bookable' | 'estimated' | 'transport'
+        type: activity.type as 'bookable' | 'estimated' | 'transport',
+        description: activity.description || ''
       }))
     }));
   };
@@ -1034,13 +964,7 @@ export default function HomeScreen() {
         <GlassCard style={styles.chatSection}>
           <Text style={styles.sectionTitle}>Chat with AI Assistant</Text>
 
-          {/* Debug Info - Visual debugging */}
-          <View style={styles.debugInfo}>
-            <Text style={styles.debugText}>🔍 Debug: Component loaded</Text>
-            <Text style={styles.debugText}>Message state: "{message}"</Text>
-            <Text style={styles.debugText}>Response state: "{response}"</Text>
-            <Text style={styles.debugText}>Loading: {isLoading ? 'Yes' : 'No'}</Text>
-          </View>
+
 
           {/* Quick Purchase Options (adjust before/while chatting) */}
           <View style={styles.quickOptionsCard}>
@@ -1134,7 +1058,7 @@ export default function HomeScreen() {
               placeholderTextColor="#666"
               value={message}
               onChangeText={(text) => {
-                console.log('📝 Message input changed:', text);
+
                 setMessage(text);
               }}
               multiline
@@ -1160,11 +1084,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>Your Itinerary</Text>
             
             {/* Debug Info */}
-            <View style={styles.debugInfo}>
-              <Text style={styles.debugText}>Debug: currentItinerary exists</Text>
-              <Text style={styles.debugText}>Schedule length: {schedule.length}</Text>
-              <Text style={styles.debugText}>First day activities: {schedule[0]?.activities?.length || 0}</Text>
-            </View>
+
             
             {/* Trip Summary Header */}
             <GlassCard style={styles.tripSummary}>
@@ -1435,16 +1355,32 @@ export default function HomeScreen() {
                     }
                   </Text>
                   <CleanSchedule
-                    schedule={mapItineraryToSchedule(currentItinerary.trip_type === 'multi_city' 
-                      ? schedule.filter(day => day.city === currentItinerary.hotels?.[0]?.city)
-                      : schedule
-                    )}
+                    schedule={(() => {
+                      const mappedSchedule = mapItineraryToSchedule(currentItinerary.trip_type === 'multi_city' 
+                        ? schedule.filter(day => day.city === currentItinerary.hotels?.[0]?.city)
+                        : schedule
+                      );
+                      console.log('🔍 Schedule being passed to CleanSchedule (1):', {
+                        originalSchedule: schedule,
+                        mappedSchedule: mappedSchedule,
+                        firstActivity: mappedSchedule[0]?.activities[0],
+                        firstActivityKeys: mappedSchedule[0]?.activities[0] ? Object.keys(mappedSchedule[0].activities[0]) : []
+                      });
+                      return mappedSchedule;
+                    })()}
                     onEditActivity={handleActivityEdit}
                     onDeleteActivity={handleDeleteActivity}
                     onAddActivity={handleAddActivity}
                     totalActivities={totalActivities}
                     editingActivity={editingActivity}
-                    alternativeActivities={{ all: getAllAvailableAlternatives() }}
+                    alternativeActivities={(() => {
+                      console.log('🔍 Passing alternativeActivities to CleanSchedule (1):', {
+                        alternativeActivities,
+                        keys: Object.keys(alternativeActivities),
+                        totalAlternatives: Object.values(alternativeActivities).flat().length
+                      });
+                      return alternativeActivities;
+                    })()}
                     onActivityEditSave={handleActivityEditSave}
                     onActivityEditCancel={handleActivityEditCancel}
                   />
@@ -1463,7 +1399,14 @@ export default function HomeScreen() {
                       onAddActivity={handleAddActivity}
                       totalActivities={totalActivities}
                       editingActivity={editingActivity}
-                      alternativeActivities={{ all: getAllAvailableAlternatives() }}
+                      alternativeActivities={(() => {
+                        console.log('🔍 Passing alternativeActivities to CleanSchedule (2):', {
+                          alternativeActivities,
+                          keys: Object.keys(alternativeActivities),
+                          totalAlternatives: Object.values(alternativeActivities).flat().length
+                        });
+                        return alternativeActivities;
+                      })()}
                       onActivityEditSave={handleActivityEditSave}
                       onActivityEditCancel={handleActivityEditCancel}
                     />
@@ -1590,7 +1533,7 @@ export default function HomeScreen() {
         <GlassCard style={styles.modalContent}>
           <Text style={styles.modalTitle}>Save Schedule</Text>
           <TextInput
-            style={styles.timeInput}
+            style={styles.timeInputMain}
             placeholder="Enter schedule name"
             placeholderTextColor="#666"
             value={scheduleName}
@@ -1667,20 +1610,7 @@ const styles = StyleSheet.create({
   chatSection: {
     marginBottom: 30,
   },
-  debugInfo: {
-    backgroundColor: '#FF6B6B',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 15,
-    borderWidth: 2,
-    borderColor: '#FF0000',
-  },
-  debugText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
+
   quickOptionsCard: {
     backgroundColor: '#1a1a1a',
     borderRadius: 15,
@@ -2336,13 +2266,13 @@ const styles = StyleSheet.create({
   timeInputContainer: {
     marginBottom: 20,
   },
-  timeInputLabel: {
+  timeInputMainLabel: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
     marginBottom: 10,
   },
-  timeInput: {
+  timeInputMain: {
     backgroundColor: '#2a2a2a',
     borderWidth: 1,
     borderColor: '#333',
@@ -2658,13 +2588,7 @@ const styles = StyleSheet.create({
     color: '#cccccc',
     marginBottom: 3,
   },
-  debugText: {
-    fontSize: 10,
-    color: '#FF6B6B',
-    textAlign: 'center',
-    marginTop: 10,
-    fontFamily: 'monospace',
-  },
+
   emptyDayContainer: {
     padding: 20,
     alignItems: 'center',
@@ -2701,17 +2625,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  debugInfo: {
-    backgroundColor: '#2a2a2a',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  debugText: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 5,
-  },
+
   saveScheduleButton: {
     backgroundColor: 'transparent',
     paddingVertical: 12,

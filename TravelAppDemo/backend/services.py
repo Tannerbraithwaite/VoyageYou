@@ -485,12 +485,33 @@ CRITICAL INSTRUCTIONS:
    - Each day must have: day, date, city, activities array
    - Each activity must have: name, time, price, type, description
    - Plan 2-3 activities per day (morning, afternoon, evening)
-   - Mix bookable tours with free/estimated activities
-7. **Activity Alternatives (REQUIRED):**
+   - **Most activities should be "estimated" since we don't have actual Ticketmaster tickets**
+   - **Only use "bookable" for activities with confirmed ticket availability**
+7. **Activity Type Classification (CRITICAL):**
+   - **"bookable" activities MUST have actual Ticketmaster tickets available**
+   - **"estimated" activities are free or don't require advance booking**
+   - **NEVER mark an activity as "bookable" unless you have confirmed Ticketmaster availability**
+   - **When in doubt, use "estimated" type**
+   - **Only use "bookable" for activities that definitely have tickets (museums, tours, shows, etc.)**
+
+8. **Activity Alternatives (REQUIRED):**
    - For every activity include an "alternatives" array with 2-3 objects
    - Each alternative must have the SAME shape as the activity (name, time, price, type, description)
    - Use realistic different activities that fit the user's interests and the city
    - Keep alternatives thematically related (food alternatives for food activities, cultural alternatives for cultural activities)
+   - **Follow the same bookable/estimated rules above**
+
+9. **FLIGHTS AND HOTELS - CRITICAL RULE:**
+   - **NEVER generate specific airline names (like "British Airways", "Air France", "United")**
+   - **NEVER generate specific flight numbers (like "BA123", "AF456", "UA789")**
+   - **NEVER generate specific hotel names (like "Grand Hotel", "Marriott", specific real hotels)**
+   - **Use ONLY generic placeholders that will be replaced with real API data:**
+     - Airline: "Airline" (exactly this text)
+     - Flight: "FL123" (generic format)
+     - Hotel name: "Hotel Name" (exactly this text)
+     - Hotel address: "Address" (exactly this text)
+   - **Real flight and hotel data will be fetched from APIs and replace these placeholders**
+   - **The user will NEVER see these placeholder values - they are temporary**
 
 JSON FORMAT - MULTI-CITY TRIP (Extended):
 {{
@@ -499,30 +520,30 @@ JSON FORMAT - MULTI-CITY TRIP (Extended):
   "duration": "{{USER_REQUESTED_DURATION}}",
   "description": "Multi-city trip to Naples and Rome",
   "flights": [
-    {{"airline": "Airline", "flight": "FL123", "departure": "JFK → NAP", "time": "10:00 - 14:00", "price": 600, "type": "outbound", "alternatives": [{{"airline": "Alt Air", "flight": "ALT456", "departure": "JFK → NAP", "time": "08:00 - 12:00", "price": 550, "type": "outbound", "alternatives": []}}]}},
-    {{"airline": "Airline", "flight": "FL456", "departure": "ROM → JFK", "time": "16:00 - 20:00", "price": 600, "type": "return", "alternatives": [{{"airline": "Alt Air", "flight": "ALT789", "departure": "ROM → JFK", "time": "18:00 - 22:00", "price": 580, "type": "return", "alternatives": []}}]}}
+    {{"airline": "Airline", "flight": "FL123", "departure": "JFK → NAP", "time": "10:00 - 14:00", "price": 600, "type": "outbound", "alternatives": [{{"airline": "Airline", "flight": "FL456", "departure": "JFK → NAP", "time": "08:00 - 12:00", "price": 550, "type": "outbound", "alternatives": []}}]}},
+    {{"airline": "Airline", "flight": "FL789", "departure": "ROM → JFK", "time": "16:00 - 20:00", "price": 600, "type": "return", "alternatives": [{{"airline": "Airline", "flight": "FL101", "departure": "ROM → JFK", "time": "18:00 - 22:00", "price": 580, "type": "return", "alternatives": []}}]}}
   ],
   "hotels": [
-    {{"city": "Naples, Italy", "name": "Hotel Name", "address": "Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Room", "price": 150, "total_nights": 2, "alternatives": [{{"city": "Naples, Italy", "name": "Alt Hotel", "address": "Alt Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Alt Room", "price": 120, "total_nights": 2, "alternatives": []}}]}},
-    {{"city": "Rome, Italy", "name": "Hotel Name", "address": "Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Room", "price": 180, "total_nights": 1, "alternatives": [{{"city": "Rome, Italy", "name": "Alt Hotel", "address": "Alt Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Alt Room", "price": 150, "total_nights": 1, "alternatives": []}}]}}
+    {{"city": "Naples, Italy", "name": "Hotel Name", "address": "Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Room", "price": 150, "total_nights": 2, "alternatives": [{{"city": "Naples, Italy", "name": "Hotel Name", "address": "Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Room", "price": 120, "total_nights": 2, "alternatives": []}}]}},
+    {{"city": "Rome, Italy", "name": "Hotel Name", "address": "Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Room", "price": 180, "total_nights": 1, "alternatives": [{{"city": "Rome, Italy", "name": "Hotel Name", "address": "Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Room", "price": 150, "total_nights": 1, "alternatives": []}}]}}
   ],
   "inter_city_transport": [
     {{"type": "train", "carrier": "Trenitalia", "from_location": "Naples", "to": "Rome", "departure_time": "10:00", "arrival_time": "11:30", "price": 25, "description": "High-speed train from Naples to Rome"}}
   ],
   "schedule": [
-    {{"day": 1, "date": "2024-07-15", "city": "Naples, Italy", "activities": [{{"name": "Pizza Making Class", "time": "10:00", "price": 45, "type": "bookable", "description": "Learn to make authentic Neapolitan pizza", "alternatives": [
-        {{"name": "Food Tour", "time": "10:00", "price": 40, "type": "bookable", "description": "Guided tour of local markets and tastings", "alternatives": []}},
-        {{"name": "Pasta Workshop", "time": "10:00", "price": 35, "type": "bookable", "description": "Hands-on pasta making class", "alternatives": []}}
+    {{"day": 1, "date": "2024-07-15", "city": "Naples, Italy", "activities": [{{"name": "Pizza Making Class", "time": "10:00", "price": 45, "type": "estimated", "description": "Learn to make authentic Neapolitan pizza", "alternatives": [
+        {{"name": "Food Tour", "time": "10:00", "price": 40, "type": "estimated", "description": "Guided tour of local markets and tastings", "alternatives": []}},
+        {{"name": "Pasta Workshop", "time": "10:00", "price": 35, "type": "estimated", "description": "Hands-on pasta making class", "alternatives": []}}
       ]}}, {{"name": "Castel dell'Ovo", "time": "14:00", "price": 0, "type": "estimated", "description": "Historic castle with sea views", "alternatives": [
-        {{"name": "Castel Nuovo", "time": "14:00", "price": 6, "type": "bookable", "description": "Medieval castle in city center", "alternatives": []}},
-        {{"name": "Royal Palace", "time": "14:00", "price": 4, "type": "bookable", "description": "Historic royal residence", "alternatives": []}}
+        {{"name": "Castel Nuovo", "time": "14:00", "price": 6, "type": "estimated", "description": "Medieval castle in city center", "alternatives": []}},
+        {{"name": "Royal Palace", "time": "14:00", "price": 4, "type": "estimated", "description": "Historic royal residence", "alternatives": []}}
       ]}}, {{"name": "Dinner at Trattoria", "time": "19:00", "price": 35, "type": "estimated"}}]}},
-    {{"day": 2, "date": "2024-07-16", "city": "Naples, Italy", "activities": [{{"name": "Pompeii Tour", "time": "09:00", "price": 60, "type": "bookable"}}, {{"name": "Naples Underground", "time": "15:00", "price": 25, "type": "bookable"}}, {{"name": "Gelato Tasting", "time": "18:00", "price": 15, "type": "estimated"}}]}},
-    {{"day": 3, "date": "2024-07-17", "city": "Naples, Italy", "activities": [{{"name": "Capri Day Trip", "time": "08:00", "price": 80, "type": "bookable"}}, {{"name": "Shopping in Spaccanapoli", "time": "16:00", "price": 0, "type": "estimated"}}, {{"name": "Farewell Dinner", "time": "20:00", "price": 50, "type": "estimated"}}]}},
-    {{"day": 4, "date": "2024-07-18", "city": "Rome, Italy", "activities": [{{"name": "Colosseum Tour", "time": "09:00", "price": 55, "type": "bookable"}}, {{"name": "Roman Forum", "time": "14:00", "price": 20, "type": "bookable"}}, {{"name": "Trevi Fountain", "time": "17:00", "price": 0, "type": "estimated"}}, {{"name": "Dinner in Trastevere", "time": "19:30", "price": 40, "type": "estimated"}}]}}
+    {{"day": 2, "date": "2024-07-16", "city": "Naples, Italy", "activities": [{{"name": "Pompeii Tour", "time": "09:00", "price": 60, "type": "estimated"}}, {{"name": "Naples Underground", "time": "15:00", "price": 25, "type": "estimated"}}, {{"name": "Gelato Tasting", "time": "18:00", "price": 15, "type": "estimated"}}]}},
+    {{"day": 3, "date": "2024-07-17", "city": "Naples, Italy", "activities": [{{"name": "Capri Day Trip", "time": "08:00", "price": 80, "type": "estimated"}}, {{"name": "Shopping in Spaccanapoli", "time": "16:00", "price": 0, "type": "estimated"}}, {{"name": "Farewell Dinner", "time": "20:00", "price": 50, "type": "estimated"}}]}},
+    {{"day": 4, "date": "2024-07-18", "city": "Rome, Italy", "activities": [{{"name": "Colosseum Tour", "time": "09:00", "price": 55, "type": "estimated"}}, {{"name": "Roman Forum", "time": "14:00", "price": 20, "type": "estimated"}}, {{"name": "Trevi Fountain", "time": "17:00", "price": 0, "type": "estimated"}}, {{"name": "Dinner in Trastevere", "time": "19:30", "price": 40, "type": "estimated"}}]}}
   ],
-  "bookable_cost": 350,
-  "estimated_cost": 140,
+  "bookable_cost": 0,
+  "estimated_cost": 490,
   "total_cost": 490
 }}
 
@@ -533,17 +554,17 @@ JSON FORMAT - SINGLE CITY TRIP:
   "duration": "{{USER_REQUESTED_DURATION}}",
   "description": "Single city trip to Paris",
   "flights": [
-    {{"airline": "Air France", "flight": "AF123", "departure": "JFK → CDG", "time": "10:00 - 14:00", "price": 600, "type": "outbound", "alternatives": [{{"airline": "Delta", "flight": "DL456", "departure": "JFK → CDG", "time": "08:00 - 12:00", "price": 550, "type": "outbound", "alternatives": []}}]}},
-    {{"airline": "Air France", "flight": "AF456", "departure": "CDG → JFK", "time": "16:00 - 20:00", "price": 600, "type": "return", "alternatives": [{{"airline": "Delta", "flight": "DL789", "departure": "CDG → JFK", "time": "18:00 - 22:00", "price": 580, "type": "return", "alternatives": []}}]}}
+    {{"airline": "Airline", "flight": "FL123", "departure": "JFK → CDG", "time": "10:00 - 14:00", "price": 600, "type": "outbound", "alternatives": [{{"airline": "Airline", "flight": "FL456", "departure": "JFK → CDG", "time": "08:00 - 12:00", "price": 550, "type": "outbound", "alternatives": []}}]}},
+    {{"airline": "Airline", "flight": "FL789", "departure": "CDG → JFK", "time": "16:00 - 20:00", "price": 600, "type": "return", "alternatives": [{{"airline": "Airline", "flight": "FL101", "departure": "CDG → JFK", "time": "18:00 - 22:00", "price": 580, "type": "return", "alternatives": []}}]}}
   ],
-  "hotel": {{"name": "Hotel Name", "address": "Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Room", "price": 200, "total_nights": 3, "alternatives": [{{"name": "Alt Hotel", "address": "Alt Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Alt Room", "price": 180, "total_nights": 3, "alternatives": []}}]}},
+  "hotel": {{"name": "Hotel Name", "address": "Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Room", "price": 200, "total_nights": 3, "alternatives": [{{"name": "Hotel Name", "address": "Address", "check_in": "Check-in", "check_out": "Check-out", "room_type": "Room", "price": 180, "total_nights": 3, "alternatives": []}}]}},
   "schedule": [
-    {{"day": 1, "date": "2024-07-15", "activities": [{{"name": "Eiffel Tower", "time": "10:00", "price": 26, "type": "bookable"}}, {{"name": "Louvre Museum", "time": "14:00", "price": 18, "type": "bookable"}}, {{"name": "Seine River Cruise", "time": "18:00", "price": 35, "type": "bookable"}}]}},
-    {{"day": 2, "date": "2024-07-16", "activities": [{{"name": "Notre-Dame", "time": "09:00", "price": 0, "type": "estimated"}}, {{"name": "Arc de Triomphe", "time": "14:00", "price": 13, "type": "bookable"}}, {{"name": "Champs-Élysées Walk", "time": "16:00", "price": 0, "type": "estimated"}}]}},
-    {{"day": 3, "date": "2024-07-17", "activities": [{{"name": "Versailles Palace", "time": "09:00", "price": 20, "type": "bookable"}}, {{"name": "Montmartre", "time": "15:00", "price": 0, "type": "estimated"}}, {{"name": "Farewell Dinner", "time": "19:00", "price": 60, "type": "estimated"}}]}}
+    {{"day": 1, "date": "2024-07-15", "activities": [{{"name": "Eiffel Tower", "time": "10:00", "price": 26, "type": "estimated"}}, {{"name": "Louvre Museum", "time": "14:00", "price": 18, "type": "estimated"}}, {{"name": "Seine River Cruise", "time": "18:00", "price": 35, "type": "estimated"}}]}},
+    {{"day": 2, "date": "2024-07-16", "activities": [{{"name": "Notre-Dame", "time": "09:00", "price": 0, "type": "estimated"}}, {{"name": "Arc de Triomphe", "time": "14:00", "price": 13, "type": "estimated"}}, {{"name": "Champs-Élysées Walk", "time": "16:00", "price": 0, "type": "estimated"}}]}},
+    {{"day": 3, "date": "2024-07-17", "activities": [{{"name": "Versailles Palace", "time": "09:00", "price": 20, "type": "estimated"}}, {{"name": "Montmartre", "time": "15:00", "price": 0, "type": "estimated"}}, {{"name": "Farewell Dinner", "time": "19:00", "price": 60, "type": "estimated"}}]}}
   ],
-  "bookable_cost": 192,
-  "estimated_cost": 60,
+  "bookable_cost": 0,
+  "estimated_cost": 252,
   "total_cost": 252
 }}
 
@@ -812,8 +833,8 @@ Make each bullet point concise, insightful, and actionable for future trip plann
             import re
             from api_services import duffel_service, hotelbeds_service, ticketmaster_service
             
-            # Use real APIs where they work (Hotelbeds + Ticketmaster), mock for Duffel
-            print("🔄 API Enhancement: Using real APIs for hotels & events, mock for flights")
+            # Use real APIs for all services (Duffel flights, Hotelbeds hotels, Ticketmaster events)
+            print("🔄 API Enhancement: Using REAL APIs for flights, hotels & events")
             return await ChatbotService._enhance_with_real_working_apis(response_text, user_message)
             
             # Try to extract JSON from response
@@ -1076,10 +1097,10 @@ Make each bullet point concise, insightful, and actionable for future trip plann
     
     @staticmethod
     async def _enhance_with_real_working_apis(response_text: str, user_message: str) -> str:
-        """Use real APIs for working services (Hotelbeds + Ticketmaster), enhanced mock for Duffel"""
+        """Use real APIs for all services: Duffel flights, Hotelbeds hotels, and Ticketmaster events"""
         try:
             import json
-            from api_services import hotelbeds_service, ticketmaster_service
+            from api_services import duffel_service, hotelbeds_service, ticketmaster_service
             
             # Try to extract JSON from LLM response
             start_idx = response_text.find('{')
@@ -1165,10 +1186,13 @@ Make each bullet point concise, insightful, and actionable for future trip plann
             
             print(f"🔍 After fallback check - schedule length: {len(itinerary_data.get('schedule', []))}")
             
-            # SIMPLIFIED: Just return the data with fallback schedule instead of complex enhancement
-            # This ensures the LLM data is preserved
-            print(f"🔍 Returning data with schedule length: {len(itinerary_data.get('schedule', []))}")
-            return json.dumps(itinerary_data, indent=2)
+            # NOW PERFORM REAL API ENHANCEMENT
+            if trip_type == 'multi_city':
+                print("🔥 ENHANCING MULTI-CITY TRIP WITH REAL APIs")
+                return await ChatbotService._enhance_multi_city_trip(itinerary_data)
+            else:
+                print("🔥 ENHANCING SINGLE-CITY TRIP WITH REAL APIs")
+                return await ChatbotService._enhance_single_city_trip(itinerary_data)
             
         except Exception as e:
             print(f"❌ Real API enhancement error: {e}")
@@ -1178,6 +1202,9 @@ Make each bullet point concise, insightful, and actionable for future trip plann
     async def _enhance_single_city_trip(itinerary_data: dict) -> str:
         """Enhance a single city trip with real API data"""
         try:
+            import json
+            from api_services import duffel_service, hotelbeds_service, ticketmaster_service
+            
             # Extract destination for API calls
             destination = itinerary_data.get('destination', '')
             if not destination:
@@ -1197,9 +1224,9 @@ Make each bullet point concise, insightful, and actionable for future trip plann
             # Convert dates to API format (YYYY-MM-DD) - use future dates for API calls
             try:
                 from datetime import datetime, timedelta
-                # Always use future dates for API calls (30 days from now)
+                # Always use future dates for API calls (90 days from now to avoid API date restrictions)
                 today = datetime.now()
-                future_start = today + timedelta(days=30)
+                future_start = today + timedelta(days=90)
                 future_end = future_start + timedelta(days=3)
                 
                 departure_date = future_start.strftime('%Y-%m-%d')
@@ -1210,27 +1237,98 @@ Make each bullet point concise, insightful, and actionable for future trip plann
                 departure_date = '2025-01-15'
                 return_date = '2025-01-18'
             
-            # Use enhanced mock for flights (since Duffel key isn't working)
-            enhanced_flights = [
-                {
-                    "airline": f"Premium Air {city[:3].upper()}",
-                    "flight": f"PA{city[:2].upper()} 287",
-                    "departure": "JFK → CDG" if 'paris' in city.lower() else f"JFK → {city[:3].upper()}",
-                    "time": "10:30 AM - 2:45 PM",
-                    "price": 520,
-                    "type": "outbound"
-                },
-                {
-                    "airline": f"Premium Air {city[:3].upper()}",
-                    "flight": f"PA{city[:2].upper()} 441", 
-                    "departure": "CDG → JFK" if 'paris' in city.lower() else f"{city[:3].upper()} → JFK",
-                    "time": "6:15 PM - 11:45 PM",
-                    "price": 520,
-                    "type": "return"
+            # Use REAL Duffel API for flights
+            try:
+                from api_services import duffel_service
+                
+                # Map city names to IATA codes
+                city_to_iata = {
+                    'paris': 'CDG',
+                    'london': 'LHR',
+                    'new york': 'JFK',
+                    'los angeles': 'LAX',
+                    'tokyo': 'NRT',
+                    'barcelona': 'BCN',
+                    'berlin': 'BER',
+                    'amsterdam': 'AMS',
+                    'rome': 'FCO',
+                    'madrid': 'MAD',
+                    # North America
+                    'montreal': 'YUL',
+                    'toronto': 'YYZ',
+                    'vancouver': 'YVR',
+                    'chicago': 'ORD',
+                    'miami': 'MIA',
+                    'san francisco': 'SFO',
+                    'boston': 'BOS',
+                    'seattle': 'SEA',
+                    # Europe
+                    'dublin': 'DUB',
+                    'stockholm': 'ARN',
+                    'copenhagen': 'CPH',
+                    'oslo': 'OSL',
+                    'zurich': 'ZUR',
+                    'vienna': 'VIE',
+                    'prague': 'PRG',
+                    # Asia Pacific
+                    'sydney': 'SYD',
+                    'melbourne': 'MEL',
+                    'singapore': 'SIN',
+                    'hong kong': 'HKG',
+                    'seoul': 'ICN',
+                    'mumbai': 'BOM',
+                    'delhi': 'DEL'
                 }
-            ]
-            itinerary_data['flights'] = enhanced_flights
-            print("✅ Enhanced flights with realistic mock data")
+                
+                # Get destination IATA code
+                destination_iata = None
+                city_lower = city.lower()
+                for city_name, iata in city_to_iata.items():
+                    if city_name in city_lower:
+                        destination_iata = iata
+                        break
+                
+                if not destination_iata:
+                    # Fallback: use first 3 letters of city name
+                    destination_iata = city[:3].upper()
+                
+                import sys
+                
+                print(f"✈️  Searching flights: JFK → {destination_iata}")
+                sys.stdout.flush()  # Force immediate output
+                
+                # Search for real flights
+                flight_data = await duffel_service.search_flights(
+                    origin="JFK",
+                    destination=destination_iata,
+                    departure_date=departure_date,
+                    return_date=return_date,
+                    passengers=2
+                )
+                
+                print(f"📊 Duffel API returned: {type(flight_data)} with keys: {list(flight_data.keys()) if isinstance(flight_data, dict) else 'not a dict'}")
+                sys.stdout.flush()
+                
+                if 'flights' in flight_data and flight_data['flights']:
+                    print(f"🔥 REPLACING LLM FLIGHTS WITH REAL DUFFEL DATA!")
+                    print(f"   Original flights: {len(itinerary_data.get('flights', []))} LLM flights")
+                    print(f"   New flights: {len(flight_data['flights'])} real Duffel flights")
+                    itinerary_data['flights'] = flight_data['flights']
+                    print(f"✅ Enhanced with REAL Duffel flights: {len(flight_data['flights'])} flights")
+                    for i, flight in enumerate(flight_data['flights']):
+                        print(f"   Flight {i+1}: {flight.get('airline', 'Unknown')} {flight.get('flight', 'Unknown')} - ${flight.get('price', 0)}")
+                    sys.stdout.flush()
+                else:
+                    print(f"⚠️  No real flight data returned (flights key: {'flights' in flight_data}, has data: {bool(flight_data.get('flights'))})")
+                    print("⚠️  Keeping LLM flights")
+                    sys.stdout.flush()
+                    
+            except Exception as e:
+                import traceback
+                print(f"❌ Duffel API error: {e}")
+                print(f"❌ Full traceback: {traceback.format_exc()}")
+                print("⚠️  Keeping LLM flight data due to API error")
+                sys.stdout.flush()
             
             # Try to get REAL hotel data from Hotelbeds
             try:
@@ -1335,7 +1433,7 @@ Make each bullet point concise, insightful, and actionable for future trip plann
         """Enhance a multi-city trip with real API data for each location"""
         try:
             import json
-            from api_services import hotelbeds_service, ticketmaster_service
+            from api_services import duffel_service, hotelbeds_service, ticketmaster_service
             
             destinations = itinerary_data.get('destinations', [])
             if not destinations or len(destinations) < 2:
@@ -1354,9 +1452,9 @@ Make each bullet point concise, insightful, and actionable for future trip plann
             # Convert dates to API format (YYYY-MM-DD) - use future dates for API calls
             try:
                 from datetime import datetime, timedelta
-                # Always use future dates for API calls (30 days from now)
+                # Always use future dates for API calls (90 days from now to avoid API date restrictions)
                 today = datetime.now()
-                future_start = today + timedelta(days=30)
+                future_start = today + timedelta(days=90)
                 future_end = future_start + timedelta(days=5)  # Multi-city trips are longer
                 
                 departure_date = future_start.strftime('%Y-%m-%d')
@@ -1367,30 +1465,96 @@ Make each bullet point concise, insightful, and actionable for future trip plann
                 departure_date = '2025-01-15'
                 return_date = '2025-01-20'
             
-            # Use enhanced mock for flights (since Duffel key isn't working)
-            first_city = destinations[0].split(',')[0].strip()
-            last_city = destinations[-1].split(',')[0].strip()
-            
-            enhanced_flights = [
-                {
-                    "airline": f"Premium Air {first_city[:3].upper()}",
-                    "flight": f"PA{first_city[:2].upper()} 287",
-                    "departure": f"JFK → {first_city[:3].upper()}",
-                    "time": "10:30 AM - 2:45 PM",
-                    "price": 520,
-                    "type": "outbound"
-                },
-                {
-                    "airline": f"Premium Air {last_city[:3].upper()}",
-                    "flight": f"PA{last_city[:2].upper()} 441", 
-                    "departure": f"{last_city[:3].upper()} → JFK",
-                    "time": "6:15 PM - 11:45 PM",
-                    "price": 520,
-                    "type": "return"
+            # Use REAL Duffel API for multi-city flights
+            try:
+                from api_services import duffel_service
+                
+                # Map city names to IATA codes
+                city_to_iata = {
+                    'paris': 'CDG',
+                    'london': 'LHR',
+                    'new york': 'JFK',
+                    'los angeles': 'LAX',
+                    'tokyo': 'NRT',
+                    'barcelona': 'BCN',
+                    'berlin': 'BER',
+                    'amsterdam': 'AMS',
+                    'rome': 'FCO',
+                    'madrid': 'MAD',
+                    'naples': 'NAP',
+                    'milan': 'MXP',
+                    # North America
+                    'montreal': 'YUL',
+                    'toronto': 'YYZ',
+                    'vancouver': 'YVR',
+                    'chicago': 'ORD',
+                    'miami': 'MIA',
+                    'san francisco': 'SFO',
+                    'boston': 'BOS',
+                    'seattle': 'SEA',
+                    # Europe
+                    'dublin': 'DUB',
+                    'stockholm': 'ARN',
+                    'copenhagen': 'CPH',
+                    'oslo': 'OSL',
+                    'zurich': 'ZUR',
+                    'vienna': 'VIE',
+                    'prague': 'PRG',
+                    # Asia Pacific
+                    'sydney': 'SYD',
+                    'melbourne': 'MEL',
+                    'singapore': 'SIN',
+                    'hong kong': 'HKG',
+                    'seoul': 'ICN',
+                    'mumbai': 'BOM',
+                    'delhi': 'DEL'
                 }
-            ]
-            itinerary_data['flights'] = enhanced_flights
-            print("✅ Enhanced multi-city flights with realistic mock data")
+                
+                first_city = destinations[0].split(',')[0].strip()
+                last_city = destinations[-1].split(',')[0].strip()
+                
+                # Get destination IATA codes
+                first_iata = None
+                last_iata = None
+                
+                for city_name, iata in city_to_iata.items():
+                    if city_name.lower() in first_city.lower():
+                        first_iata = iata
+                    if city_name.lower() in last_city.lower():
+                        last_iata = iata
+                
+                # Fallback to first 3 letters if not found
+                if not first_iata:
+                    first_iata = first_city[:3].upper()
+                if not last_iata:
+                    last_iata = last_city[:3].upper()
+                
+                print(f"✈️  Searching multi-city flights: JFK → {first_iata}, {last_iata} → JFK")
+                
+                # Search for real flights (outbound to first city, return from last city)
+                flight_data = await duffel_service.search_flights(
+                    origin="JFK",
+                    destination=first_iata,
+                    departure_date=departure_date,
+                    return_date=return_date,
+                    passengers=2
+                )
+                
+                if 'flights' in flight_data and flight_data['flights']:
+                    # For multi-city, we might need to adjust the return flight destination
+                    flights = flight_data['flights']
+                    if len(flights) >= 2:
+                        # Update return flight to depart from last city
+                        flights[1]['departure'] = f"{last_iata} → JFK"
+                    
+                    itinerary_data['flights'] = flights
+                    print(f"✅ Enhanced with REAL Duffel multi-city flights: {len(flights)} flights")
+                else:
+                    print("⚠️  No real flight data returned, keeping LLM flights")
+                    
+            except Exception as e:
+                print(f"❌ Duffel API error for multi-city: {e}")
+                print("⚠️  Keeping LLM flight data due to API error")
             
             # Try to get REAL hotel data from Hotelbeds for each city
             hotels = itinerary_data.get('hotels', [])
