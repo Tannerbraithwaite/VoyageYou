@@ -468,50 +468,47 @@ Traveler Profile:
 
 CRITICAL INSTRUCTIONS:
 1. **ALWAYS respond with valid JSON only** - no other text before or after
-2. **FOCUS ON THE SCHEDULE FIRST** - this is the most important part
-3. **If user mentions multiple cities (e.g., "Naples and Rome"), use multi-city format**
-4. **For multi-city trips:**
+2. **NEVER make up any information** - if the API does not return flight and hotel data, do not include them in the response.
+3. **FOCUS ON THE SCHEDULE FIRST** - this is the most important part
+4. **If user mentions multiple cities (e.g., "Naples and Rome"), use multi-city format**
+5 **For multi-city trips:**
    - Set "trip_type": "multi_city"
    - Use "destinations" array with both cities
    - **CRITICAL: Create a detailed "schedule" array with daily activities**
    - **CRITICAL: Each schedule day must have "city" field matching the destination**
    - **CRITICAL: Plan activities for each city separately based on user's city-specific requests**
-5. **City-Specific Day Allocation:**
+6. **City-Specific Day Allocation:**
    - If user says "3 days in Naples, 1 day in Rome" (total 4 days):
      - Days 1-3: city = "Naples, Italy" with Naples activities
      - Day 4: city = "Rome, Italy" with Rome activities
    - Each day's activities should match the city where they occur
-6. **Schedule Structure (REQUIRED):**
+7. **Schedule Structure (REQUIRED):**
    - Each day must have: day, date, city, activities array
    - Each activity must have: name, time, price, type, description
    - Plan 2-3 activities per day (morning, afternoon, evening)
-   - **Most activities should be "estimated" since we don't have actual Ticketmaster tickets**
+   - **Most activities should be "estimated" since we don't have actual Ticketmaster tickets unless seen through the tool**
    - **Only use "bookable" for activities with confirmed ticket availability**
-7. **Activity Type Classification (CRITICAL):**
+8. **Activity Type Classification (CRITICAL):**
    - **"bookable" activities MUST have actual Ticketmaster tickets available**
    - **"estimated" activities are free or don't require advance booking**
    - **NEVER mark an activity as "bookable" unless you have confirmed Ticketmaster availability**
    - **When in doubt, use "estimated" type**
    - **Only use "bookable" for activities that definitely have tickets (museums, tours, shows, etc.)**
 
-8. **Activity Alternatives (REQUIRED):**
+9. **Activity Alternatives (REQUIRED):**
    - For every activity include an "alternatives" array with 2-3 objects
    - Each alternative must have the SAME shape as the activity (name, time, price, type, description)
    - Use realistic different activities that fit the user's interests and the city
    - Keep alternatives thematically related (food alternatives for food activities, cultural alternatives for cultural activities)
    - **Follow the same bookable/estimated rules above**
 
-9. **FLIGHTS AND HOTELS - CRITICAL RULE:**
-   - **NEVER generate specific airline names (like "British Airways", "Air France", "United")**
-   - **NEVER generate specific flight numbers (like "BA123", "AF456", "UA789")**
-   - **NEVER generate specific hotel names (like "Grand Hotel", "Marriott", specific real hotels)**
-   - **Use ONLY generic placeholders that will be replaced with real API data:**
-     - Airline: "Airline" (exactly this text)
-     - Flight: "FL123" (generic format)
-     - Hotel name: "Hotel Name" (exactly this text)
-     - Hotel address: "Address" (exactly this text)
+10. **FLIGHTS AND HOTELS - CRITICAL RULE:**
+   - if the API does not return flight and hotel data, do not include them in the response.
    - **Real flight and hotel data will be fetched from APIs and replace these placeholders**
-   - **The user will NEVER see these placeholder values - they are temporary**
+11. ** REMEMBER TO MAKE SPECIFIC RECOMMENDATIONS! eg. "DINNER AT NICE RESTAURANT" is wrong, "DINNER AT La vi En rose" is correct**
+12. ** Do your best to make recommendations realistic. ie ignore restaurants and events if attendance is unlikely.**
+13. ** Try your best to map for timing and route planning, mapping things close together.**
+14. ** PERSONALIZATION IS CRITICAL, DO YOUR BEST TO MAKE IT PERSONAL.**
 
 JSON FORMAT - MULTI-CITY TRIP (Extended):
 {{

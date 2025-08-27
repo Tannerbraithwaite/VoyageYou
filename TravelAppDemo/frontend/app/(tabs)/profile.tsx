@@ -14,6 +14,7 @@ export default function ProfileScreen() {
   const [nationality, setNationality] = useState('');
   const [passportNumber, setPassportNumber] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
+  const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
   const [travelStyle, setTravelStyle] = useState('solo');
   const [budget, setBudget] = useState('moderate');
   const [interests, setInterests] = useState(['art', 'food', 'culture', 'photography', 'architecture']);
@@ -285,7 +286,10 @@ export default function ProfileScreen() {
   console.log('Budget levels:', budgetLevels);
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      onScrollBeginDrag={() => setShowNationalityDropdown(false)}
+    >
       <Text style={styles.title}>Your Profile</Text>
       
       {isLoading && (
@@ -376,26 +380,38 @@ export default function ProfileScreen() {
         
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Nationality</Text>
-          <View style={styles.optionsContainer}>
-            {nationalityOptions.map((option) => (
-              <TouchableOpacity
-                key={option.id}
-                style={[
-                  styles.optionButton,
-                  nationality === option.id && styles.selectedOption
-                ]}
-                onPress={() => setNationality(option.id)}
-              >
-                <Text style={styles.optionIcon}>{option.icon}</Text>
-                <Text style={[
-                  styles.optionText,
-                  nationality === option.id && styles.selectedOptionText
-                ]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity
+            style={styles.dropdownButton}
+            onPress={() => setShowNationalityDropdown(!showNationalityDropdown)}
+          >
+            <Text style={nationality ? styles.dropdownButtonText : styles.dropdownButtonPlaceholder}>
+              {nationality ? 
+                `${nationalityOptions.find(opt => opt.id === nationality)?.icon} ${nationalityOptions.find(opt => opt.id === nationality)?.label}` :
+                'Select your nationality'
+              }
+            </Text>
+            <Text style={[styles.dropdownArrow, showNationalityDropdown && styles.dropdownArrowRotated]}>
+              ▼
+            </Text>
+          </TouchableOpacity>
+          
+          {showNationalityDropdown && (
+            <View style={styles.dropdownOptions}>
+              {nationalityOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.id}
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setNationality(option.id);
+                    setShowNationalityDropdown(false);
+                  }}
+                >
+                  <Text style={styles.dropdownOptionIcon}>{option.icon}</Text>
+                  <Text style={styles.dropdownOptionText}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </GlassCard>
 
@@ -784,5 +800,55 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  dropdownButton: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 10,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#333',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dropdownButtonText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  dropdownButtonPlaceholder: {
+    color: '#666',
+    fontSize: 16,
+  },
+  dropdownArrow: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  dropdownArrowRotated: {
+    transform: [{ rotate: '180deg' }],
+  },
+  dropdownOptions: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#333',
+    marginTop: 5,
+    maxHeight: 200,
+    overflow: 'scroll',
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  dropdownOptionIcon: {
+    fontSize: 20,
+    marginRight: 10,
+  },
+  dropdownOptionText: {
+    color: 'white',
+    fontSize: 16,
   },
 }); 
