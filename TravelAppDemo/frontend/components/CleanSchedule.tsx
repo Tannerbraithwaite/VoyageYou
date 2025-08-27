@@ -43,6 +43,7 @@ interface CleanScheduleProps {
   alternativeActivities: Record<string, AlternativeActivity[]>;
   onActivityEditSave: (dayIndex: number, activityIndex: number, updatedActivity: Activity) => void;
   onActivityEditCancel: () => void;
+  formatPrice: (price: number) => string;
 }
 
 export const CleanSchedule: React.FC<CleanScheduleProps> = ({
@@ -54,7 +55,8 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
   editingActivity,
   alternativeActivities,
   onActivityEditSave,
-  onActivityEditCancel
+  onActivityEditCancel,
+  formatPrice
 }) => {
   // Add debugging and error handling
   console.log('CleanSchedule render - schedule:', schedule);
@@ -88,31 +90,15 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
     onSave: (dayIndex: number, activityIndex: number, activity: Activity) => void; 
     onCancel: () => void; 
   }) => {
-    const [editedActivity, setEditedActivity] = React.useState<Activity>(activity);
-    const [selectedAlternative, setSelectedAlternative] = React.useState<AlternativeActivity | null>(null);
     const [customTime, setCustomTime] = React.useState(activity.time);
 
     const handleSave = () => {
       console.log('🔄 ActivityEditForm: Saving activity...');
       console.log('   Original activity:', activity);
-      console.log('   Edited activity:', editedActivity);
-      console.log('   Selected alternative:', selectedAlternative);
       console.log('   Custom time:', customTime);
       
-      let finalActivity = editedActivity;
-      
-      if (selectedAlternative) {
-        // Convert alternative to match Activity interface
-        finalActivity = {
-          time: customTime,
-          activity: selectedAlternative.name, // Convert 'name' to 'activity'
-          price: selectedAlternative.price,
-          type: selectedAlternative.type as 'bookable' | 'estimated'
-        };
-      } else {
-        // Use edited activity with custom time
-        finalActivity = { ...editedActivity, time: customTime };
-      }
+      // Only update the time, keep everything else the same
+      const finalActivity = { ...activity, time: customTime };
       
       console.log('   Final activity to save:', finalActivity);
       console.log('   Calling onSave with dayIndex:', dayIndex, 'activityIndex:', activityIndex);
@@ -122,7 +108,7 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
 
     return (
       <View style={styles.activityEditForm}>
-        <Text style={styles.editFormTitle}>Edit Activity</Text>
+        <Text style={styles.editFormTitle}>Edit Activity Time</Text>
         
         {/* Time Input */}
         <View style={styles.timeInputRow}>
@@ -133,101 +119,50 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
             onChangeText={setCustomTime}
             placeholder="09:00"
             placeholderTextColor="#666"
-          />
-        </View>
-
-        {/* Activity Name Input */}
-        <View style={styles.inputRow}>
-          <Text style={styles.inputLabel}>Activity:</Text>
-          <TextInput
-            style={styles.textInput}
-            value={editedActivity.name}
-            onChangeText={(text) => setEditedActivity(prev => ({ ...prev, name: text }))}
-            placeholder="Activity name"
-            placeholderTextColor="#666"
-          />
-        </View>
-
-        {/* Price Input */}
-        <View style={styles.inputRow}>
-          <Text style={styles.inputLabel}>Price:</Text>
-          <TextInput
-            style={styles.textInput}
-            value={editedActivity.price.toString()}
-            onChangeText={(text) => setEditedActivity(prev => ({ ...prev, price: parseFloat(text) || 0 }))}
-            placeholder="0"
-            placeholderTextColor="#666"
             keyboardType="numeric"
+            maxLength={5}
           />
         </View>
 
-        {/* Type Selection */}
-        <View style={styles.inputRow}>
-          <Text style={styles.inputLabel}>Type:</Text>
-          <View style={styles.typeSelection}>
-            <TouchableOpacity 
-              style={[
-                styles.typeOption, 
-                editedActivity.type === 'bookable' && styles.typeOptionSelected
-              ]}
-              onPress={() => setEditedActivity(prev => ({ ...prev, type: 'bookable' }))}
-            >
-              <Text style={[
-                styles.typeOptionText,
-                editedActivity.type === 'bookable' && styles.typeOptionTextSelected
-              ]}>Bookable</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[
-                styles.typeOption, 
-                editedActivity.type === 'estimated' && styles.typeOptionSelected
-              ]}
-              onPress={() => setEditedActivity(prev => ({ ...prev, type: 'estimated' }))}
-            >
-              <Text style={[
-                styles.typeOptionText,
-                editedActivity.type === 'estimated' && styles.typeOptionTextSelected
-              ]}>Estimated</Text>
-            </TouchableOpacity>
+        {/* Activity Details (Read-only) */}
+        <View style={styles.readOnlySection}>
+          <Text style={styles.sectionLabel}>Activity Details</Text>
+          
+          <View style={styles.readOnlyRow}>
+            <Text style={styles.readOnlyLabel}>Name:</Text>
+            <Text style={styles.readOnlyValue}>{activity.name}</Text>
           </View>
+          
+          <View style={styles.readOnlyRow}>
+            <Text style={styles.readOnlyLabel}>Price:</Text>
+            <Text style={styles.readOnlyValue}>{formatPrice(activity.price)}</Text>
+          </View>
+          
+          <View style={styles.readOnlyRow}>
+            <Text style={styles.readOnlyLabel}>Type:</Text>
+            <View style={[
+              styles.typeBadge,
+              activity.type === 'bookable' ? styles.bookableBadge : 
+              activity.type === 'transport' ? styles.transportBadge : styles.estimatedBadge
+            ]}>
+              <Text style={[
+                styles.typeText,
+                activity.type === 'bookable' ? styles.bookableText : 
+                activity.type === 'transport' ? styles.transportText : styles.estimatedText
+              ]}>
+                {activity.type === 'bookable' ? 'Bookable' : 
+                 activity.type === 'transport' ? 'Transport' : 'Estimated'}
+              </Text>
+            </View>
+          </View>
+          
+          {activity.description && (
+            <View style={styles.readOnlyRow}>
+              <Text style={styles.readOnlyLabel}>Description:</Text>
+              <Text style={styles.readOnlyValue}>{activity.description}</Text>
+            </View>
+          )}
         </View>
-
-        {/* Alternatives */}
-        {alternativeActivities.all && alternativeActivities.all.length > 0 && (
-          <View style={styles.alternativesSection}>
-            <Text style={styles.alternativesTitle}>Available Alternative Activities:</Text>
-            <Text style={styles.alternativesSubtitle}>
-              Select an alternative to replace the current activity
-            </Text>
-            {alternativeActivities.all.map((alternative, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.alternativeItem,
-                  selectedAlternative === alternative && styles.alternativeItemSelected
-                ]}
-                onPress={() => setSelectedAlternative(alternative)}
-              >
-                <View style={styles.alternativeHeader}>
-                  <Text style={styles.alternativeName}>{alternative.name}</Text>
-                  <Text style={styles.alternativePrice}>${alternative.price}</Text>
-                </View>
-                <Text style={styles.alternativeDescription}>{alternative.description}</Text>
-                <View style={[
-                  styles.typeBadge,
-                  alternative.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge
-                ]}>
-                  <Text style={[
-                    styles.typeText,
-                    alternative.type === 'bookable' ? styles.bookableText : styles.estimatedText
-                  ]}>
-                    {alternative.type === 'bookable' ? 'Bookable' : 'Estimated'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
 
         {/* Action Buttons */}
         <View style={styles.editFormActions}>
@@ -285,7 +220,7 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                       {isEditing ? (
                         <ActivityEditForm
                           activity={activity}
-                          alternatives={alternativeActivities.all || []}
+                          alternatives={[]}
                           dayIndex={dayIndex}
                           activityIndex={activityIndex}
                           onSave={onActivityEditSave}
@@ -299,9 +234,9 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                           >
                             <Text style={styles.activityText}>{activity.name}</Text>
                             <View style={styles.activityDetails}>
-                              {activity.price > 0 && (
-                                <Text style={styles.priceText}>${activity.price}</Text>
-                              )}
+                                                          {activity.price > 0 && (
+                              <Text style={styles.priceText}>{formatPrice(activity.price)}</Text>
+                            )}
                               <View style={[
                                 styles.typeBadge,
                                 activity.type === 'bookable' ? styles.bookableBadge : 
@@ -402,12 +337,6 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                           
                           <View style={styles.activityActions}>
                             <TouchableOpacity 
-                              style={styles.editButton}
-                              onPress={() => onEditActivity(dayIndex, activityIndex)}
-                            >
-                              <Text style={styles.editButtonText}>✏️</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
                               style={styles.deleteButton}
                               onPress={() => onDeleteActivity(dayIndex, activityIndex)}
                             >
@@ -440,7 +369,7 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
       
       <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>Total Activities:</Text>
-        <Text style={styles.totalAmount}>${totalActivities}</Text>
+        <Text style={styles.totalAmount}>{formatPrice(totalActivities)}</Text>
       </View>
     </GlassCard>
   );
@@ -500,7 +429,7 @@ const styles = {
   activityCard: {
     backgroundColor: '#2a2a2a',
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
   },
   activityContent: {
     flexDirection: 'row' as const,
@@ -777,7 +706,7 @@ const styles = {
     flexDirection: 'row' as const,
     backgroundColor: '#333',
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
   },
   typeOption: {
     flex: 1,
@@ -838,5 +767,31 @@ const styles = {
     color: '#888',
     textAlign: 'center' as const,
     marginTop: 4,
+  },
+  readOnlySection: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  sectionLabel: {
+    fontSize: 14,
+    color: '#cccccc',
+    marginBottom: 8,
+  },
+  readOnlyRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 5,
+  },
+  readOnlyLabel: {
+    fontSize: 14,
+    color: '#999',
+  },
+  readOnlyValue: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '600' as const,
   },
 };

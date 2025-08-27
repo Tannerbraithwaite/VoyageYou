@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert,
 import { useFocusEffect } from '@react-navigation/native';
 import GlassCard from '@/components/ui/GlassCard';
 import { router, useLocalSearchParams } from 'expo-router';
-import { DatePicker, CleanSchedule, AlternativesSelector } from '@/components';
+import { DatePicker, CleanSchedule, AlternativesSelector, CurrencyConverter, useCurrencyConverter, type Currency } from '@/components';
 import { TripDates, EnhancedItinerary, ItineraryActivity, FlightInfo, HotelInfo, ItineraryDay, MultiCityItinerary, SingleCityItinerary } from '@/types';
 import { formatDateForChat, calculateTripDuration } from '@/utils';
 import exportService from '@/services/export';
@@ -76,6 +76,9 @@ export default function HomeScreen() {
     endDate: null,
     isFlexible: false,
   });
+  
+  // State for undecided dates planning
+  const [isUndecidedDates, setIsUndecidedDates] = useState(false);
   const [currentItinerary, setCurrentItinerary] = useState<EnhancedItinerary | null>(null);
   const [showOldTrips, setShowOldTrips] = useState(false);
   const [showAlternatives, setShowAlternatives] = useState(false);
@@ -105,28 +108,7 @@ export default function HomeScreen() {
     }
     return {};
   });
-  const [oldTripsState, setOldTripsState] = useState([
-    {
-      id: 1,
-      destination: 'Paris, France',
-      date: 'July 2024',
-      activities: [
-        { name: 'Eiffel Tower Visit', rating: 5 },
-        { name: 'Louvre Museum', rating: 4 },
-        { name: 'Seine River Cruise', rating: 5 }
-      ]
-    },
-    {
-      id: 2,
-      destination: 'Tokyo, Japan',
-      date: 'March 2024',
-      activities: [
-        { name: 'Sushi Making Class', rating: 5 },
-        { name: 'Senso-ji Temple', rating: 4 },
-        { name: 'Shibuya Crossing', rating: 3 }
-      ]
-    }
-  ]);
+
 
   // Interactive schedule state - using new drag and drop system
 
@@ -153,8 +135,23 @@ export default function HomeScreen() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [scheduleName, setScheduleName] = useState('');
   
+  // State for add activity modal
+  const [showAddActivityModal, setShowAddActivityModal] = useState(false);
+  const [selectedDayForActivity, setSelectedDayForActivity] = useState<number | null>(null);
+  
+  // State for currency conversion
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency>({
+    code: 'USD',
+    name: 'US Dollar',
+    symbol: '$',
+    rate: 1.0
+  });
+  
   // State for export functionality
   const [isExporting, setIsExporting] = useState(false);
+  
+  // Currency converter hook
+  const { formatPrice } = useCurrencyConverter(selectedCurrency);
 
   // Purchase options
   const [includeFlights, setIncludeFlights] = useState(true);
@@ -356,7 +353,15 @@ export default function HomeScreen() {
     
     // Prepare the message with trip dates context
     let enhancedMessage = userMessage;
-    if (tripDates.startDate && tripDates.endDate) {
+    
+    if (isUndecidedDates) {
+      // For undecided dates, don't include specific dates but indicate planning mode
+      const planningContext = `Planning Mode: Undecided dates - planning ahead without specific dates\n` +
+        `Purchase Options:\n- Flights: ${includeFlights ? 'Include' : 'Exclude'}\n- Hotel: ${includeHotel ? 'Include' : 'Exclude'}\n- Activities: ${includeActivities ? 'Include' : 'Exclude'}`;
+      
+      enhancedMessage = `${planningContext}\n\nUser Request: ${userMessage}`;
+    } else if (tripDates.startDate && tripDates.endDate) {
+      // For specific dates, include full date context
       const startDateStr = formatDateForChat(tripDates.startDate);
       const endDateStr = formatDateForChat(tripDates.endDate);
       const duration = calculateTripDuration(tripDates.startDate, tripDates.endDate);
@@ -370,6 +375,12 @@ export default function HomeScreen() {
       const optionsContext = `Purchase Options:\n- Flights: ${includeFlights ? 'Include' : 'Exclude'}\n- Hotel: ${includeHotel ? 'Include' : 'Exclude'}\n- Activities: ${includeActivities ? 'Include' : 'Exclude'}`;
 
       enhancedMessage = `${dateContext}\n${optionsContext}\n\nUser Request: ${userMessage}`;
+    } else {
+      // No dates selected, basic context
+      const basicContext = `No specific dates selected\n` +
+        `Purchase Options:\n- Flights: ${includeFlights ? 'Include' : 'Exclude'}\n- Hotel: ${includeHotel ? 'Include' : 'Exclude'}\n- Activities: ${includeActivities ? 'Include' : 'Exclude'}`;
+      
+      enhancedMessage = `${basicContext}\n\nUser Request: ${userMessage}`;
     }
     
     // Log full prompt for debugging
@@ -752,7 +763,20 @@ export default function HomeScreen() {
   };
 
   const handleAddActivity = (dayIndex: number) => {
-    const newActivity: Activity = { time: '12:00', name: 'New Activity', price: 0, type: 'estimated' };
+    setSelectedDayForActivity(dayIndex);
+    setShowAddActivityModal(true);
+  };
+
+  const handleSelectActivityFromAlternatives = (alternative: AlternativeActivity, dayIndex: number) => {
+    // Create a new activity from the selected alternative
+    const newActivity: Activity = {
+      time: '12:00', // Default time, user can edit later
+      name: alternative.name,
+      price: alternative.price,
+      type: alternative.type as 'bookable' | 'estimated'
+    };
+    
+    // Add to schedule
     setSchedule(prevSchedule => 
       prevSchedule.map((day, index) => 
         index === dayIndex ? { 
@@ -761,8 +785,19 @@ export default function HomeScreen() {
         } : day
       )
     );
-    const newActivityIndex = schedule[dayIndex].activities.length;
-    setEditingActivity({ dayIndex, activityIndex: newActivityIndex, isEditing: true });
+    
+    // Close modal
+    setShowAddActivityModal(false);
+    setSelectedDayForActivity(null);
+    
+    // Show success message
+    Alert.alert('Activity Added', `"${alternative.name}" has been added to Day ${dayIndex + 1}`);
+  };
+
+  const handleAddDatesToPlan = () => {
+    setIsUndecidedDates(false);
+    // Focus on the date picker
+    // You could also scroll to the date picker here
   };
 
   // Calculate totals
@@ -949,20 +984,12 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-              {/* Header */}
-        <GlassCard style={styles.header}>
-          <Text style={styles.headerTitle}>Travel Assistant</Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity onPress={() => setShowOldTrips(true)} style={styles.oldTripsButton}>
-              <Text style={styles.oldTripsButtonText}>View Old Trips</Text>
-            </TouchableOpacity>
-          </View>
-        </GlassCard>
+      
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Chat Section */}
         <GlassCard style={styles.chatSection}>
-          <Text style={styles.sectionTitle}>Chat with AI Assistant</Text>
+          <Text style={styles.sectionTitle}>Chat with Neel</Text>
 
 
 
@@ -991,15 +1018,47 @@ export default function HomeScreen() {
                 <Text style={styles.checkboxLabel}>Activities</Text>
               </TouchableOpacity>
             </View>
+            
+            {/* Currency Selector */}
+            <View style={styles.currencySection}>
+              <Text style={styles.currencySectionTitle}>Currency</Text>
+              <CurrencyConverter
+                selectedCurrency={selectedCurrency}
+                onCurrencyChange={setSelectedCurrency}
+              />
+            </View>
           </View>
           
           {/* Trip Dates */}
           <View style={styles.datesContainer}>
             <Text style={styles.datesTitle}>Trip Dates</Text>
-            <DatePicker
-              tripDates={tripDates}
-              onDatesChange={setTripDates}
-            />
+            
+            {/* Undecided Dates Checkbox */}
+            <TouchableOpacity 
+              style={styles.undecidedCheckboxRow} 
+              onPress={() => setIsUndecidedDates(!isUndecidedDates)}
+            >
+              <View style={[styles.checkbox, isUndecidedDates && styles.checkboxChecked]}>
+                {isUndecidedDates && <Text style={styles.checkboxTick}>✓</Text>}
+              </View>
+              <Text style={styles.checkboxLabel}>Undecided dates - plan ahead without committing to specific dates</Text>
+            </TouchableOpacity>
+            
+            {!isUndecidedDates && (
+              <DatePicker
+                tripDates={tripDates}
+                onDatesChange={setTripDates}
+              />
+            )}
+            
+            {isUndecidedDates && (
+              <View style={styles.undecidedInfo}>
+                <Text style={styles.undecidedInfoText}>
+                  💡 You can still plan your trip! The AI will suggest flights, hotels, and activities without specific dates. 
+                  You can add dates later when you're ready to book.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Chat History - Scrollable with auto-scroll to bottom */}
@@ -1083,6 +1142,12 @@ export default function HomeScreen() {
           <GlassCard style={styles.scheduleSection}>
             <Text style={styles.sectionTitle}>Your Itinerary</Text>
             
+            {/* Currency Converter */}
+            <CurrencyConverter
+              selectedCurrency={selectedCurrency}
+              onCurrencyChange={setSelectedCurrency}
+            />
+            
             {/* Debug Info */}
 
             
@@ -1094,8 +1159,25 @@ export default function HomeScreen() {
                   : `🌍 ${currentItinerary.destination || 'Trip'}`
                 }
               </Text>
-              <Text style={styles.tripDuration}>{currentItinerary.duration}</Text>
-              <Text style={styles.tripDescription}>{currentItinerary.description}</Text>
+              
+              {!isUndecidedDates && currentItinerary.duration && (
+                <Text style={styles.tripDuration}>{currentItinerary.duration}</Text>
+              )}
+              
+              {isUndecidedDates && (
+                <View style={styles.undecidedDatesBanner}>
+                  <Text style={styles.undecidedDatesText}>📅 Undecided Dates - Planning Mode</Text>
+                  <Text style={styles.undecidedDatesSubtext}>
+                    This is a preliminary plan. Add specific dates when ready to book.
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.addDatesButton}
+                    onPress={handleAddDatesToPlan}
+                  >
+                    <Text style={styles.addDatesButtonText}>Add Travel Dates</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               
               {/* Export Button */}
               <TouchableOpacity 
@@ -1110,17 +1192,27 @@ export default function HomeScreen() {
             </GlassCard>
 
             {/* Flight Information */}
-            {includeFlights && currentItinerary.flights && currentItinerary.flights.length > 0 && (
+            {includeFlights && currentItinerary.flights && currentItinerary.flights.length > 0 && currentItinerary.flights[0]?.airline && currentItinerary.flights[1]?.airline ? (
               <GlassCard style={styles.section}>
                 <Text style={styles.sectionTitle}>✈️ Flight Information</Text>
+                
+                {isUndecidedDates && (
+                  <View style={styles.undecidedDatesInfo}>
+                    <Text style={styles.undecidedDatesInfoText}>
+                      💡 Flight suggestions are based on general availability. Specific dates and times will be confirmed when you select travel dates.
+                    </Text>
+                  </View>
+                )}
                 
                 <View style={styles.flightContainer}>
                   <GlassCard style={styles.flightCard}>
                     <Text style={styles.flightLabel}>Outbound</Text>
-                    <Text style={styles.airline}>{currentItinerary.flights[0]?.airline} {currentItinerary.flights[0]?.flight}</Text>
-                    <Text style={styles.route}>{currentItinerary.flights[0]?.departure}</Text>
-                    <Text style={styles.timeText}>{currentItinerary.flights[0]?.time}</Text>
-                    <Text style={styles.priceText}>${currentItinerary.flights[0]?.price}</Text>
+                    <Text style={styles.airline}>{currentItinerary.flights[0].airline} {currentItinerary.flights[0].flight}</Text>
+                    <Text style={styles.route}>{currentItinerary.flights[0].departure}</Text>
+                    {!isUndecidedDates && (
+                      <Text style={styles.timeText}>{currentItinerary.flights[0].time}</Text>
+                    )}
+                    <Text style={styles.priceText}>{formatPrice(currentItinerary.flights[0].price)}</Text>
                     
                     {/* Alternatives Selector for Outbound Flight */}
                     {currentItinerary.flights[0]?.alternatives && currentItinerary.flights[0].alternatives.length > 0 && (
@@ -1165,10 +1257,12 @@ export default function HomeScreen() {
                   
                   <GlassCard style={styles.flightCard}>
                     <Text style={styles.flightLabel}>Return</Text>
-                    <Text style={styles.airline}>{currentItinerary.flights[1]?.airline} {currentItinerary.flights[1]?.flight}</Text>
-                    <Text style={styles.route}>{currentItinerary.flights[1]?.departure}</Text>
-                    <Text style={styles.timeText}>{currentItinerary.flights[1]?.time}</Text>
-                    <Text style={styles.priceText}>${currentItinerary.flights[1]?.price}</Text>
+                    <Text style={styles.airline}>{currentItinerary.flights[1].airline} {currentItinerary.flights[1].flight}</Text>
+                    <Text style={styles.route}>{currentItinerary.flights[1].departure}</Text>
+                    {!isUndecidedDates && (
+                      <Text style={styles.timeText}>{currentItinerary.flights[1].time}</Text>
+                    )}
+                    <Text style={styles.priceText}>{formatPrice(currentItinerary.flights[1].price)}</Text>
                     
                     {/* Alternatives Selector for Return Flight */}
                     {currentItinerary.flights[1]?.alternatives && currentItinerary.flights[1].alternatives.length > 0 && (
@@ -1214,7 +1308,18 @@ export default function HomeScreen() {
                 
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Total Flights:</Text>
-                  <Text style={styles.totalAmount}>${totalFlights}</Text>
+                  <Text style={styles.totalAmount}>{formatPrice(totalFlights)}</Text>
+                </View>
+              </GlassCard>
+            ) : includeFlights && (
+              // No flight information available
+              <GlassCard style={styles.section}>
+                <Text style={styles.sectionTitle}>✈️ Flight Information</Text>
+                <View style={styles.noDataContainer}>
+                  <Text style={styles.noDataText}>No flight information available</Text>
+                  <Text style={styles.noDataSubtext}>
+                    The AI couldn't find suitable flight options for your trip. Try adjusting your preferences or dates.
+                  </Text>
                 </View>
               </GlassCard>
             )}
@@ -1224,26 +1329,38 @@ export default function HomeScreen() {
               <GlassCard style={styles.section}>
                 <Text style={styles.sectionTitle}>🏨 Hotel Information</Text>
                 
-                {currentItinerary.trip_type === 'multi_city' && currentItinerary.hotels ? (
+                {isUndecidedDates && (
+                  <View style={styles.undecidedDatesInfo}>
+                    <Text style={styles.undecidedDatesInfoText}>
+                      💡 Hotel suggestions are based on general availability and pricing. Specific check-in/check-out dates will be confirmed when you select travel dates.
+                    </Text>
+                  </View>
+                )}
+                
+                {currentItinerary.trip_type === 'multi_city' && currentItinerary.hotels && currentItinerary.hotels.length > 0 ? (
                   // Multi-city hotels
                   <View>
                     {currentItinerary.hotels.map((hotel, index) => (
                       <GlassCard key={index} style={styles.hotelCard}>
-                        <Text style={styles.hotelCity}>{hotel.city || `City ${index + 1}`}</Text>
+                        <Text style={styles.hotelCity}>{hotel.city}</Text>
                         <Text style={styles.hotelName}>{hotel.name}</Text>
                         <Text style={styles.hotelAddress}>{hotel.address}</Text>
                         <Text style={styles.hotelDetails}>{hotel.room_type}</Text>
-                        <Text style={styles.hotelDates}>Check-in: {hotel.check_in}</Text>
-                        <Text style={styles.hotelDates}>Check-out: {hotel.check_out}</Text>
+                        {!isUndecidedDates && (
+                          <>
+                            <Text style={styles.hotelDates}>Check-in: {hotel.check_in}</Text>
+                            <Text style={styles.hotelDates}>Check-out: {hotel.check_out}</Text>
+                          </>
+                        )}
                         <View style={styles.hotelPriceRow}>
-                          <Text style={styles.hotelPriceLabel}>${hotel.price}/night × {hotel.total_nights} nights</Text>
-                          <Text style={styles.hotelPriceTotal}>${hotel.price * hotel.total_nights}</Text>
+                          <Text style={styles.hotelPriceLabel}>{formatPrice(hotel.price)}/night × {hotel.total_nights} nights</Text>
+                          <Text style={styles.hotelPriceTotal}>{formatPrice(hotel.price * hotel.total_nights)}</Text>
                         </View>
                         
                         {/* Alternatives Selector for Hotel */}
                         {hotel.alternatives && hotel.alternatives.length > 0 && (
                           <AlternativesSelector
-                            title={`${hotel.city || `City ${index + 1}`} Hotel Alternatives`}
+                            title={`${hotel.city} Hotel Alternatives`}
                             currentOption={hotel}
                             alternatives={hotel.alternatives}
                             onSelect={(option: FlightInfo | HotelInfo) => {
@@ -1272,53 +1389,59 @@ export default function HomeScreen() {
                       </GlassCard>
                     ))}
                   </View>
-                ) : (
+                ) : currentItinerary.trip_type === 'single_city' && currentItinerary.hotel && currentItinerary.hotel.name ? (
                   // Single city hotel
                   <GlassCard style={styles.hotelCard}>
-                    {currentItinerary.trip_type === 'single_city' && 'hotel' in currentItinerary ? (
+                    <Text style={styles.hotelName}>{currentItinerary.hotel.name}</Text>
+                    <Text style={styles.hotelAddress}>{currentItinerary.hotel.address}</Text>
+                    <Text style={styles.hotelDetails}>{currentItinerary.hotel.room_type}</Text>
+                    {!isUndecidedDates && (
                       <>
-                        <Text style={styles.hotelName}>{currentItinerary.hotel.name}</Text>
-                        <Text style={styles.hotelAddress}>{currentItinerary.hotel.address}</Text>
-                        <Text style={styles.hotelDetails}>{currentItinerary.hotel.room_type}</Text>
                         <Text style={styles.hotelDates}>Check-in: {currentItinerary.hotel.check_in}</Text>
                         <Text style={styles.hotelDates}>Check-out: {currentItinerary.hotel.check_out}</Text>
-                        <View style={styles.hotelPriceRow}>
-                          <Text style={styles.hotelPriceLabel}>${currentItinerary.hotel.price}/night × {currentItinerary.hotel.total_nights} nights</Text>
-                          <Text style={styles.hotelPriceTotal}>${currentItinerary.hotel.price * currentItinerary.hotel.total_nights}</Text>
-                        </View>
-                        
-                        {/* Alternatives Selector for Single City Hotel */}
-                        {currentItinerary.hotel.alternatives && currentItinerary.hotel.alternatives.length > 0 && (
-                          <AlternativesSelector
-                            title="Hotel Alternatives"
-                            currentOption={currentItinerary.hotel}
-                            alternatives={currentItinerary.hotel.alternatives}
-                            onSelect={(option: FlightInfo | HotelInfo) => {
-                              // Update the itinerary with the selected hotel
-                              const selectedHotel = option as HotelInfo;
-                              
-                              // Preserve the alternatives array for the new hotel
-                              const updatedHotel = {
-                                ...selectedHotel,
-                                alternatives: currentItinerary.hotel.alternatives
-                              };
-                              
-                              if (currentItinerary && currentItinerary.trip_type === 'single_city') {
-                                const updatedItinerary = {
-                                  ...currentItinerary,
-                                  hotel: updatedHotel
-                                };
-                                setCurrentItinerary(updatedItinerary);
-                              }
-                            }}
-                            type="hotel"
-                          />
-                        )}
                       </>
-                    ) : (
-                      <Text style={styles.hotelName}>Hotel information not available</Text>
+                    )}
+                    <View style={styles.hotelPriceRow}>
+                      <Text style={styles.hotelPriceLabel}>{formatPrice(currentItinerary.hotel.price)}/night × {currentItinerary.hotel.total_nights} nights</Text>
+                      <Text style={styles.hotelPriceTotal}>{formatPrice(currentItinerary.hotel.price * currentItinerary.hotel.total_nights)}</Text>
+                    </View>
+                    
+                    {/* Alternatives Selector for Single City Hotel */}
+                    {currentItinerary.hotel.alternatives && currentItinerary.hotel.alternatives.length > 0 && (
+                      <AlternativesSelector
+                        title="Hotel Alternatives"
+                        currentOption={currentItinerary.hotel}
+                        alternatives={currentItinerary.hotel.alternatives}
+                        onSelect={(option: FlightInfo | HotelInfo) => {
+                          // Update the itinerary with the selected hotel
+                          const selectedHotel = option as HotelInfo;
+                          
+                          // Preserve the alternatives array for the new hotel
+                          const updatedHotel = {
+                            ...selectedHotel,
+                            alternatives: currentItinerary.hotel.alternatives
+                          };
+                          
+                          if (currentItinerary && currentItinerary.trip_type === 'single_city') {
+                            const updatedItinerary = {
+                              ...currentItinerary,
+                              hotel: updatedHotel
+                            };
+                            setCurrentItinerary(updatedItinerary);
+                          }
+                        }}
+                        type="hotel"
+                      />
                     )}
                   </GlassCard>
+                ) : (
+                  // No hotel information available
+                  <View style={styles.noDataContainer}>
+                    <Text style={styles.noDataText}>No hotel information available</Text>
+                    <Text style={styles.noDataSubtext}>
+                      The AI couldn't find suitable hotel options for your trip. Try adjusting your preferences or dates.
+                    </Text>
+                  </View>
                 )}
               </GlassCard>
             )}
@@ -1332,7 +1455,7 @@ export default function HomeScreen() {
                   <GlassCard key={index} style={styles.transportCard}>
                     <View style={styles.transportHeader}>
                       <Text style={styles.transportType}>{transport.type.toUpperCase()}</Text>
-                      <Text style={styles.transportPrice}>${transport.price}</Text>
+                      <Text style={styles.transportPrice}>{formatPrice(transport.price)}</Text>
                     </View>
                     <Text style={styles.transportCarrier}>{transport.carrier}</Text>
                     <Text style={styles.transportRoute}>{transport.from_location} → {transport.to}</Text>
@@ -1383,6 +1506,7 @@ export default function HomeScreen() {
                     })()}
                     onActivityEditSave={handleActivityEditSave}
                     onActivityEditCancel={handleActivityEditCancel}
+                    formatPrice={formatPrice}
                   />
                 </GlassCard>
 
@@ -1402,13 +1526,14 @@ export default function HomeScreen() {
                       alternativeActivities={(() => {
                         console.log('🔍 Passing alternativeActivities to CleanSchedule (2):', {
                           alternativeActivities,
-                          keys: Object.keys(alternativeActivities),
+                          key: Object.keys(alternativeActivities),
                           totalAlternatives: Object.values(alternativeActivities).flat().length
                         });
                         return alternativeActivities;
                       })()}
                       onActivityEditSave={handleActivityEditSave}
                       onActivityEditCancel={handleActivityEditCancel}
+                      formatPrice={formatPrice}
                     />
                   </GlassCard>
                 )}
@@ -1447,19 +1572,19 @@ export default function HomeScreen() {
               <Text style={styles.costTitle}>Cost Breakdown</Text>
               <View style={styles.costRow}>
                 <Text style={[styles.costLabel, !includeFlights && styles.costLabelDisabled]}>Flights:</Text>
-                <Text style={[styles.costValue, !includeFlights && styles.costValueDisabled]}>${includeFlights ? totalFlights : 0}</Text>
+                <Text style={[styles.costValue, !includeFlights && styles.costValueDisabled]}>{formatPrice(includeFlights ? totalFlights : 0)}</Text>
               </View>
               <View style={styles.costRow}>
                 <Text style={[styles.costLabel, !includeHotel && styles.costLabelDisabled]}>Hotel:</Text>
-                <Text style={[styles.costValue, !includeHotel && styles.costValueDisabled]}>${includeHotel ? totalHotel : 0}</Text>
+                <Text style={[styles.costValue, !includeHotel && styles.costValueDisabled]}>{formatPrice(includeHotel ? totalHotel : 0)}</Text>
               </View>
               <View style={styles.costRow}>
                 <Text style={[styles.costLabel, !includeActivities && styles.costLabelDisabled]}>Activities:</Text>
-                <Text style={[styles.costValue, !includeActivities && styles.costValueDisabled]}>${includeActivities ? bookableActivities : 0}</Text>
+                <Text style={[styles.costValue, !includeActivities && styles.costValueDisabled]}>{formatPrice(includeActivities ? bookableActivities : 0)}</Text>
               </View>
               <View style={[styles.costRow, styles.totalRow]}>
                 <Text style={styles.totalLabel}>Ready to Book:</Text>
-                <Text style={styles.totalValue}>${bookableTotal}</Text>
+                <Text style={styles.totalValue}>{formatPrice(bookableTotal)}</Text>
               </View>
             </GlassCard>
 
@@ -1468,10 +1593,20 @@ export default function HomeScreen() {
               <Text style={styles.saveScheduleButtonText}>💾 Save This Schedule</Text>
             </TouchableOpacity>
 
-            {/* Checkout Button */}
-            <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
-              <Text style={styles.checkoutButtonText}>Checkout Now</Text>
-            </TouchableOpacity>
+            {/* Checkout Button - Only show when dates are decided */}
+            {!isUndecidedDates && (
+              <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
+                <Text style={styles.checkoutButtonText}>Checkout Now</Text>
+              </TouchableOpacity>
+            )}
+            
+            {isUndecidedDates && (
+              <View style={styles.undecidedCheckoutInfo}>
+                <Text style={styles.undecidedCheckoutText}>
+                  💡 To proceed to checkout, please select specific travel dates above.
+                </Text>
+              </View>
+            )}
           </GlassCard>
         )}
       </ScrollView>
@@ -1489,7 +1624,7 @@ export default function HomeScreen() {
                 onPress={() => handleSelectAlternative(alternative)}
               >
                 <Text style={styles.alternativeName}>{alternative.name}</Text>
-                <Text style={styles.alternativePrice}>${alternative.price}</Text>
+                <Text style={styles.alternativePrice}>{formatPrice(alternative.price)}</Text>
                 <Text style={styles.alternativeDescription}>{alternative.description}</Text>
               </TouchableOpacity>
             ))}
@@ -1501,27 +1636,68 @@ export default function HomeScreen() {
       </View>
     </Modal>
 
-    {/* Old Trips Modal */}
-    <Modal visible={showOldTrips} transparent={true} animationType="slide">
+
+
+    {/* Add Activity Modal */}
+    <Modal visible={showAddActivityModal} transparent={true} animationType="slide">
       <View style={styles.modalOverlay}>
         <GlassCard style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Past Trips</Text>
-          <ScrollView style={styles.oldTripsList}>
-            {oldTripsState.map((trip) => (
-              <GlassCard key={trip.id} style={styles.tripItem}>
-                <Text style={styles.tripDestination}>{trip.destination}</Text>
-                <Text style={styles.tripDate}>{trip.date}</Text>
-                {trip.activities.map((activity, index) => (
-                  <View key={index} style={styles.activityRating}>
-                    <Text style={styles.activityName}>{activity.name}</Text>
-                    {renderStars(activity.rating, handleRateActivity, activity.name, trip.id)}
+          <Text style={styles.modalTitle}>Add Activity</Text>
+          <Text style={styles.modalHelpText}>
+            Select an activity from the LLM suggestions to add to your schedule
+          </Text>
+          
+          <ScrollView style={styles.alternativesList}>
+            {(() => {
+              // Get all available alternatives that aren't already in the schedule
+              const allAlternatives = getAllAvailableAlternatives();
+              
+              if (allAlternatives.length === 0) {
+                return (
+                  <View style={styles.noAlternativesContainer}>
+                    <Text style={styles.noAlternativesText}>No additional activities available</Text>
+                    <Text style={styles.noAlternativesSubtext}>
+                      All LLM-suggested activities are already in your schedule
+                    </Text>
                   </View>
-                ))}
-              </GlassCard>
-            ))}
+                );
+              }
+              
+              return allAlternatives.map((alternative, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.alternativeItem}
+                  onPress={() => handleSelectActivityFromAlternatives(alternative, selectedDayForActivity!)}
+                >
+                  <View style={styles.alternativeHeader}>
+                    <Text style={styles.alternativeName}>{alternative.name}</Text>
+                    <Text style={styles.alternativePrice}>{formatPrice(alternative.price)}</Text>
+                  </View>
+                  <Text style={styles.alternativeDescription}>{alternative.description}</Text>
+                  <View style={[
+                    styles.typeBadge,
+                    alternative.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge
+                  ]}>
+                    <Text style={[
+                      styles.typeText,
+                      alternative.type === 'bookable' ? styles.bookableText : styles.estimatedText
+                    ]}>
+                      {alternative.type === 'bookable' ? 'Bookable' : 'Estimated'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ));
+            })()}
           </ScrollView>
-          <TouchableOpacity style={styles.modalButton} onPress={() => setShowOldTrips(false)}>
-            <Text style={styles.modalButtonText}>Close</Text>
+          
+          <TouchableOpacity 
+            style={styles.modalButton} 
+            onPress={() => {
+              setShowAddActivityModal(false);
+              setSelectedDayForActivity(null);
+            }}
+          >
+            <Text style={styles.modalButtonText}>Cancel</Text>
           </TouchableOpacity>
         </GlassCard>
       </View>
@@ -1629,6 +1805,124 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  currencySection: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  currencySectionTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  undecidedCheckboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingVertical: 8,
+  },
+  undecidedInfo: {
+    backgroundColor: '#2a2a2a',
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#6366f1',
+    marginTop: 10,
+  },
+  undecidedInfoText: {
+    fontSize: 14,
+    color: '#cccccc',
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  undecidedDatesBanner: {
+    backgroundColor: '#2a2a2a',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#6366f1',
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  undecidedDatesText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6366f1',
+    marginBottom: 5,
+  },
+  undecidedDatesSubtext: {
+    fontSize: 14,
+    color: '#999999',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  undecidedCheckoutInfo: {
+    backgroundColor: '#2a2a2a',
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#666',
+    marginBottom: 30,
+    alignItems: 'center',
+  },
+  undecidedCheckoutText: {
+    fontSize: 14,
+    color: '#999999',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  undecidedDatesInfo: {
+    backgroundColor: '#2a2a2a',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#6366f1',
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  undecidedDatesInfoText: {
+    fontSize: 13,
+    color: '#cccccc',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  addDatesButton: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  addDatesButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  noDataContainer: {
+    backgroundColor: '#2a2a2a',
+    padding: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#666',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  noDataText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#cccccc',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  noDataSubtext: {
+    fontSize: 14,
+    color: '#999999',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   scheduleSection: {
     marginBottom: 30,
@@ -2734,5 +3028,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     padding: 20,
+  },
+  noAlternativesContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  noAlternativesText: {
+    fontSize: 16,
+    color: '#ffffff',
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  noAlternativesSubtext: {
+    fontSize: 14,
+    color: '#999999',
+    textAlign: 'center',
+  },
+  alternativeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
   },
 });

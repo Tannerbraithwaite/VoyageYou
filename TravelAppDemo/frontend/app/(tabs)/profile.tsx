@@ -6,6 +6,14 @@ import authService from '@/services/auth';
 
 export default function ProfileScreen() {
   const [name, setName] = useState('Sarah Johnson');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [birthdate, setBirthdate] = useState('');
+  const [age, setAge] = useState<number | null>(null);
+  const [gender, setGender] = useState('');
+  const [nationality, setNationality] = useState('');
+  const [passportNumber, setPassportNumber] = useState('');
+  const [emergencyContact, setEmergencyContact] = useState('');
   const [travelStyle, setTravelStyle] = useState('solo');
   const [budget, setBudget] = useState('moderate');
   const [interests, setInterests] = useState(['art', 'food', 'culture', 'photography', 'architecture']);
@@ -54,6 +62,14 @@ export default function ProfileScreen() {
         
         // Update state with loaded data
         setName(profileData.name || 'Sarah Johnson');
+        setEmail(profileData.email || '');
+        setPhone(profileData.phone || '');
+        setBirthdate(profileData.birthdate || '');
+        setAge(profileData.birthdate ? calculateAge(profileData.birthdate) : null);
+        setGender(profileData.gender || '');
+        setNationality(profileData.nationality || '');
+        setPassportNumber(profileData.passport_number || '');
+        setEmergencyContact(profileData.emergency_contact || '');
         setTravelStyle(profileData.travel_style || 'solo');
         setBudget(profileData.budget_range || 'moderate');
         setAdditionalInfo(profileData.additional_info || '');
@@ -98,6 +114,30 @@ export default function ProfileScreen() {
     { id: 'luxury', label: 'Luxury', icon: 'L' },
   ];
 
+  const genderOptions = [
+    { id: 'male', label: 'Male', icon: '👨' },
+    { id: 'female', label: 'Female', icon: '👩' },
+    { id: 'non-binary', label: 'Non-binary', icon: '🌈' },
+    { id: 'prefer-not-to-say', label: 'Prefer not to say', icon: '🤐' },
+  ];
+
+  const nationalityOptions = [
+    { id: 'us', label: 'United States', icon: '🇺🇸' },
+    { id: 'uk', label: 'United Kingdom', icon: '🇬🇧' },
+    { id: 'ca', label: 'Canada', icon: '🇨🇦' },
+    { id: 'au', label: 'Australia', icon: '🇦🇺' },
+    { id: 'de', label: 'Germany', icon: '🇩🇪' },
+    { id: 'fr', label: 'France', icon: '🇫🇷' },
+    { id: 'it', label: 'Italy', icon: '🇮🇹' },
+    { id: 'es', label: 'Spain', icon: '🇪🇸' },
+    { id: 'jp', label: 'Japan', icon: '🇯🇵' },
+    { id: 'cn', label: 'China', icon: '🇨🇳' },
+    { id: 'in', label: 'India', icon: '🇮🇳' },
+    { id: 'br', label: 'Brazil', icon: '🇧🇷' },
+    { id: 'mx', label: 'Mexico', icon: '🇲🇽' },
+    { id: 'other', label: 'Other', icon: '🌍' },
+  ];
+
   const interestOptions = [
     { id: 'art', label: 'Art & Museums', icon: '🎨' },
     { id: 'food', label: 'Food & Dining', icon: '🍽️' },
@@ -123,6 +163,25 @@ export default function ProfileScreen() {
     } else {
       setInterests([...interests, interestId]);
     }
+  };
+
+  const calculateAge = (birthDate: string) => {
+    if (!birthDate) return null;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const handleBirthdateChange = (date: string) => {
+    setBirthdate(date);
+    const calculatedAge = calculateAge(date);
+    setAge(calculatedAge);
   };
 
   const handleLogout = () => {
@@ -151,6 +210,13 @@ export default function ProfileScreen() {
         },
         body: JSON.stringify({
           name,
+          email,
+          phone,
+          birthdate,
+          gender,
+          nationality,
+          passport_number: passportNumber,
+          emergency_contact: emergencyContact,
           travel_style: travelStyle,
           budget_range: budget,
           additional_info: additionalInfo
@@ -240,6 +306,97 @@ export default function ProfileScreen() {
             placeholderTextColor="#666"
           />
         </View>
+        
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            style={styles.textInput}
+            placeholder="Enter your email"
+            placeholderTextColor="#666"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+        
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Phone Number</Text>
+          <TextInput
+            value={phone}
+            onChangeText={setPhone}
+            style={styles.textInput}
+            placeholder="Enter your phone number"
+            placeholderTextColor="#666"
+            keyboardType="phone-pad"
+          />
+        </View>
+        
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Birthdate</Text>
+          <TextInput
+            value={birthdate}
+            onChangeText={handleBirthdateChange}
+            style={styles.textInput}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor="#666"
+          />
+          {age !== null && (
+            <Text style={styles.ageText}>Age: {age} years old</Text>
+          )}
+        </View>
+      </GlassCard>
+
+      <GlassCard style={styles.section}>
+        <Text style={styles.sectionTitle}>Personal Details</Text>
+        
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Gender</Text>
+          <View style={styles.optionsContainer}>
+            {genderOptions.map((option) => (
+              <TouchableOpacity
+                key={option.id}
+                style={[
+                  styles.optionButton,
+                  gender === option.id && styles.selectedOption
+                ]}
+                onPress={() => setGender(option.id)}
+              >
+                <Text style={styles.optionIcon}>{option.icon}</Text>
+                <Text style={[
+                  styles.optionText,
+                  gender === option.id && styles.selectedOptionText
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Nationality</Text>
+          <View style={styles.optionsContainer}>
+            {nationalityOptions.map((option) => (
+              <TouchableOpacity
+                key={option.id}
+                style={[
+                  styles.optionButton,
+                  nationality === option.id && styles.selectedOption
+                ]}
+                onPress={() => setNationality(option.id)}
+              >
+                <Text style={styles.optionIcon}>{option.icon}</Text>
+                <Text style={[
+                  styles.optionText,
+                  nationality === option.id && styles.selectedOptionText
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
       </GlassCard>
 
       <GlassCard style={styles.section}>
@@ -266,6 +423,33 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             );
           })}
+        </View>
+      </GlassCard>
+
+      <GlassCard style={styles.section}>
+        <Text style={styles.sectionTitle}>Travel Documents</Text>
+        
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Passport Number</Text>
+          <TextInput
+            value={passportNumber}
+            onChangeText={setPassportNumber}
+            style={styles.textInput}
+            placeholder="Enter your passport number"
+            placeholderTextColor="#666"
+            autoCapitalize="characters"
+          />
+        </View>
+        
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Emergency Contact</Text>
+          <TextInput
+            value={emergencyContact}
+            onChangeText={setEmergencyContact}
+            style={styles.textInput}
+            placeholder="Name and phone number"
+            placeholderTextColor="#666"
+          />
         </View>
       </GlassCard>
 
@@ -367,6 +551,18 @@ export default function ProfileScreen() {
           <Text style={styles.errorText}>Failed to save profile</Text>
         </GlassCard>
       )}
+
+      <GlassCard style={styles.section}>
+        <Text style={styles.sectionTitle}>Privacy & Data</Text>
+        <Text style={styles.privacyText}>
+          🔒 Your personal information is securely stored and used only to provide you with personalized travel recommendations. 
+          We never share your data with third parties without your explicit consent.
+        </Text>
+        <Text style={styles.privacySubtext}>
+          Required fields: Name, Email{'\n'}
+          Optional fields: All other information helps us provide better travel suggestions
+        </Text>
+      </GlassCard>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Logout</Text>
@@ -569,5 +765,24 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#888',
     fontSize: 16,
+  },
+  ageText: {
+    fontSize: 14,
+    color: '#6366f1',
+    marginTop: 5,
+    fontStyle: 'italic',
+  },
+  privacyText: {
+    fontSize: 14,
+    color: '#cccccc',
+    lineHeight: 20,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  privacySubtext: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 }); 

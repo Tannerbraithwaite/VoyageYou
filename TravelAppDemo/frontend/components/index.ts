@@ -10,6 +10,7 @@ export { default as ParallaxScrollView } from './ParallaxScrollView';
 export { ThemedText } from './ThemedText';
 export { ThemedView } from './ThemedView';
 export { AlternativesSelector } from './AlternativesSelector';
+export { CurrencyConverter, useCurrencyConverter } from './CurrencyConverter';
 
 // UI components
 export { IconSymbol } from './ui/IconSymbol';
