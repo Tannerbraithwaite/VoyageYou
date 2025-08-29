@@ -44,6 +44,7 @@ from schemas import (
 from services import UserService, TripService, ActivityService, ItineraryService, RecommendationService, ChatbotService
 from auth import AuthService
 from oauth import OAuthService
+from enhanced_api_services import enhanced_flight_service, enhanced_hotel_service
 
 # Global service instances
 oauth_service = OAuthService()
@@ -1267,6 +1268,41 @@ def get_chat_history(user_id: int, limit: int = 20, db: Session = Depends(get_db
         raise HTTPException(status_code=403, detail="Forbidden")
     """Get chat history for a user"""
     return ChatbotService.get_chat_history(db, user_id, limit)
+
+# Enhanced API endpoints for detailed flight and hotel information
+@app.post("/api/flights/enhanced")
+async def get_enhanced_flight_details(
+    origin: str,
+    destination: str,
+    departure_date: str,
+    return_date: str = None,
+    passengers: int = 1
+):
+    """Get enhanced flight details including baggage, amenities, aircraft info"""
+    try:
+        flight_details = await enhanced_flight_service.search_flights_with_details(
+            origin, destination, departure_date, return_date, passengers
+        )
+        return flight_details
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching enhanced flight details: {str(e)}")
+
+@app.post("/api/hotels/enhanced")
+async def get_enhanced_hotel_details(
+    destination: str,
+    check_in: str,
+    check_out: str,
+    rooms: int = 1,
+    adults: int = 2
+):
+    """Get enhanced hotel details including amenities, images, policies, reviews"""
+    try:
+        hotel_details = await enhanced_hotel_service.search_hotels_with_details(
+            destination, check_in, check_out, rooms, adults
+        )
+        return hotel_details
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching enhanced hotel details: {str(e)}")
 
 # PDF Export endpoints
 @app.post("/itinerary/export")

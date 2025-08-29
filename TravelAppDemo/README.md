@@ -220,17 +220,4 @@ npm test
 4. Add tests for new functionality
 5. Submit a pull request
 
-## 📄 **License**
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 **Support**
-
-- **Documentation**: Check the [docs/](docs/) folder
-- **Issues**: Report bugs via GitHub Issues
-- **Discussions**: Join community discussions
-- **Email**: Contact the development team
-
----
-
 **Built with ❤️ using FastAPI, React Native, and OpenAI**

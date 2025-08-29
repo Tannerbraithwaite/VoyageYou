@@ -3,6 +3,8 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Alert } fr
 import GlassCard from '@/components/ui/GlassCard';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
+import { DetailsModal } from '@/components/DetailsModal';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Activity {
   time: string;
@@ -43,6 +45,18 @@ export default function ScheduleScreen() {
   const [selectedSchedule, setSelectedSchedule] = useState<SavedSchedule | null>(null);
   const [showScheduleDetails, setShowScheduleDetails] = useState(false);
   const [activityRatings, setActivityRatings] = useState<Record<string, number>>({});
+  
+  // Details modal state
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsType, setDetailsType] = useState<'flight' | 'hotel'>('flight');
+  const [detailsData, setDetailsData] = useState<any>(null);
+
+  // Function to show details modal
+  const showDetails = (type: 'flight' | 'hotel', data: any) => {
+    setDetailsType(type);
+    setDetailsData(data);
+    setShowDetailsModal(true);
+  };
 
   // Function to automatically determine trip status
   const determineTripStatus = (schedule: any): 'unbooked' | 'booked' | 'past' => {
@@ -399,7 +413,16 @@ export default function ScheduleScreen() {
                       <Text style={styles.detailTitle}>✈️ Flight Information</Text>
                       {selectedSchedule.flights.map((flight, index) => (
                         <View key={index} style={styles.infoItem}>
-                          <Text style={styles.infoLabel}>{flight.type === 'outbound' ? 'Departure' : 'Return'}</Text>
+                          <View style={styles.infoHeader}>
+                            <Text style={styles.infoLabel}>{flight.type === 'outbound' ? 'Departure' : 'Return'}</Text>
+                            <TouchableOpacity
+                              style={styles.detailButton}
+                              onPress={() => showDetails('flight', flight)}
+                            >
+                              <Ionicons name="information-circle" size={20} color="#007AFF" />
+                              <Text style={styles.detailButtonText}>View Details</Text>
+                            </TouchableOpacity>
+                          </View>
                           <Text style={styles.infoText}>{flight.airline} {flight.flight}</Text>
                           <Text style={styles.infoSubtext}>{flight.departure} at {flight.time}</Text>
                           <Text style={styles.infoPrice}>${flight.price}</Text>
@@ -414,7 +437,16 @@ export default function ScheduleScreen() {
                       <Text style={styles.detailTitle}>🏨 Hotel Information</Text>
                       {selectedSchedule.hotels.map((hotel, index) => (
                         <View key={index} style={styles.infoItem}>
-                          <Text style={styles.infoText}>{hotel.name}</Text>
+                          <View style={styles.infoHeader}>
+                            <Text style={styles.infoText}>{hotel.name}</Text>
+                            <TouchableOpacity
+                              style={styles.detailButton}
+                              onPress={() => showDetails('hotel', hotel)}
+                            >
+                              <Ionicons name="information-circle" size={20} color="#007AFF" />
+                              <Text style={styles.detailButtonText}>View Details</Text>
+                            </TouchableOpacity>
+                          </View>
                           <Text style={styles.infoSubtext}>{hotel.address}</Text>
                           <Text style={styles.infoSubtext}>Check-in: {hotel.check_in} | Check-out: {hotel.check_out}</Text>
                           <Text style={styles.infoSubtext}>Room: {hotel.room_type} | Nights: {hotel.total_nights}</Text>
@@ -619,6 +651,14 @@ export default function ScheduleScreen() {
           </View>
         </View>
       </Modal>
+      
+      {/* Details Modal */}
+      <DetailsModal
+        visible={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        type={detailsType}
+        data={detailsData}
+      />
     </View>
   );
 }
@@ -990,6 +1030,28 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  detailButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  detailButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginLeft: 4,
   },
   infoLabel: {
     fontSize: 14,
