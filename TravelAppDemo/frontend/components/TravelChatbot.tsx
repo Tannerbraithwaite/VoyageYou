@@ -121,7 +121,7 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
       // Debug: log full prompt before sending
       try { console.log('FULL_PROMPT (TravelChatbot):', userMessage); } catch {}
 
-      const response = await fetch('http://localhost:8000/chat/enhanced/', {
+      const response = await fetch('http://localhost:8000/chat/tools/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,17 +135,34 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
       if (response.ok) {
         const result = await response.json();
 
-        // Store the itinerary data in sessionStorage for home screen
-        if (result.destination && typeof window !== 'undefined') {
-          sessionStorage.setItem('currentItinerary', JSON.stringify(result));
-        }
-
         const newUserMessage: ChatMessage = {
           id: Date.now(),
           message: userMessage,
           is_bot: false,
           created_at: new Date().toISOString(),
         };
+
+        // Check if this is a question response (LLM asking for clarification)
+        if (result.type === 'question') {
+          const questionMessage = result.message || "I need more information to help you plan your trip.";
+          
+          const newBotMessage: ChatMessage = {
+            id: Date.now() + 1,
+            message: '',
+            is_bot: true,
+            response: questionMessage,
+            created_at: new Date().toISOString(),
+          };
+
+          setMessages(prev => [...prev, newUserMessage, newBotMessage]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Store the itinerary data in sessionStorage for home screen
+        if (result.destination && typeof window !== 'undefined') {
+          sessionStorage.setItem('currentItinerary', JSON.stringify(result));
+        }
 
         // Create a user-friendly summary instead of raw JSON
         const botResponseText = result.destination 

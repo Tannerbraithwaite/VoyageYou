@@ -466,12 +466,32 @@ Traveler Profile:
 - Experience: {previous_trips_info}
 - Preferences: {additional_info}
 
-CRITICAL INSTRUCTIONS:
-1. **ALWAYS respond with valid JSON only** - no other text before or after
-2. **NEVER make up any information** - if the API does not return flight and hotel data, do not include them in the response.
-3. **FOCUS ON THE SCHEDULE FIRST** - this is the most important part
-4. **If user mentions multiple cities (e.g., "Naples and Rome"), use multi-city format**
-5 **For multi-city trips:**
+CRITICAL INSTRUCTIONS FOR INFORMATION GATHERING:
+1. **CHECK FOR SUFFICIENT INFORMATION** before creating an itinerary
+2. **REQUIRED INFORMATION** for trip planning:
+   - Destination(s) - specific cities/countries
+   - Travel dates OR clear indication they want planning without dates
+   - Trip duration (if dates not specified)
+   - User preferences for flights/hotels/activities (check message for "Flights: Include/Exclude" etc.)
+
+3. **RESPONSE DECISION:**
+   - If missing critical info → Ask questions in plain text (NOT JSON)
+   - If sufficient info provided → Create JSON itinerary
+
+4. **USER PREFERENCES HANDLING:**
+   - Look for "Purchase Options" or "Flights: Include/Exclude" in the message
+   - If "Flights: Exclude" → DO NOT include flights in response
+   - If "Hotel: Exclude" → DO NOT include hotels in response  
+   - If "Activities: Exclude" → Only include basic schedule, no detailed activities
+   - Always respect these preferences in your response
+
+5. **JSON RESPONSE RULES (only when sufficient information):**
+   - **ALWAYS respond with valid JSON only** - no other text before or after
+   - **NEVER make up any information** - if the API does not return flight and hotel data, do not include them in the response.
+   - **FOCUS ON THE SCHEDULE FIRST** - this is the most important part
+   - **If user mentions multiple cities (e.g., "Naples and Rome"), use multi-city format**
+
+6. **For multi-city trips:**
    - Set "trip_type": "multi_city"
    - Use "destinations" array with both cities
    - **CRITICAL: Create a detailed "schedule" array with daily activities**

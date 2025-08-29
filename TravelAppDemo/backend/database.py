@@ -33,6 +33,9 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Location for flight origin (departure city)
+    location = Column(String, nullable=True)  # City, Country format (e.g., "New York, NY")
+    
     # Relationships
     interests = relationship("UserInterest", back_populates="user")
     trips = relationship("Trip", back_populates="user")

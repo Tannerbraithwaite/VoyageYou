@@ -415,6 +415,15 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+# Temporary testing endpoint - bypasses authentication for development
+@app.put("/users/{user_id}/test", response_model=schemas.User)
+def update_user_test(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
+    """Update user profile for testing (bypasses authentication)"""
+    user = UserService.update_user(db, user_id, user_update.dict(exclude_unset=True))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
 @app.post("/users/{user_id}/interests/")
 def update_user_interests(user_id: int, interests: List[str], db: Session = Depends(get_db), current_user: User = Depends(get_current_user_from_cookies)):
     if current_user.id != user_id:
@@ -696,8 +705,20 @@ async def chat_with_function_calling(chat_request: ChatRequest, db: Session = De
         # Parse and return JSON response
         import json
         try:
-            itinerary_data = json.loads(response_text)
-            return itinerary_data
+            response_data = json.loads(response_text)
+            
+            # Check if this is a question response
+            if response_data.get("type") == "question":
+                # Return question response for frontend to handle
+                return {
+                    "type": "question",
+                    "message": response_data.get("message", ""),
+                    "needs_clarification": True
+                }
+            else:
+                # Return itinerary data
+                return response_data
+                
         except json.JSONDecodeError:
             # Fallback if response isn't valid JSON
             return {
@@ -713,6 +734,89 @@ async def chat_with_function_calling(chat_request: ChatRequest, db: Session = De
                 "estimated_cost": 0,
                 "error": "Invalid response format"
             }
+            
+    except Exception as e:
+        print(f"❌ Error in function calling chat: {e}")
+        raise HTTPException(status_code=500, detail=f"Error processing chat: {str(e)}")
+
+# Temporary testing endpoint - bypasses authentication for development
+@app.post("/chat/tools/test")
+async def chat_with_function_calling_test(chat_request: ChatRequest, db: Session = Depends(get_db)):
+    """Chat with AI using function calling tools for testing (bypasses authentication)"""
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=500, 
+            detail="OpenAI API key not configured."
+        )
+    
+    try:
+        from chat_tools import function_calling_chat_service
+        
+        # Use function calling chat service with conversation history
+        response_text = await function_calling_chat_service.chat_with_tools(
+            chat_request.message, 
+            chat_request.user_id,
+            chat_request.conversation_history,
+            chat_request.undecided_dates
+        )
+        
+        # Parse and return JSON response
+        import json
+        try:
+            response_data = json.loads(response_text)
+            
+            # Check if this is a question response
+            if response_data.get("type") == "question":
+                # Return question response for frontend to handle
+                return {
+                    "type": "question",
+                    "message": response_data.get("message", ""),
+                    "needs_clarification": True
+                }
+            else:
+                # Check if this looks like a complete itinerary (has schedule with activities)
+                if (response_data.get("schedule") and 
+                    isinstance(response_data["schedule"], list) and 
+                    len(response_data["schedule"]) > 0 and
+                    any(day.get("activities") and len(day["activities"]) > 0 for day in response_data["schedule"])):
+                    
+                    # This is a complete itinerary - return as-is
+                    return response_data
+                else:
+                    # This looks like an incomplete response - treat as a question
+                    return {
+                        "type": "question",
+                        "message": "I need more information to create your itinerary. Please provide a destination, duration, and preferred dates.",
+                        "needs_clarification": True
+                    }
+                
+        except json.JSONDecodeError:
+            # Check if the response is a plain text question
+            if any(keyword in response_text.lower() for keyword in [
+                "need", "please", "could you", "would you", "what", "when", "where", "how many", "which"
+            ]):
+                # This looks like a question - return as question type
+                return {
+                    "type": "question",
+                    "message": response_text,
+                    "needs_clarification": True
+                }
+            else:
+                # Fallback if response isn't valid JSON and doesn't look like a question
+                return {
+                    "trip_type": "single_city",
+                    "destination": "Error",
+                    "duration": "0 days",
+                    "description": "Error processing request",
+                    "flights": [],
+                    "hotel": {},
+                    "schedule": [],
+                    "total_cost": 0,
+                    "bookable_cost": 0,
+                    "estimated_cost": 0,
+                    "error": "Invalid response format"
+                }
             
     except Exception as e:
         print(f"❌ Error in function calling chat: {e}")

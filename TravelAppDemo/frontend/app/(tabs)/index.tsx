@@ -150,6 +150,9 @@ export default function HomeScreen() {
   // State for export functionality
   const [isExporting, setIsExporting] = useState(false);
   
+  // State for user location
+  const [userLocation, setUserLocation] = useState<string>('');
+  
   // Currency converter hook
   const { formatPrice } = useCurrencyConverter(selectedCurrency);
 
@@ -359,7 +362,9 @@ export default function HomeScreen() {
       const planningContext = `Planning Mode: Undecided dates - planning ahead without specific dates\n` +
         `Purchase Options:\n- Flights: ${includeFlights ? 'Include' : 'Exclude'}\n- Hotel: ${includeHotel ? 'Include' : 'Exclude'}\n- Activities: ${includeActivities ? 'Include' : 'Exclude'}`;
       
-      enhancedMessage = `${planningContext}\n\nUser Request: ${userMessage}`;
+      const locationContext = userLocation ? `User Location: ${userLocation} (flight departure city)` : 'User Location: Not specified';
+      
+      enhancedMessage = `${planningContext}\n${locationContext}\n\nUser Request: ${userMessage}`;
     } else if (tripDates.startDate && tripDates.endDate) {
       // For specific dates, include full date context
       const startDateStr = formatDateForChat(tripDates.startDate);
@@ -373,14 +378,18 @@ export default function HomeScreen() {
       
       // Purchase options context
       const optionsContext = `Purchase Options:\n- Flights: ${includeFlights ? 'Include' : 'Exclude'}\n- Hotel: ${includeHotel ? 'Include' : 'Exclude'}\n- Activities: ${includeActivities ? 'Include' : 'Exclude'}`;
+      
+      const locationContext = userLocation ? `User Location: ${userLocation} (flight departure city)` : 'User Location: Not specified';
 
-      enhancedMessage = `${dateContext}\n${optionsContext}\n\nUser Request: ${userMessage}`;
+      enhancedMessage = `${dateContext}\n${optionsContext}\n${locationContext}\n\nUser Request: ${userMessage}`;
     } else {
       // No dates selected, basic context
       const basicContext = `No specific dates selected\n` +
         `Purchase Options:\n- Flights: ${includeFlights ? 'Include' : 'Exclude'}\n- Hotel: ${includeHotel ? 'Include' : 'Exclude'}\n- Activities: ${includeActivities ? 'Include' : 'Exclude'}`;
       
-      enhancedMessage = `${basicContext}\n\nUser Request: ${userMessage}`;
+      const locationContext = userLocation ? `User Location: ${userLocation} (flight departure city)` : 'User Location: Not specified';
+      
+      enhancedMessage = `${basicContext}\n${locationContext}\n\nUser Request: ${userMessage}`;
     }
     
     // Log full prompt for debugging
@@ -400,8 +409,8 @@ export default function HomeScreen() {
   const sendMessageToAPI = async (messageToSend: string) => {
 
     try {
-      // Try enhanced endpoint first
-      const response = await fetch('http://localhost:8000/chat/enhanced/', {
+      // Try tools endpoint first (enhanced with function calling and question handling)
+      const response = await fetch('http://localhost:8000/chat/tools/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -409,11 +418,25 @@ export default function HomeScreen() {
         body: JSON.stringify({
           message: messageToSend,
           user_id: userId,
+          conversation_history: chatHistory.map(chat => ({
+            message: chat.message,
+            isBot: chat.isBot
+          }))
         }),
       });
 
       if (response.ok) {
         const result = await response.json();
+        
+        // Check if this is a question response (LLM asking for clarification)
+        if (result.type === 'question') {
+          // Handle question response - just display the message
+          const questionMessage = result.message || "I need more information to help you plan your trip.";
+          setResponse(questionMessage);
+          setChatHistory(prev => [...prev, { message: questionMessage, isBot: true }]);
+          setIsLoading(false);
+          return;
+        }
         
         // Store the itinerary data
         setCurrentItinerary(result);
@@ -468,6 +491,10 @@ export default function HomeScreen() {
           body: JSON.stringify({
             message: messageToSend,
             user_id: userId,
+            conversation_history: chatHistory.map(chat => ({
+              message: chat.message,
+              isBot: chat.isBot
+            }))
           }),
         });
 
@@ -800,26 +827,31 @@ export default function HomeScreen() {
     // You could also scroll to the date picker here
   };
 
-  // Calculate totals
-  const totalFlights = currentItinerary?.flights.reduce((sum, flight) => sum + flight.price, 0) || 1700;
+  // Calculate totals with proper type checking
+  const totalFlights = (() => {
+    if (!currentItinerary?.flights || !Array.isArray(currentItinerary.flights)) {
+      return 1700; // fallback
+    }
+    return currentItinerary.flights.reduce((sum, flight) => sum + (flight.price || 0), 0);
+  })();
   
-  // Handle both single-city and multi-city hotel calculations
+  // Handle both single-city and multi-city hotel calculations with proper type checking
   const totalHotel = (() => {
     if (!currentItinerary) return 540;
-    if (currentItinerary.trip_type === 'multi_city' && 'hotels' in currentItinerary) {
-      return currentItinerary.hotels.reduce((sum, hotel) => sum + (hotel.price * hotel.total_nights), 0);
-    } else if (currentItinerary.trip_type === 'single_city' && 'hotel' in currentItinerary) {
-      return currentItinerary.hotel.price * currentItinerary.hotel.total_nights;
+    if (currentItinerary.trip_type === 'multi_city' && 'hotels' in currentItinerary && Array.isArray(currentItinerary.hotels)) {
+      return currentItinerary.hotels.reduce((sum, hotel) => sum + ((hotel.price || 0) * (hotel.total_nights || 1)), 0);
+    } else if (currentItinerary.trip_type === 'single_city' && 'hotel' in currentItinerary && currentItinerary.hotel) {
+      return (currentItinerary.hotel.price || 0) * (currentItinerary.hotel.total_nights || 1);
     }
     return 540; // fallback
   })();
   
   const bookableActivities = schedule.flatMap(day => 
     day.activities.filter(activity => activity.type === 'bookable')
-  ).reduce((sum, activity) => sum + activity.price, 0);
+  ).reduce((sum, activity) => sum + (activity.price || 0), 0);
   
   const totalActivities = schedule.reduce((sum, day) => 
-    sum + day.activities.reduce((daySum, activity) => daySum + activity.price, 0), 0
+    sum + day.activities.reduce((daySum, activity) => daySum + (activity.price || 0), 0), 0
   );
   
   // Schedule updated, recalculating totals

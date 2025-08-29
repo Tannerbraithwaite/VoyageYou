@@ -751,21 +751,21 @@ export default function CheckoutScreen() {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Flights:</Text>
               <Text style={styles.summaryValue}>
-                ${itinerary.flights.reduce((sum, flight) => sum + flight.price, 0)}
+                ${Array.isArray(itinerary.flights) ? itinerary.flights.reduce((sum, flight) => sum + (flight.price || 0), 0) : 0}
               </Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Hotel:</Text>
               <Text style={styles.summaryValue}>
-                ${itinerary.hotel.price * itinerary.hotel.total_nights}
+                ${(itinerary.hotel?.price || 0) * (itinerary.hotel?.total_nights || 1)}
               </Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Activities:</Text>
               <Text style={styles.summaryValue}>
-                ${itinerary.schedule.reduce((sum, day) => 
-                  sum + day.activities.reduce((daySum, activity) => daySum + activity.price, 0), 0
-                )}
+                ${itinerary.schedule?.reduce((sum, day) => 
+                  sum + (day.activities?.reduce((daySum, activity) => daySum + (activity.price || 0), 0) || 0), 0
+                ) || 0}
               </Text>
             </View>
             <View style={[styles.summaryRow, styles.totalRow]}>

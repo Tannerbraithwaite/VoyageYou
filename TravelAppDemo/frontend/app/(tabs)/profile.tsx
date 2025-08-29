@@ -14,6 +14,7 @@ export default function ProfileScreen() {
   const [nationality, setNationality] = useState('');
   const [passportNumber, setPassportNumber] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
+  const [location, setLocation] = useState('');
   const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
   const [travelStyle, setTravelStyle] = useState('solo');
   const [budget, setBudget] = useState('moderate');
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
         }
         setUserId(user.id);
         await loadUserProfile(user.id);
+        await loadUserLocation(user.id);
       } catch (e) {
         router.replace('/auth/login');
       }
@@ -71,6 +73,7 @@ export default function ProfileScreen() {
         setNationality(profileData.nationality || '');
         setPassportNumber(profileData.passport_number || '');
         setEmergencyContact(profileData.emergency_contact || '');
+        setLocation(profileData.location || '');
         setTravelStyle(profileData.travel_style || 'solo');
         setBudget(profileData.budget_range || 'moderate');
         setAdditionalInfo(profileData.additional_info || '');
@@ -99,6 +102,31 @@ export default function ProfileScreen() {
       console.error('Error loading profile:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadUserLocation = async (resolvedUserId?: number) => {
+    try {
+      const effectiveUserId = typeof resolvedUserId === 'number' ? resolvedUserId : userId;
+      if (!effectiveUserId) {
+        console.log('No user id available, skipping location load');
+        return;
+      }
+      
+      // Load user profile to get location
+      const profileResponse = await fetch(`http://localhost:8000/users/${effectiveUserId}`, {
+        credentials: 'include'
+      });
+      
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        if (profileData.location) {
+          setUserLocation(profileData.location);
+          console.log('Loaded user location:', profileData.location);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user location:', error);
     }
   };
 
@@ -218,6 +246,7 @@ export default function ProfileScreen() {
           nationality,
           passport_number: passportNumber,
           emergency_contact: emergencyContact,
+          location,
           travel_style: travelStyle,
           budget_range: budget,
           additional_info: additionalInfo
@@ -334,6 +363,21 @@ export default function ProfileScreen() {
             placeholderTextColor="#666"
             keyboardType="phone-pad"
           />
+        </View>
+        
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Location (Flight Origin)</Text>
+          <TextInput
+            value={location}
+            onChangeText={setLocation}
+            style={styles.textInput}
+            placeholder="e.g., New York, NY or London, UK"
+            placeholderTextColor="#666"
+            autoCapitalize="words"
+          />
+          <Text style={styles.helperText}>
+            This is where your flights will depart from when planning trips
+          </Text>
         </View>
         
         <View style={styles.inputContainer}>
@@ -785,6 +829,12 @@ const styles = StyleSheet.create({
   ageText: {
     fontSize: 14,
     color: '#6366f1',
+    marginTop: 5,
+    fontStyle: 'italic',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#888',
     marginTop: 5,
     fontStyle: 'italic',
   },

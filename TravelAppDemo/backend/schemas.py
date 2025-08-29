@@ -94,6 +94,7 @@ class UserBase(BaseModel):
     travel_style: Optional[str] = None
     budget_range: Optional[str] = None
     additional_info: Optional[str] = None
+    location: Optional[str] = None  # City, Country format for flight origin
 
 class UserCreate(UserBase):
     password: str
@@ -104,6 +105,7 @@ class UserUpdate(BaseModel):
     travel_style: Optional[str] = None
     budget_range: Optional[str] = None
     additional_info: Optional[str] = None
+    location: Optional[str] = None
 
 class User(UserBase):
     id: int
@@ -327,6 +329,8 @@ class ChatMessage(ChatMessageBase):
 class ChatRequest(BaseModel):
     message: str
     user_id: int
+    conversation_history: Optional[List[dict]] = None  # List of previous messages
+    undecided_dates: Optional[bool] = False  # Flag for when user has undecided travel dates
 
 class ChatResponse(BaseModel):
     message: str
