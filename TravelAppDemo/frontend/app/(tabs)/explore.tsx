@@ -77,16 +77,35 @@ export default function ScheduleScreen() {
         if (stored) {
           const schedules = JSON.parse(stored);
           
-          // Apply automatic status assignment to all schedules
-          const updatedSchedules = schedules.map((schedule: any) => ({
+          // Filter out invalid schedules that don't have the required structure
+          const validSchedules = schedules.filter((schedule: any) => {
+            // Check if schedule has basic required properties
+            return schedule && 
+                   schedule.id && 
+                   schedule.name && 
+                   schedule.destination &&
+                   (schedule.schedule || schedule.itinerary); // Must have either schedule or itinerary
+          });
+          
+          // Apply automatic status assignment to valid schedules
+          const updatedSchedules = validSchedules.map((schedule: any) => ({
             ...schedule,
             status: determineTripStatus(schedule)
           }));
           
           setSavedSchedules(updatedSchedules);
+          
+          // If we filtered out any invalid schedules, update localStorage
+          if (validSchedules.length !== schedules.length) {
+            localStorage.setItem('savedSchedules', JSON.stringify(validSchedules));
+            console.log(`Filtered out ${schedules.length - validSchedules.length} invalid schedules`);
+          }
         }
       } catch (error) {
-        // Error loading saved schedules
+        console.error('Error loading saved schedules:', error);
+        // Clear corrupted data
+        localStorage.removeItem('savedSchedules');
+        setSavedSchedules([]);
       }
     }
   };
@@ -209,6 +228,16 @@ export default function ScheduleScreen() {
     );
   };
 
+  // Helper function to check if a schedule is compatible with current format
+  const isScheduleCompatible = (schedule: any): boolean => {
+    return schedule && 
+           schedule.schedule && 
+           Array.isArray(schedule.schedule) &&
+           schedule.schedule.every((day: any) => 
+             day && day.activities && Array.isArray(day.activities)
+           );
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -222,6 +251,18 @@ export default function ScheduleScreen() {
 
         {/* Schedules List */}
         <View style={styles.schedulesSection}>
+          {/* Warning for incompatible schedules */}
+          {savedSchedules.some(schedule => !isScheduleCompatible(schedule)) && (
+            <GlassCard style={styles.warningCard}>
+              <Text style={styles.warningIcon}>⚠️</Text>
+              <Text style={styles.warningTitle}>Some schedules may be incompatible</Text>
+              <Text style={styles.warningText}>
+                Some of your saved schedules are from an older version and may not display correctly. 
+                You can delete them and create new ones using the improved travel planning system.
+              </Text>
+            </GlassCard>
+          )}
+          
           {savedSchedules.length === 0 ? (
             <GlassCard style={styles.emptyState}>
               <Text style={styles.emptyStateIcon}>📋</Text>
@@ -417,38 +458,91 @@ export default function ScheduleScreen() {
                   {/* Daily Schedule */}
                   <GlassCard style={styles.detailSection}>
                     <Text style={styles.detailTitle}>📅 Daily Schedule</Text>
-                    {selectedSchedule.schedule.map((day, dayIndex) => (
-                      <View key={dayIndex} style={styles.daySection}>
-                        <Text style={styles.dayTitle}>Day {dayIndex + 1}</Text>
-                        {day.activities.map((activity: any, activityIndex: number) => {
-                          const key = `${selectedSchedule.id}|${dayIndex}|${activityIndex}|${activity.time}|${activity.name}`;
+                    {selectedSchedule.schedule && Array.isArray(selectedSchedule.schedule) ? (
+                      selectedSchedule.schedule.map((day, dayIndex) => {
+                        // Safely check if day and day.activities exist
+                        if (!day || !day.activities || !Array.isArray(day.activities)) {
                           return (
-                            <View key={activityIndex} style={styles.activityItem}>
-                              <View style={styles.activityTimeSection}>
-                                <Text style={styles.activityTime}>{activity.time}</Text>
-                                <View style={[styles.typeBadge, activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge]}>
-                                  <Text style={styles.typeText}>
-                                    {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
-                                  </Text>
-                                </View>
-                              </View>
-                              <View style={styles.activityContent}>
-                                <Text style={styles.activityName}>{activity.name}</Text>
-                                <Text style={styles.activityPrice}>${activity.price}</Text>
-                                {/* Show activity description if available */}
-                                {activity.description && (
-                                  <Text style={styles.activityDescription}>
-                                    {activity.description}
-                                  </Text>
-                                )}
-                              </View>
-                              {/* Ratings visible only for past schedules */}
-                              {selectedSchedule.status === 'past' && renderStars(key)}
+                            <View key={dayIndex} style={styles.daySection}>
+                              <Text style={styles.dayTitle}>Day {dayIndex + 1}</Text>
+                              <Text style={styles.noActivitiesText}>No activities available for this day</Text>
                             </View>
                           );
-                        })}
+                        }
+                        
+                        return (
+                          <View key={dayIndex} style={styles.daySection}>
+                            <Text style={styles.dayTitle}>Day {dayIndex + 1}</Text>
+                            {day.activities.map((activity: any, activityIndex: number) => {
+                              // Safely check if activity has required properties
+                              if (!activity || !activity.time || !activity.name) {
+                                return (
+                                  <View key={activityIndex} style={styles.activityItem}>
+                                    <Text style={styles.invalidActivityText}>Invalid activity data</Text>
+                                  </View>
+                                );
+                              }
+                              
+                              const key = `${selectedSchedule.id}|${dayIndex}|${activityIndex}|${activity.time}|${activity.name}`;
+                              return (
+                                <View key={activityIndex} style={styles.activityItem}>
+                                  <View style={styles.activityTimeSection}>
+                                    <Text style={styles.activityTime}>{activity.time}</Text>
+                                    <View style={[styles.typeBadge, activity.type === 'bookable' ? styles.bookableBadge : styles.estimatedBadge]}>
+                                      <Text style={styles.typeText}>
+                                        {activity.type === 'bookable' ? 'Bookable' : 'Estimated'}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  <View style={styles.activityContent}>
+                                    <Text style={styles.activityName}>{activity.name}</Text>
+                                    <Text style={styles.activityPrice}>${activity.price || 0}</Text>
+                                    {/* Show activity description if available */}
+                                    {activity.description && (
+                                      <Text style={styles.activityDescription}>
+                                        {activity.description}
+                                      </Text>
+                                    )}
+                                  </View>
+                                  {/* Ratings visible only for past schedules */}
+                                  {selectedSchedule.status === 'past' && renderStars(key)}
+                                </View>
+                              );
+                            })}
+                          </View>
+                        );
+                      })
+                    ) : (
+                      <View style={styles.noScheduleSection}>
+                        <Text style={styles.noScheduleText}>
+                          No schedule data available. This schedule may be from an older version of the app.
+                        </Text>
+                        <TouchableOpacity 
+                          style={styles.migrateButton}
+                          onPress={() => {
+                            Alert.alert(
+                              'Migrate Schedule',
+                              'This schedule is from an older version. Would you like to delete it and create a new one?',
+                              [
+                                { text: 'Cancel', style: 'cancel' },
+                                { 
+                                  text: 'Delete & Create New', 
+                                  style: 'destructive',
+                                  onPress: () => {
+                                    handleDeleteSchedule(selectedSchedule.id);
+                                    setShowScheduleDetails(false);
+                                    // Optionally redirect to create new schedule
+                                    router.push('/(tabs)');
+                                  }
+                                }
+                              ]
+                            );
+                          }}
+                        >
+                          <Text style={styles.migrateButtonText}>🔄 Migrate to New Format</Text>
+                        </TouchableOpacity>
                       </View>
-                    ))}
+                    )}
                   </GlassCard>
 
                   {/* Secondary Actions */}
@@ -942,5 +1036,67 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'white',
     marginBottom: 8,
+  },
+  noActivitiesText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  invalidActivityText: {
+    fontSize: 14,
+    color: '#ef4444',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  noScheduleSection: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noScheduleText: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 24,
+  },
+  migrateButton: {
+    backgroundColor: '#6366f1',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#8b5cf6',
+  },
+  migrateButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+  },
+  warningCard: {
+    backgroundColor: '#1f2937',
+    borderColor: '#f59e0b',
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  warningIcon: {
+    fontSize: 24,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#f59e0b',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#ccc',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

@@ -202,7 +202,7 @@ export default function LoginScreen() {
           >
             <View style={styles.socialButtonContent}>
               <View style={styles.appleLogo}>
-                <Text style={styles.appleLogoText}>⌘</Text>
+                <Text style={styles.appleLogoText}>🍎</Text>
               </View>
               <Text style={styles.socialButtonText}>
                 {isAppleLoading ? 'Signing in with Apple...' : 'Continue with Apple'}
@@ -392,13 +392,15 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#4285f4',
+    backgroundColor: 'white',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#4285f4',
   },
   googleLogoText: {
-    color: 'white',
+    color: '#4285f4',
     fontSize: 16,
     fontWeight: 'bold',
     fontFamily: 'Arial',
@@ -407,13 +409,13 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'white',
+    backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   appleLogoText: {
-    color: '#000000',
+    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },

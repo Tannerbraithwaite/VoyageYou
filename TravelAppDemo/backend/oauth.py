@@ -34,15 +34,15 @@ class OAuthService:
             )
             
             if response.status_code != 200:
-                print(f"Google token verification failed with status {response.status_code}")
+                # Google token verification failed
                 return None
                 
             token_info = response.json()
-            print(f"Google token info: {token_info}")
+            # Google token info retrieved
             
             # Verify the token is for our app
             if token_info.get("aud") != GOOGLE_CLIENT_ID:
-                print(f"Token audience mismatch. Expected: {GOOGLE_CLIENT_ID}, Got: {token_info.get('aud')}")
+                # Token audience mismatch
                 return None
                 
             return {
@@ -52,7 +52,7 @@ class OAuthService:
                 "provider": "google"
             }
         except Exception as e:
-            print(f"Google token verification error: {e}")
+            # Google token verification error
             return None
 
     @staticmethod
@@ -79,7 +79,7 @@ class OAuthService:
                 "provider": "apple"
             }
         except Exception as e:
-            print(f"Apple token verification error: {e}")
+            # Apple token verification error
             return None
 
     @staticmethod
