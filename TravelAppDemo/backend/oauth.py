@@ -6,6 +6,7 @@ from database import User, get_db
 from sqlalchemy.orm import Session
 from auth import AuthService
 import os
+from logging_config import get_oauth_logger
 
 # OAuth Configuration
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "1082045743309-dmv4ea2mp7vig54cbuybvfh6vb4s26i6.apps.googleusercontent.com")
@@ -15,8 +16,10 @@ APPLE_TEAM_ID = os.getenv("APPLE_TEAM_ID", "your-apple-team-id")
 APPLE_KEY_ID = os.getenv("APPLE_KEY_ID", "your-apple-key-id")
 
 class OAuthService:
-    @staticmethod
-    async def verify_google_token(id_token: str) -> Optional[Dict[str, Any]]:
+    def __init__(self):
+        self.logger = get_oauth_logger()
+    
+    async def verify_google_token(self, id_token: str) -> Optional[Dict[str, Any]]:
         """Verify Google ID token and return user info"""
         try:
             # For demo purposes, accept mock tokens
@@ -34,15 +37,15 @@ class OAuthService:
             )
             
             if response.status_code != 200:
-                # Google token verification failed
+                self.logger.warning(f"Google token verification failed with status {response.status_code}")
                 return None
                 
             token_info = response.json()
-            # Google token info retrieved
+            self.logger.info("Google token info retrieved successfully")
             
             # Verify the token is for our app
             if token_info.get("aud") != GOOGLE_CLIENT_ID:
-                # Token audience mismatch
+                self.logger.warning(f"Token audience mismatch. Expected: {GOOGLE_CLIENT_ID}, Got: {token_info.get('aud')}")
                 return None
                 
             return {
@@ -52,11 +55,10 @@ class OAuthService:
                 "provider": "google"
             }
         except Exception as e:
-            # Google token verification error
+            self.logger.error(f"Google token verification error: {e}")
             return None
 
-    @staticmethod
-    async def verify_apple_token(id_token: str) -> Optional[Dict[str, Any]]:
+    async def verify_apple_token(self, id_token: str) -> Optional[Dict[str, Any]]:
         """Verify Apple ID token and return user info"""
         try:
             # For demo purposes, accept mock tokens
@@ -79,11 +81,10 @@ class OAuthService:
                 "provider": "apple"
             }
         except Exception as e:
-            # Apple token verification error
+            self.logger.error(f"Apple token verification error: {e}")
             return None
 
-    @staticmethod
-    def get_or_create_user(db: Session, oauth_user: Dict[str, Any]) -> User:
+    def get_or_create_user(self, db: Session, oauth_user: Dict[str, Any]) -> User:
         """Get existing user or create new user from OAuth data"""
         email = oauth_user.get("email")
         if not email:
@@ -114,10 +115,9 @@ class OAuthService:
         
         return user
 
-    @staticmethod
-    async def handle_google_oauth(id_token: str, db: Session) -> Dict[str, Any]:
+    async def handle_google_oauth(self, id_token: str, db: Session) -> Dict[str, Any]:
         """Handle Google OAuth login"""
-        oauth_user = await OAuthService.verify_google_token(id_token)
+        oauth_user = await self.verify_google_token(id_token)
         
         if not oauth_user:
             raise HTTPException(
@@ -125,7 +125,7 @@ class OAuthService:
                 detail="Invalid Google token"
             )
         
-        user = OAuthService.get_or_create_user(db, oauth_user)
+        user = self.get_or_create_user(db, oauth_user)
         
         # Create tokens
         access_token = AuthService.create_access_token(data={"sub": str(user.id)})
@@ -138,10 +138,9 @@ class OAuthService:
             "token_type": "bearer"
         }
 
-    @staticmethod
-    async def handle_apple_oauth(id_token: str, db: Session) -> Dict[str, Any]:
+    async def handle_apple_oauth(self, id_token: str, db: Session) -> Dict[str, Any]:
         """Handle Apple OAuth login"""
-        oauth_user = await OAuthService.verify_apple_token(id_token)
+        oauth_user = await self.verify_apple_token(id_token)
         
         if not oauth_user:
             raise HTTPException(
@@ -149,7 +148,7 @@ class OAuthService:
                 detail="Invalid Apple token"
             )
         
-        user = OAuthService.get_or_create_user(db, oauth_user)
+        user = self.get_or_create_user(db, oauth_user)
         
         # Create tokens
         access_token = AuthService.create_access_token(data={"sub": str(user.id)})

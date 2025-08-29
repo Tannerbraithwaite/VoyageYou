@@ -44,6 +44,9 @@ from schemas import (
 from services import UserService, TripService, ActivityService, ItineraryService, RecommendationService, ChatbotService
 from auth import AuthService
 from oauth import OAuthService
+
+# Global service instances
+oauth_service = OAuthService()
 from email_service import email_service
 
 # Create FastAPI app
@@ -310,9 +313,9 @@ async def oauth_login(oauth_data: OAuthRequest, response: Response, db: Session 
     """OAuth login with Google or Apple"""
     try:
         if oauth_data.provider == "google":
-            result = await OAuthService.handle_google_oauth(oauth_data.id_token, db)
-        elif oauth_data.provider == "apple":
-            result = await OAuthService.handle_apple_oauth(oauth_data.id_token, db)
+                    result = await oauth_service.handle_google_oauth(oauth_data.id_token, db)
+    elif oauth_data.provider == "apple":
+        result = await oauth_service.handle_apple_oauth(oauth_data.id_token, db)
         else:
             raise HTTPException(status_code=400, detail="Invalid OAuth provider")
         

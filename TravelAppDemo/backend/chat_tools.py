@@ -8,6 +8,7 @@ from openai import AsyncOpenAI
 from tools import tool_registry
 import os
 from datetime import datetime, timedelta
+from logging_config import get_chat_logger, log_performance, RequestLogger
 
 
 class FunctionCallingChatService:
@@ -17,7 +18,9 @@ class FunctionCallingChatService:
         self.client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.max_tool_calls = 5  # Prevent infinite loops
         self.timeout_seconds = 30  # Tool execution timeout
+        self.logger = get_chat_logger()
     
+    @log_performance("chat")
     async def chat_with_tools(
         self,
         user_message: str,
@@ -28,13 +31,13 @@ class FunctionCallingChatService:
         """
         Process user message with function calling capabilities
         """
-        # Starting function-calling chat for user
+        self.logger.info(f"Starting function-calling chat for user {user_id}")
         
         # Get current date for context
         from datetime import datetime, timedelta
         today = datetime.now()
         future_date = today + timedelta(days=1)  # Allow planning from tomorrow onwards
-        # Using fixed date calculation for trip planning
+        self.logger.debug(f"Using date range: {today.strftime('%Y-%m-%d')} to {future_date.strftime('%Y-%m-%d')}")
         
         # Get user location for flight origin context
         user_location = "Unknown"  # Default value
@@ -48,11 +51,11 @@ class FunctionCallingChatService:
             user = db.query(User).filter(User.id == user_id).first()
             if user and user.location:
                 user_location = user.location
-                # User location found for flight origin context
+                self.logger.info(f"User location found: {user_location}")
             else:
-                # No user location found, will ask user for departure city
+                self.logger.info("No user location found, will ask user for departure city")
         except Exception as e:
-            # Error getting user location
+            self.logger.error(f"Error getting user location: {e}")
         
         # System prompt that enforces tool usage  
         # Pre-calculate date strings to avoid complex f-string expressions
@@ -163,7 +166,7 @@ JSON FORMAT - SINGLE CITY TRIP:
             system_prompt += "\n" + undecided_clause
 
         # Debug: print full system prompt once per request
-        # System prompt sent to LLM
+        self.logger.debug("System prompt prepared and sent to LLM")
 
         # Enhanced context analysis with conversation history
         user_message_lower = user_message.lower()
@@ -245,7 +248,7 @@ JSON FORMAT - SINGLE CITY TRIP:
         # Departure city is no longer mandatory; if missing we will create itinerary without flights
         can_create_itinerary = has_destination and has_timing
         
-        # Itinerary decision variables calculated
+        self.logger.debug(f"Itinerary decision: destination={has_destination}, timing={has_timing}, can_create={can_create_itinerary}")
         
         # Simplify complex f-string expressions by pre-calculating values
         # Get the text to search in (either conversation history or current message)
@@ -327,7 +330,7 @@ JSON FORMAT - SINGLE CITY TRIP:
         first_message = conversation_history[0].get('message', '') if conversation_history else ''
         last_message = conversation_history[-1].get('message', '') if conversation_history else ''
         
-        # Conversation context prepared for LLM
+        self.logger.debug(f"Conversation context prepared: {conversation_history_length} messages")
         
         tool_calls_made = 0
         
@@ -335,7 +338,7 @@ JSON FORMAT - SINGLE CITY TRIP:
             try:
                 # Use GPT-4o like the working services.py version - no JSON mode enforcement
                 model_name = os.getenv("OPENAI_MODEL", "gpt-4o")
-                # Using specified model for LLM interaction
+                self.logger.info(f"Using model: {model_name}")
                 
                 response = await self.client.chat.completions.create(
                     model=model_name,
@@ -351,7 +354,7 @@ JSON FORMAT - SINGLE CITY TRIP:
                 # Check if LLM wants to call tools
                 if message.tool_calls:
                     tool_calls_count = len(message.tool_calls)
-                    # LLM requested tool calls
+                    self.logger.info(f"LLM requested {tool_calls_count} tool calls")
                     
                     # Add the assistant's message to conversation
                     messages.append({
@@ -382,7 +385,7 @@ JSON FORMAT - SINGLE CITY TRIP:
                         except json.JSONDecodeError:
                             function_args = {}
                         
-                        # Executing function with provided arguments
+                        self.logger.info(f"Executing {function_name} with args: {function_args}")
                         
                         # Execute tool with timeout
                         try:
@@ -400,7 +403,7 @@ JSON FORMAT - SINGLE CITY TRIP:
                             "tool_call_id": tool_call.id
                         })
                         
-                        # Tool execution completed successfully
+                        self.logger.info(f"Tool {function_name} executed successfully")
                     
                     # Continue the conversation loop to get final response
                     continue
@@ -408,7 +411,7 @@ JSON FORMAT - SINGLE CITY TRIP:
                 else:
                     # No more tool calls, return final response
                     final_response = message.content
-                            # Final response ready for processing
+                            self.logger.info(f"Final response ready: {len(final_response)} characters")
                     
                     # Strip markdown formatting if present
                     if "```json" in final_response or "```" in final_response:
@@ -428,12 +431,12 @@ JSON FORMAT - SINGLE CITY TRIP:
                         json_keys = list(itinerary_data.keys())
                         response_preview = final_response[:500]
                         
-                        # JSON structure validated
+                        self.logger.info("JSON response validated successfully")
                         
                         # If schedule is missing or empty, ask the model to regenerate once
                         if not itinerary_data.get('schedule') or len(itinerary_data.get('schedule')) == 0:
                             if tool_calls_made < self.max_tool_calls:
-                                # Schedule missing, requesting regeneration from LLM
+                                self.logger.warning("Schedule missing in itinerary, requesting regeneration from LLM")
                                 messages.append({
                                     "role": "assistant",
                                     "content": json.dumps(itinerary_data)
@@ -447,7 +450,7 @@ JSON FORMAT - SINGLE CITY TRIP:
                         return json.dumps(processed_itinerary, indent=2)
                     except json.JSONDecodeError:
                         # Response is plain text (likely asking clarifying questions)
-                        # Response is plain text (clarifying questions)
+                        self.logger.info("Response is plain text (clarifying questions)")
                         
                         # Check if it's asking questions (contains question marks or typical question phrases)
                         question_indicators = ['?', 'where', 'when', 'how many', 'which', 'what', 'could you tell me', 'would you like']
@@ -479,7 +482,7 @@ JSON FORMAT - SINGLE CITY TRIP:
                             return json.dumps(fallback_response, indent=2)
                         
             except Exception as e:
-                # Error in function calling chat
+                self.logger.error(f"Error in function calling chat: {e}")
                 error_response = {
                     "trip_type": "single_city",
                     "destination": "Error",
@@ -494,8 +497,7 @@ JSON FORMAT - SINGLE CITY TRIP:
                 }
                 return json.dumps(error_response, indent=2)
         
-        # Max tool calls reached
-        # Max tool calls reached
+        self.logger.warning(f"Max tool calls ({self.max_tool_calls}) reached")
         timeout_response = {
             "trip_type": "single_city", 
             "destination": "Timeout",
@@ -574,12 +576,12 @@ JSON FORMAT - SINGLE CITY TRIP:
             itinerary_data['estimated_cost'] = total_cost - bookable_cost
             
             estimated_cost = itinerary_data['estimated_cost']
-            # Post-processed costs calculated
+            self.logger.info(f"Post-processed costs: total={total_cost}, bookable={bookable_cost}, estimated={estimated_cost}")
             
             return itinerary_data
             
         except Exception as e:
-            # Error in post-processing
+            self.logger.error(f"Error in post-processing: {e}")
             return itinerary_data
 
 
