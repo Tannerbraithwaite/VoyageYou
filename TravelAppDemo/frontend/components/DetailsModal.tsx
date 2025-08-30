@@ -7,33 +7,20 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/Colors';
-import { FlightDetailsWidget } from './FlightDetailsWidget';
-import { HotelDetailsWidget } from './HotelDetailsWidget';
+import HotelDetailsWidget from './HotelDetailsWidget';
+import FlightDetailsWidget from './FlightDetailsWidget';
 
 const { width, height } = Dimensions.get('window');
 
 interface DetailsModalProps {
   visible: boolean;
   onClose: () => void;
-  type: 'flight' | 'hotel';
+  type: 'hotel' | 'flight';
   data: any;
 }
 
-export const DetailsModal: React.FC<DetailsModalProps> = ({
-  visible,
-  onClose,
-  type,
-  data,
-}) => {
-  const renderContent = () => {
-    if (type === 'flight') {
-      return <FlightDetailsWidget flight={data} onClose={onClose} />;
-    } else if (type === 'hotel') {
-      return <HotelDetailsWidget hotel={data} onClose={onClose} />;
-    }
-    return null;
-  };
+export default function DetailsModal({ visible, onClose, type, data }: DetailsModalProps) {
+  if (!data) return null;
 
   return (
     <Modal
@@ -43,15 +30,27 @@ export const DetailsModal: React.FC<DetailsModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.container}>
-        {renderContent()}
+        {type === 'hotel' && (
+          <HotelDetailsWidget
+            hotel={data}
+            onClose={onClose}
+          />
+        )}
+        
+        {type === 'flight' && (
+          <FlightDetailsWidget
+            flight={data}
+            onClose={onClose}
+          />
+        )}
       </View>
     </Modal>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: '#f8f9fa',
   },
 });

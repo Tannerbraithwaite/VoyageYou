@@ -241,7 +241,7 @@ export default function ProfileScreen() {
           name,
           email,
           phone,
-          birthdate,
+          birthdate: birthdate ? new Date(birthdate).toISOString().split('T')[0] : null,
           gender,
           nationality,
           passport_number: passportNumber,

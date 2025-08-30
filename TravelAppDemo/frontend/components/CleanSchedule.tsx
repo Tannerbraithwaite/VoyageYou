@@ -58,6 +58,7 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
   onActivityEditCancel,
   formatPrice
 }) => {
+  const [expandedAlternatives, setExpandedAlternatives] = React.useState<Record<string, boolean>>({});
   // Add debugging and error handling
   console.log('CleanSchedule render - schedule:', schedule);
   console.log('CleanSchedule render - totalActivities:', totalActivities);
@@ -232,7 +233,12 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                             style={styles.activityClickable}
                             onPress={() => onEditActivity(dayIndex, activityIndex)}
                           >
-                            <Text style={styles.activityText}>{activity.name}</Text>
+                                                          <View style={styles.activityHeader}>
+                                <Text style={styles.activityText}>{activity.name}</Text>
+                              </View>
+                            {activity.description && (
+                              <Text style={styles.activityDescription}>{activity.description}</Text>
+                            )}
                             <View style={styles.activityDetails}>
                                                           {activity.price > 0 && (
                               <Text style={styles.priceText}>{formatPrice(activity.price)}</Text>
@@ -265,13 +271,16 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                             
                             {/* Show alternatives if available */}
                             {(() => {
-                              // Get alternatives for this specific activity
-                              const specificAlternatives = alternativeActivities[activity.name] || [];
+                              // Get alternatives for this specific activity (excluding bookable ones)
+                              const specificAlternatives = (alternativeActivities[activity.name] || []).filter(
+                                (alt: AlternativeActivity) => alt.type !== 'bookable'
+                              );
                               
                               // Get alternatives from other activities that could be good substitutes
                               const allAlternatives = Object.values(alternativeActivities).flat();
-                              const relevantAlternatives = allAlternatives.filter(alt => 
+                              const relevantAlternatives = allAlternatives.filter((alt: AlternativeActivity) => 
                                 alt.name !== activity.name && // Don't show the current activity as an alternative
+                                alt.type !== 'bookable' && // Don't show bookable activities in regular alternatives
                                 !schedule.some(day => 
                                   day.activities.some(act => act.name === alt.name) // Don't show already scheduled activities
                                 )
@@ -279,6 +288,15 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                               
                               // Combine specific alternatives with relevant ones, prioritizing specific ones
                               const combinedAlternatives = [...specificAlternatives, ...relevantAlternatives.slice(0, 3)];
+                              
+                              // Separate bookable alternatives for dedicated section
+                              const bookableAlternatives = allAlternatives.filter((alt: AlternativeActivity) =>
+                                alt.type === 'bookable' &&
+                                alt.name !== activity.name &&
+                                !schedule.some(day =>
+                                  day.activities.some(act => act.name === alt.name)
+                                )
+                              );
                               
                               console.log('🔍 Checking alternatives for activity:', {
                                 activity: activity,
@@ -293,7 +311,7 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                                 <View style={styles.alternativesPreview}>
                                   <Text style={styles.alternativesPreviewTitle}>💡 Alternatives available</Text>
                                   <View style={styles.alternativesPreviewList}>
-                                    {combinedAlternatives.slice(0, 2).map((alternative, altIndex) => (
+                                    {combinedAlternatives.slice(0, expandedAlternatives[`${dayIndex}-${activityIndex}`] ? combinedAlternatives.length : 2).map((alternative, altIndex) => (
                                       <TouchableOpacity
                                         key={altIndex}
                                         style={styles.alternativePreviewItem}
@@ -318,15 +336,74 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                                           onActivityEditSave(dayIndex, activityIndex, updatedActivity);
                                         }}
                                       >
-                                        <Text style={styles.alternativePreviewName}>{alternative.name}</Text>
-                                        <Text style={styles.alternativePreviewPrice}>${alternative.price}</Text>
+                                        <View style={styles.alternativePreviewHeader}>
+                                          <Text style={styles.alternativePreviewName}>{alternative.name}</Text>
+                                          <Text style={styles.alternativePreviewPrice}>${alternative.price}</Text>
+                                        </View>
+                                        {alternative.description && (
+                                          <Text style={styles.alternativePreviewDescription}>{alternative.description}</Text>
+                                        )}
                                       </TouchableOpacity>
                                     ))}
-                                    {combinedAlternatives.length > 2 && (
-                                      <Text style={styles.alternativesPreviewMore}>
-                                        +{combinedAlternatives.length - 2} more
-                                      </Text>
-                                    )}
+                                                                    {combinedAlternatives.length > 2 && (
+                                  <TouchableOpacity
+                                    style={styles.alternativesPreviewMoreButton}
+                                    onPress={() => {
+                                      const key = `${dayIndex}-${activityIndex}`;
+                                      setExpandedAlternatives(prev => ({
+                                        ...prev,
+                                        [key]: !prev[key]
+                                      }));
+                                    }}
+                                  >
+                                    <Text style={styles.alternativesPreviewMore}>
+                                      {expandedAlternatives[`${dayIndex}-${activityIndex}`] ? 'Show Less' : `+${combinedAlternatives.length - 2} more`}
+                                    </Text>
+                                  </TouchableOpacity>
+                                )}
+                                
+                                {/* Bookable Activities Section */}
+                                {bookableAlternatives.length > 0 && (
+                                  <View style={styles.bookableSection}>
+                                    <Text style={styles.bookableSectionTitle}>🎫 Bookable Activities Available</Text>
+                                    <Text style={styles.bookableSectionSubtitle}>
+                                      These are real bookable experiences you can reserve
+                                    </Text>
+                                    <View style={styles.bookableAlternativesList}>
+                                      {bookableAlternatives.map((bookable: AlternativeActivity, bookableIndex) => (
+                                        <TouchableOpacity
+                                          key={bookableIndex}
+                                          style={styles.bookableAlternativeItem}
+                                          onPress={() => {
+                                            console.log('🎫 Adding bookable activity:', bookable);
+                                            
+                                            // Add the bookable activity to the schedule
+                                            const newActivity = {
+                                              time: activity.time,
+                                              name: bookable.name,
+                                              price: bookable.price,
+                                              type: 'bookable' as const,
+                                              description: bookable.description || ''
+                                            };
+                                            
+                                            onActivityEditSave(dayIndex, activityIndex, newActivity);
+                                          }}
+                                        >
+                                          <View style={styles.bookableAlternativeHeader}>
+                                            <Text style={styles.bookableAlternativeName}>{bookable.name}</Text>
+                                            <View style={styles.bookableBadge}>
+                                              <Text style={styles.bookableBadgeText}>🎫</Text>
+                                            </View>
+                                          </View>
+                                          {bookable.description && (
+                                            <Text style={styles.bookableAlternativeDescription}>{bookable.description}</Text>
+                                          )}
+                                          <Text style={styles.bookableAlternativePrice}>${bookable.price}</Text>
+                                        </TouchableOpacity>
+                                      ))}
+                                    </View>
+                                  </View>
+                                )}
                                   </View>
                                 </View>
                               ) : null;
@@ -463,9 +540,7 @@ const styles = {
     minWidth: 80,
     alignItems: 'center' as const,
   },
-  bookableBadge: {
-    backgroundColor: '#10b981',
-  },
+
   estimatedBadge: {
     backgroundColor: '#475569',
   },
@@ -507,6 +582,75 @@ const styles = {
     color: '#666',
     fontStyle: 'italic' as const,
   },
+  activityHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 4,
+  },
+  bookableSection: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  bookableSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#10b981',
+    marginBottom: 4,
+  },
+  bookableSectionSubtitle: {
+    fontSize: 11,
+    color: '#999',
+    marginBottom: 10,
+    fontStyle: 'italic' as const,
+  },
+  bookableAlternativesList: {
+    gap: 8,
+  },
+  bookableAlternativeItem: {
+    backgroundColor: '#1a1a1a',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#10b981',
+  },
+  bookableAlternativeHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 6,
+  },
+  bookableAlternativeName: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#ffffff',
+    flex: 1,
+  },
+  bookableBadge: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  bookableBadgeText: {
+    fontSize: 10,
+    color: '#ffffff',
+  },
+
+  bookableAlternativeDescription: {
+    fontSize: 11,
+    color: '#ccc',
+    marginBottom: 6,
+    lineHeight: 14,
+  },
+  bookableAlternativePrice: {
+    fontSize: 12,
+    color: '#10b981',
+    fontWeight: '600' as const,
+    textAlign: 'right' as const,
+  },
   activityActions: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -524,6 +668,7 @@ const styles = {
   deleteButtonText: {
     fontSize: 16,
   },
+
   emptyDayContainer: {
     alignItems: 'center' as const,
     padding: 20,
@@ -742,9 +887,6 @@ const styles = {
     gap: 8,
   },
   alternativePreviewItem: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
     padding: 8,
     backgroundColor: '#333',
     borderRadius: 6,
@@ -762,11 +904,36 @@ const styles = {
     fontWeight: '600' as const,
     marginLeft: 8,
   },
+  alternativePreviewDescription: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic' as const,
+    marginTop: 2,
+    lineHeight: 12,
+  },
+  alternativePreviewHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 4,
+  },
   alternativesPreviewMore: {
     fontSize: 11,
     color: '#888',
     textAlign: 'center' as const,
     marginTop: 4,
+  },
+  alternativesPreviewMoreButton: {
+    padding: 4,
+    borderRadius: 4,
+  },
+  activityDescription: {
+    fontSize: 12,
+    color: '#cccccc',
+    fontStyle: 'italic' as const,
+    marginTop: 2,
+    marginBottom: 8,
+    lineHeight: 16,
   },
   readOnlySection: {
     marginTop: 15,

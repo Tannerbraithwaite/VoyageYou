@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -35,6 +35,14 @@ class User(Base):
     
     # Location for flight origin (departure city)
     location = Column(String, nullable=True)  # City, Country format (e.g., "New York, NY")
+    
+    # Additional profile fields
+    phone = Column(String, nullable=True)
+    birthdate = Column(Date, nullable=True)
+    gender = Column(String, nullable=True)
+    nationality = Column(String, nullable=True)
+    passport_number = Column(String, nullable=True)
+    emergency_contact = Column(String, nullable=True)
     
     # Relationships
     interests = relationship("UserInterest", back_populates="user")

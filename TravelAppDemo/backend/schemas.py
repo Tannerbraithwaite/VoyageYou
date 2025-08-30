@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, validator, root_validator
 from typing import List, Optional, ForwardRef, Union
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import re
 
 # Base schemas
@@ -106,9 +106,21 @@ class UserUpdate(BaseModel):
     budget_range: Optional[str] = None
     additional_info: Optional[str] = None
     location: Optional[str] = None
+    phone: Optional[str] = None
+    birthdate: Optional[date] = None
+    gender: Optional[str] = None
+    nationality: Optional[str] = None
+    passport_number: Optional[str] = None
+    emergency_contact: Optional[str] = None
 
 class User(UserBase):
     id: int
+    phone: Optional[str] = None
+    birthdate: Optional[date] = None
+    gender: Optional[str] = None
+    nationality: Optional[str] = None
+    passport_number: Optional[str] = None
+    emergency_contact: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

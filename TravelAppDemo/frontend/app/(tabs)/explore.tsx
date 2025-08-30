@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Alert } fr
 import GlassCard from '@/components/ui/GlassCard';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import { DetailsModal } from '@/components/DetailsModal';
+import DetailsModal from '@/components/DetailsModal';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Activity {

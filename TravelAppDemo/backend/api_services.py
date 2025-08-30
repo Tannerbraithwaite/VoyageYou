@@ -390,7 +390,8 @@ class HotelbedsHotelService:
                 "check_out": f"{checkout_date.strftime('%B %d, %Y')} - 11:00 AM",
                 "room_type": "Standard Room",
                 "price": int(float(min_rate)) if min_rate else 150,
-                "total_nights": total_nights
+                "total_nights": total_nights,
+                "hotel_code": hotel_data.get("code")  # Add hotel code for Content API
             }
             
             print(f"🏨 Parsed REAL hotel data: {hotel_name} at ${min_rate}/night")

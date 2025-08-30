@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert, Modal, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert, Modal, Platform, ActivityIndicator, PermissionsAndroid } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import * as Location from 'expo-location';
 import GlassCard from '@/components/ui/GlassCard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { DatePicker, CleanSchedule, AlternativesSelector, CurrencyConverter, useCurrencyConverter, type Currency } from '@/components';
 import { TripDates, EnhancedItinerary, ItineraryActivity, FlightInfo, HotelInfo, ItineraryDay, MultiCityItinerary, SingleCityItinerary } from '@/types';
-import { DetailsModal } from '@/components/DetailsModal';
+import DetailsModal from '@/components/DetailsModal';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDateForChat, calculateTripDuration } from '@/utils';
 import exportService from '@/services/export';
@@ -92,6 +93,11 @@ export default function HomeScreen() {
   const [detailsType, setDetailsType] = useState<'flight' | 'hotel'>('flight');
   const [detailsData, setDetailsData] = useState<any>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  
+  // Location detection state
+  const [userLocation, setUserLocation] = useState<string>('');
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
   // Function to show details modal with enhanced data
   const showDetails = async (type: 'flight' | 'hotel', data: any) => {
     setIsLoadingDetails(true);
@@ -129,8 +135,10 @@ export default function HomeScreen() {
           const enhancedResponse = await response.json();
           if (enhancedResponse.flights && enhancedResponse.flights.length > 0) {
             // Merge basic data with enhanced data
+            // Handle both nested structures: basic data might be under 'flights' key
+            const basicData = Array.isArray(data) ? data[0] : data;
             enhancedData = {
-              ...data,
+              ...basicData,
               ...enhancedResponse.flights[0]
             };
           }
@@ -171,8 +179,10 @@ export default function HomeScreen() {
           const enhancedResponse = await response.json();
           if (enhancedResponse.hotels && enhancedResponse.hotels.length > 0) {
             // Merge basic data with enhanced data
+            // Handle both nested structures: basic data might be under 'hotel' key
+            const basicData = data.hotel || data;
             enhancedData = {
-              ...data,
+              ...basicData,
               ...enhancedResponse.hotels[0]
             };
           }
@@ -190,6 +200,88 @@ export default function HomeScreen() {
       setShowDetailsModal(true);
     } finally {
       setIsLoadingDetails(false);
+    }
+  };
+
+  // Function to detect user's location from phone
+  const detectUserLocation = async () => {
+    setIsDetectingLocation(true);
+    try {
+      // Check location permissions
+      let { status } = await Location.getForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        // Request permission
+        const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
+        status = newStatus;
+      }
+      
+      setLocationPermission(status);
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location Permission Required',
+          'To provide better flight planning, we need access to your location. Please enable location services in your phone settings.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      // Get current location
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 10000,
+        distanceInterval: 1000,
+      });
+      
+      // Reverse geocode to get city name
+      const geocodeResult = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      
+      if (geocodeResult.length > 0) {
+        const address = geocodeResult[0];
+        const city = address.city || address.subregion || address.region || 'Unknown City';
+        const country = address.country || '';
+        const locationString = country ? `${city}, ${country}` : city;
+        
+        setUserLocation(locationString);
+        
+        // Update user profile with detected location
+        try {
+          const response = await fetch(`http://localhost:8000/users/${userId}/test`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              location: locationString
+            })
+          });
+          
+          if (response.ok) {
+            console.log('Location updated in profile:', locationString);
+          }
+        } catch (error) {
+          console.error('Error updating location in profile:', error);
+        }
+        
+        Alert.alert(
+          'Location Detected!',
+          `We've detected you're in ${locationString}. This will be used for flight planning.`,
+          [{ text: 'Great!' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error detecting location:', error);
+      Alert.alert(
+        'Location Detection Failed',
+        'We couldn\'t detect your location. You can still manually set your location in your profile.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsDetectingLocation(false);
     }
   };
 
@@ -259,8 +351,7 @@ export default function HomeScreen() {
   // State for export functionality
   const [isExporting, setIsExporting] = useState(false);
   
-  // State for user location
-  const [userLocation, setUserLocation] = useState<string>('');
+
   
   // Currency converter hook
   const { formatPrice } = useCurrencyConverter(selectedCurrency);
@@ -406,6 +497,37 @@ export default function HomeScreen() {
       }
     }
   }, []);
+  
+  // Load user's location from profile and auto-detect if needed
+  useEffect(() => {
+    const loadUserLocation = async () => {
+      try {
+        // First try to get location from user profile
+        const response = await fetch(`http://localhost:8000/users/${userId}/profile`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const profileData = await response.json();
+          if (profileData.user && profileData.user.location) {
+            setUserLocation(profileData.user.location);
+            return; // User already has location set
+          }
+        }
+        
+        // If no location in profile, check if we should auto-detect
+        const shouldAutoDetect = await Location.getForegroundPermissionsAsync();
+        if (shouldAutoDetect.status === 'granted') {
+          // User has already granted permission, offer to detect
+          console.log('Location permission already granted, offering auto-detection');
+        }
+      } catch (error) {
+        console.error('Error loading user location:', error);
+      }
+    };
+    
+    loadUserLocation();
+  }, [userId]);
 
   // Reload the itinerary every time the Home tab gains focus (e.g., after selecting "Edit" from the Schedule tab)
   useFocusEffect(
@@ -549,6 +671,27 @@ export default function HomeScreen() {
         
         // Store the itinerary data
         setCurrentItinerary(result);
+        
+        // If we used a detected location for trip planning, update the user's profile
+        if (userLocation && !result.location_updated) {
+          try {
+            const profileUpdateResponse = await fetch(`http://localhost:8000/users/${userId}/test`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                location: userLocation
+              })
+            });
+            
+            if (profileUpdateResponse.ok) {
+              console.log('Location saved to profile after successful trip planning');
+            }
+          } catch (error) {
+            console.error('Error updating profile with location:', error);
+          }
+        }
         
         // Create a user-friendly response message
         let botResponse = '';
@@ -1249,6 +1392,45 @@ export default function HomeScreen() {
               )}
             </ScrollView>
           </View>
+
+          {/* Location Detection Button */}
+          {!userLocation && (
+            <View style={styles.locationDetectionContainer}>
+              <TouchableOpacity 
+                style={[styles.locationButton, isDetectingLocation && styles.locationButtonDisabled]}
+                onPress={detectUserLocation}
+                disabled={isDetectingLocation}
+              >
+                <Ionicons 
+                  name="location" 
+                  size={20} 
+                  color={isDetectingLocation ? "#999" : "#007AFF"} 
+                />
+                <Text style={styles.locationButtonText}>
+                  {isDetectingLocation ? 'Detecting...' : '📍 Detect My Location'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.locationHintText}>
+                Enable location to get better flight planning from your current city
+              </Text>
+            </View>
+          )}
+          
+          {/* Current Location Display */}
+          {userLocation && (
+            <View style={styles.currentLocationContainer}>
+              <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+              <Text style={styles.currentLocationText}>
+                📍 Departing from: {userLocation}
+              </Text>
+              <TouchableOpacity 
+                style={styles.changeLocationButton}
+                onPress={() => setUserLocation('')}
+              >
+                <Text style={styles.changeLocationButtonText}>Change</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Chat Input - Now at the bottom */}
           <View style={styles.inputContainer}>
@@ -2043,6 +2225,68 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#6366f1',
     marginTop: 10,
+  },
+  
+  // Location Detection Styles
+  locationDetectionContainer: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  locationButtonDisabled: {
+    backgroundColor: '#666',
+  },
+  locationButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  locationHintText: {
+    color: '#999',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  currentLocationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  currentLocationText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 8,
+    flex: 1,
+  },
+  changeLocationButton: {
+    backgroundColor: '#666',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  changeLocationButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '500',
   },
   undecidedInfoText: {
     fontSize: 14,

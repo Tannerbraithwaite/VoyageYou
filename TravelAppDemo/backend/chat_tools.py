@@ -90,6 +90,10 @@ class FunctionCallingChatService:
             "TOOLS: Use search_flights, search_hotels, search_events for real data only\n"
             "COSTS: Calculate total_cost as sum of ALL real prices (flights + hotels + activities)\n"
             "ACTIVITIES: Provide detailed descriptions and fill empty days with suggestions\n\n"
+            "🚨 ABSOLUTE RULE: NEVER generate fake hotel names, addresses, prices, or flight details!\n"
+            "   - If search_hotels() returns no results → set hotel to empty object {}\n"
+            "   - If search_flights() returns no results → set flights to empty array []\n"
+            "   - If no real data available → use empty structures, not placeholders\n\n"
             "RESPONSE FORMAT: JSON itinerary with trip_type, destination, duration, flights, hotel, schedule, total_cost, bookable_cost, estimated_cost\n\n"
         )
 
@@ -133,6 +137,14 @@ JSON FORMAT - SINGLE CITY TRIP:
   "bookable_cost": 0,
   "estimated_cost": 179
 }
+
+🚨 CRITICAL DATA RULES:
+- The example above shows STRUCTURE ONLY - NOT real data
+- NEVER use placeholder text like "Hotel Name", "Address", "Check-in"
+- ALWAYS use search_flights() and search_hotels() tools to get REAL data
+- If no real data available, set arrays to empty [] and costs to 0
+- NEVER fabricate hotel names, addresses, prices, or flight details
+- ONLY use data returned from actual API calls
 
 **CRITICAL**: Use this EXACT structure. The schedule array MUST contain daily activities.
 
