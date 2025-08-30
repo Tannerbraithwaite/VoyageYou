@@ -91,11 +91,106 @@ export default function HomeScreen() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsType, setDetailsType] = useState<'flight' | 'hotel'>('flight');
   const [detailsData, setDetailsData] = useState<any>(null);
-  // Function to show details modal
-  const showDetails = (type: 'flight' | 'hotel', data: any) => {
-    setDetailsType(type);
-    setDetailsData(data);
-    setShowDetailsModal(true);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  // Function to show details modal with enhanced data
+  const showDetails = async (type: 'flight' | 'hotel', data: any) => {
+    setIsLoadingDetails(true);
+    try {
+      let enhancedData = data;
+      
+      if (type === 'flight') {
+        // Extract origin and destination from departure string
+        let origin = 'JFK';
+        let destination = 'LHR';
+        
+        if (data.departure && data.departure.includes(' → ')) {
+          const parts = data.departure.split(' → ');
+          if (parts.length === 2) {
+            origin = parts[0].trim();
+            destination = parts[1].trim();
+          }
+        }
+        
+        // Call enhanced flight API to get detailed information
+        const response = await fetch('http://localhost:8000/api/flights/enhanced', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            origin: origin,
+            destination: destination,
+            departure_date: '2025-09-11', // Default date for demo
+            passengers: 1
+          })
+        });
+        
+        if (response.ok) {
+          const enhancedResponse = await response.json();
+          if (enhancedResponse.flights && enhancedResponse.flights.length > 0) {
+            // Merge basic data with enhanced data
+            enhancedData = {
+              ...data,
+              ...enhancedResponse.flights[0]
+            };
+          }
+        }
+      } else if (type === 'hotel') {
+        // Extract destination from address or use a default
+        let destination = 'Barcelona';
+        
+        if (data.address) {
+          // Try to extract city from address (e.g., "Eixample | Barcelona | 📍 41.3956, 2.1495")
+          if (data.address.includes('|')) {
+            const parts = data.address.split('|');
+            if (parts.length >= 2) {
+              destination = parts[1].trim();
+            }
+          } else if (data.address.includes(',')) {
+            // Fallback to comma-separated format
+            destination = data.address.split(',')[0].trim();
+          }
+        }
+        
+        // Call enhanced hotel API to get detailed information
+        const response = await fetch('http://localhost:8000/api/hotels/enhanced', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            destination: destination,
+            check_in: '2025-09-11', // Default date for demo
+            check_out: '2025-09-14', // Default date for demo
+            rooms: 1,
+            adults: 2
+          })
+        });
+        
+        if (response.ok) {
+          const enhancedResponse = await response.json();
+          if (enhancedResponse.hotels && enhancedResponse.hotels.length > 0) {
+            // Merge basic data with enhanced data
+            enhancedData = {
+              ...data,
+              ...enhancedResponse.hotels[0]
+            };
+          }
+        }
+      }
+      
+      setDetailsType(type);
+      setDetailsData(enhancedData);
+      setShowDetailsModal(true);
+    } catch (error) {
+      console.error('Error fetching enhanced data:', error);
+      // Fallback to basic data if enhanced API fails
+      setDetailsType(type);
+      setDetailsData(data);
+      setShowDetailsModal(true);
+    } finally {
+      setIsLoadingDetails(false);
+    }
   };
 
   const [schedule, setSchedule] = useState<ItineraryDay[]>([
@@ -1262,11 +1357,18 @@ export default function HomeScreen() {
                     
                     {/* View Details Button for Outbound Flight */}
                     <TouchableOpacity
-                      style={styles.detailButton}
+                      style={[styles.detailButton, isLoadingDetails && styles.detailButtonDisabled]}
                       onPress={() => showDetails('flight', currentItinerary.flights[0])}
+                      disabled={isLoadingDetails}
                     >
-                      <Ionicons name="information-circle" size={16} color="#007AFF" />
-                      <Text style={styles.detailButtonText}>View Details</Text>
+                      {isLoadingDetails ? (
+                        <ActivityIndicator size="small" color="#007AFF" />
+                      ) : (
+                        <Ionicons name="information-circle" size={16} color="#007AFF" />
+                      )}
+                      <Text style={[styles.detailButtonText, isLoadingDetails && styles.detailButtonTextDisabled]}>
+                        {isLoadingDetails ? 'Loading...' : 'View Details'}
+                      </Text>
                     </TouchableOpacity>
                     
                     {/* Alternatives Selector for Outbound Flight */}
@@ -1321,11 +1423,18 @@ export default function HomeScreen() {
                     
                     {/* View Details Button for Return Flight */}
                     <TouchableOpacity
-                      style={styles.detailButton}
+                      style={[styles.detailButton, isLoadingDetails && styles.detailButtonDisabled]}
                       onPress={() => showDetails('flight', currentItinerary.flights[1])}
+                      disabled={isLoadingDetails}
                     >
-                      <Ionicons name="information-circle" size={16} color="#007AFF" />
-                      <Text style={styles.detailButtonText}>View Details</Text>
+                      {isLoadingDetails ? (
+                        <ActivityIndicator size="small" color="#007AFF" />
+                      ) : (
+                        <Ionicons name="information-circle" size={16} color="#007AFF" />
+                      )}
+                      <Text style={[styles.detailButtonText, isLoadingDetails && styles.detailButtonTextDisabled]}>
+                        {isLoadingDetails ? 'Loading...' : 'View Details'}
+                      </Text>
                     </TouchableOpacity>
                     
                     {/* Alternatives Selector for Return Flight */}
@@ -1423,11 +1532,18 @@ export default function HomeScreen() {
                         
                         {/* View Details Button for Multi-City Hotel */}
                         <TouchableOpacity
-                          style={styles.detailButton}
+                          style={[styles.detailButton, isLoadingDetails && styles.detailButtonDisabled]}
                           onPress={() => showDetails('hotel', hotel)}
+                          disabled={isLoadingDetails}
                         >
-                          <Ionicons name="information-circle" size={16} color="#007AFF" />
-                          <Text style={styles.detailButtonText}>View Details</Text>
+                          {isLoadingDetails ? (
+                            <ActivityIndicator size="small" color="#007AFF" />
+                          ) : (
+                            <Ionicons name="information-circle" size={16} color="#007AFF" />
+                          )}
+                          <Text style={[styles.detailButtonText, isLoadingDetails && styles.detailButtonTextDisabled]}>
+                            {isLoadingDetails ? 'Loading...' : 'View Details'}
+                          </Text>
                         </TouchableOpacity>
                         
                         {/* Alternatives Selector for Hotel */}
@@ -1481,11 +1597,18 @@ export default function HomeScreen() {
                     
                     {/* View Details Button for Single City Hotel */}
                     <TouchableOpacity
-                      style={styles.detailButton}
+                      style={[styles.detailButton, isLoadingDetails && styles.detailButtonDisabled]}
                       onPress={() => showDetails('hotel', currentItinerary.hotel)}
+                      disabled={isLoadingDetails}
                     >
-                      <Ionicons name="information-circle" size={16} color="#007AFF" />
-                      <Text style={styles.detailButtonText}>View Details</Text>
+                      {isLoadingDetails ? (
+                        <ActivityIndicator size="small" color="#007AFF" />
+                      ) : (
+                        <Ionicons name="information-circle" size={16} color="#007AFF" />
+                      )}
+                      <Text style={[styles.detailButtonText, isLoadingDetails && styles.detailButtonTextDisabled]}>
+                        {isLoadingDetails ? 'Loading...' : 'View Details'}
+                      </Text>
                     </TouchableOpacity>
                     
                     {/* Alternatives Selector for Single City Hotel */}
@@ -3156,5 +3279,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#007AFF',
     marginLeft: 4,
+  },
+  detailButtonDisabled: {
+    opacity: 0.6,
+    backgroundColor: 'rgba(0, 122, 255, 0.05)',
+  },
+  detailButtonTextDisabled: {
+    color: '#666',
   },
 });
