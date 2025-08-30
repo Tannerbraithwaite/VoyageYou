@@ -411,7 +411,7 @@ JSON FORMAT - SINGLE CITY TRIP:
                 else:
                     # No more tool calls, return final response
                     final_response = message.content
-                            self.logger.info(f"Final response ready: {len(final_response)} characters")
+                    self.logger.info(f"Final response ready: {len(final_response)} characters")
                     
                     # Strip markdown formatting if present
                     if "```json" in final_response or "```" in final_response:

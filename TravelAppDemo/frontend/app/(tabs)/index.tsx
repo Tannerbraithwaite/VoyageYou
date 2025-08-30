@@ -5,6 +5,8 @@ import GlassCard from '@/components/ui/GlassCard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { DatePicker, CleanSchedule, AlternativesSelector, CurrencyConverter, useCurrencyConverter, type Currency } from '@/components';
 import { TripDates, EnhancedItinerary, ItineraryActivity, FlightInfo, HotelInfo, ItineraryDay, MultiCityItinerary, SingleCityItinerary } from '@/types';
+import { DetailsModal } from '@/components/DetailsModal';
+import { Ionicons } from '@expo/vector-icons';
 import { formatDateForChat, calculateTripDuration } from '@/utils';
 import exportService from '@/services/export';
 
@@ -84,6 +86,18 @@ export default function HomeScreen() {
   const [showAlternatives, setShowAlternatives] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
+  
+  // Details modal state
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsType, setDetailsType] = useState<'flight' | 'hotel'>('flight');
+  const [detailsData, setDetailsData] = useState<any>(null);
+  // Function to show details modal
+  const showDetails = (type: 'flight' | 'hotel', data: any) => {
+    setDetailsType(type);
+    setDetailsData(data);
+    setShowDetailsModal(true);
+  };
+
   const [schedule, setSchedule] = useState<ItineraryDay[]>([
     {
       day: 1,
@@ -1246,6 +1260,15 @@ export default function HomeScreen() {
                     )}
                     <Text style={styles.priceText}>{formatPrice(currentItinerary.flights[0].price)}</Text>
                     
+                    {/* View Details Button for Outbound Flight */}
+                    <TouchableOpacity
+                      style={styles.detailButton}
+                      onPress={() => showDetails('flight', currentItinerary.flights[0])}
+                    >
+                      <Ionicons name="information-circle" size={16} color="#007AFF" />
+                      <Text style={styles.detailButtonText}>View Details</Text>
+                    </TouchableOpacity>
+                    
                     {/* Alternatives Selector for Outbound Flight */}
                     {currentItinerary.flights[0]?.alternatives && currentItinerary.flights[0].alternatives.length > 0 && (
                       <AlternativesSelector
@@ -1295,6 +1318,15 @@ export default function HomeScreen() {
                       <Text style={styles.timeText}>{currentItinerary.flights[1].time}</Text>
                     )}
                     <Text style={styles.priceText}>{formatPrice(currentItinerary.flights[1].price)}</Text>
+                    
+                    {/* View Details Button for Return Flight */}
+                    <TouchableOpacity
+                      style={styles.detailButton}
+                      onPress={() => showDetails('flight', currentItinerary.flights[1])}
+                    >
+                      <Ionicons name="information-circle" size={16} color="#007AFF" />
+                      <Text style={styles.detailButtonText}>View Details</Text>
+                    </TouchableOpacity>
                     
                     {/* Alternatives Selector for Return Flight */}
                     {currentItinerary.flights[1]?.alternatives && currentItinerary.flights[1].alternatives.length > 0 && (
@@ -1389,6 +1421,15 @@ export default function HomeScreen() {
                           <Text style={styles.hotelPriceTotal}>{formatPrice(hotel.price * hotel.total_nights)}</Text>
                         </View>
                         
+                        {/* View Details Button for Multi-City Hotel */}
+                        <TouchableOpacity
+                          style={styles.detailButton}
+                          onPress={() => showDetails('hotel', hotel)}
+                        >
+                          <Ionicons name="information-circle" size={16} color="#007AFF" />
+                          <Text style={styles.detailButtonText}>View Details</Text>
+                        </TouchableOpacity>
+                        
                         {/* Alternatives Selector for Hotel */}
                         {hotel.alternatives && hotel.alternatives.length > 0 && (
                           <AlternativesSelector
@@ -1437,6 +1478,15 @@ export default function HomeScreen() {
                       <Text style={styles.hotelPriceLabel}>{formatPrice(currentItinerary.hotel.price)}/night × {currentItinerary.hotel.total_nights} nights</Text>
                       <Text style={styles.hotelPriceTotal}>{formatPrice(currentItinerary.hotel.price * currentItinerary.hotel.total_nights)}</Text>
                     </View>
+                    
+                    {/* View Details Button for Single City Hotel */}
+                    <TouchableOpacity
+                      style={styles.detailButton}
+                      onPress={() => showDetails('hotel', currentItinerary.hotel)}
+                    >
+                      <Ionicons name="information-circle" size={16} color="#007AFF" />
+                      <Text style={styles.detailButtonText}>View Details</Text>
+                    </TouchableOpacity>
                     
                     {/* Alternatives Selector for Single City Hotel */}
                     {currentItinerary.hotel.alternatives && currentItinerary.hotel.alternatives.length > 0 && (
@@ -1759,7 +1809,14 @@ export default function HomeScreen() {
         </GlassCard>
       </View>
     </Modal>
-
+    
+    {/* Details Modal */}
+    <DetailsModal
+      visible={showDetailsModal}
+      onClose={() => setShowDetailsModal(false)}
+      type={detailsType}
+      data={detailsData}
+    />
 
     </View>
   );
@@ -3081,5 +3138,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 5,
+  },
+  detailButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  detailButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginLeft: 4,
   },
 });

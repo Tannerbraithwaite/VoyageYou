@@ -314,9 +314,9 @@ async def oauth_login(oauth_data: OAuthRequest, response: Response, db: Session 
     """OAuth login with Google or Apple"""
     try:
         if oauth_data.provider == "google":
-                    result = await oauth_service.handle_google_oauth(oauth_data.id_token, db)
-    elif oauth_data.provider == "apple":
-        result = await oauth_service.handle_apple_oauth(oauth_data.id_token, db)
+            result = await oauth_service.handle_google_oauth(oauth_data.id_token, db)
+        elif oauth_data.provider == "apple":
+            result = await oauth_service.handle_apple_oauth(oauth_data.id_token, db)
         else:
             raise HTTPException(status_code=400, detail="Invalid OAuth provider")
         
@@ -1272,14 +1272,20 @@ def get_chat_history(user_id: int, limit: int = 20, db: Session = Depends(get_db
 # Enhanced API endpoints for detailed flight and hotel information
 @app.post("/api/flights/enhanced")
 async def get_enhanced_flight_details(
-    origin: str,
-    destination: str,
-    departure_date: str,
-    return_date: str = None,
-    passengers: int = 1
+    request: Request
 ):
     """Get enhanced flight details including baggage, amenities, aircraft info"""
     try:
+        body = await request.json()
+        origin = body.get("origin")
+        destination = body.get("destination")
+        departure_date = body.get("departure_date")
+        return_date = body.get("return_date")
+        passengers = body.get("passengers", 1)
+        
+        if not all([origin, destination, departure_date]):
+            raise HTTPException(status_code=400, detail="Missing required fields: origin, destination, departure_date")
+        
         flight_details = await enhanced_flight_service.search_flights_with_details(
             origin, destination, departure_date, return_date, passengers
         )
@@ -1289,14 +1295,20 @@ async def get_enhanced_flight_details(
 
 @app.post("/api/hotels/enhanced")
 async def get_enhanced_hotel_details(
-    destination: str,
-    check_in: str,
-    check_out: str,
-    rooms: int = 1,
-    adults: int = 2
+    request: Request
 ):
     """Get enhanced hotel details including amenities, images, policies, reviews"""
     try:
+        body = await request.json()
+        destination = body.get("destination")
+        check_in = body.get("check_in")
+        check_out = body.get("check_out")
+        rooms = body.get("rooms", 1)
+        adults = body.get("adults", 2)
+        
+        if not all([destination, check_in, check_out]):
+            raise HTTPException(status_code=400, detail="Missing required fields: destination, check_in, check_out")
+        
         hotel_details = await enhanced_hotel_service.search_hotels_with_details(
             destination, check_in, check_out, rooms, adults
         )
