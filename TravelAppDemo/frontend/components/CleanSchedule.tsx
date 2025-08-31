@@ -363,52 +363,53 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                                       </TouchableOpacity>
                                     )}
                                 
-                                {/* Bookable Activities Section */}
-                                {bookableAlternatives.length > 0 && (
-                                  <View style={styles.bookableSection}>
-                                    <Text style={styles.bookableSectionTitle}>🎫 Bookable Activities Available</Text>
-                                    <Text style={styles.bookableSectionSubtitle}>
-                                      These are real bookable experiences you can reserve
-                                    </Text>
-                                    <View style={styles.bookableAlternativesList}>
-                                      {bookableAlternatives.map((bookable: AlternativeActivity, bookableIndex) => (
-                                        <TouchableOpacity
-                                          key={bookableIndex}
-                                          style={styles.bookableAlternativeItem}
-                                          onPress={() => {
-                                            console.log('🎫 Adding bookable activity:', bookable);
-                                            
-                                            // Add the bookable activity to the schedule
-                                            const newActivity = {
-                                              time: activity.time,
-                                              name: bookable.name,
-                                              price: bookable.price,
-                                              type: 'bookable' as const,
-                                              description: bookable.description || ''
-                                            };
-                                            
-                                            onActivityEditSave(dayIndex, activityIndex, newActivity);
-                                          }}
-                                        >
-                                          <View style={styles.bookableAlternativeHeader}>
-                                            <Text style={styles.bookableAlternativeName}>{bookable.name}</Text>
-                                            <View style={styles.bookableBadge}>
-                                              <Text style={styles.bookableBadgeText}>🎫</Text>
-                                            </View>
-                                          </View>
-                                          {bookable.description && (
-                                            <Text style={styles.bookableAlternativeDescription}>{bookable.description}</Text>
-                                          )}
-                                          <Text style={styles.bookableAlternativePrice}>${bookable.price}</Text>
-                                        </TouchableOpacity>
-                                      ))}
-                                    </View>
-                                  </View>
-                                )}
                                   </View>
                                 </View>
                               ) : null;
                             })()}
+                            
+                            {/* Bookable Activities Section */}
+                            {bookableAlternatives.length > 0 && (
+                              <View style={styles.bookableSection}>
+                                <Text style={styles.bookableSectionTitle}>🎫 Bookable Activities Available</Text>
+                                <Text style={styles.bookableSectionSubtitle}>
+                                  These are real bookable experiences you can reserve
+                                </Text>
+                                <View style={styles.bookableAlternativesList}>
+                                  {bookableAlternatives.map((bookable: AlternativeActivity, bookableIndex) => (
+                                    <TouchableOpacity
+                                      key={bookableIndex}
+                                      style={styles.bookableAlternativeItem}
+                                      onPress={() => {
+                                        console.log('🎫 Adding bookable activity:', bookable);
+                                        
+                                        // Add the bookable activity to the schedule
+                                        const newActivity = {
+                                          time: activity.time,
+                                          name: bookable.name,
+                                          price: bookable.price,
+                                          type: 'bookable' as const,
+                                          description: bookable.description || ''
+                                        };
+                                        
+                                        onActivityEditSave(dayIndex, activityIndex, newActivity);
+                                      }}
+                                    >
+                                      <View style={styles.bookableAlternativeHeader}>
+                                        <Text style={styles.bookableAlternativeName}>{bookable.name}</Text>
+                                        <View style={styles.bookableBadge}>
+                                          <Text style={styles.bookableBadgeText}>🎫</Text>
+                                        </View>
+                                      </View>
+                                      {bookable.description && (
+                                        <Text style={styles.bookableAlternativeDescription}>{bookable.description}</Text>
+                                      )}
+                                      <Text style={styles.bookableAlternativePrice}>${bookable.price}</Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              </View>
+                            )}
                             
                             <Text style={styles.editHint}>Tap to edit</Text>
                           </TouchableOpacity>
