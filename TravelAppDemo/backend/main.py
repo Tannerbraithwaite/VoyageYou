@@ -1,5 +1,6 @@
 import sys
 import os
+import asyncio
 print(f"[DEBUG] Python executable: {sys.executable}")
 try:
     import openai
@@ -1315,6 +1316,287 @@ async def get_enhanced_hotel_details(
         return hotel_details
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching enhanced hotel details: {str(e)}")
+
+# Booking endpoints
+@app.post("/api/bookings/create")
+async def create_booking(booking_request: dict):
+    """Create a new travel booking with upgrades and traveler information"""
+    try:
+        # In a real app, this would integrate with:
+        # - Duffel API for flight bookings
+        # - Hotelbeds API for hotel bookings
+        # - Payment processor for transactions
+        # - Email service for confirmations
+        
+        # For testing purposes, we'll simulate a successful booking
+        import uuid
+        import datetime
+        
+        booking_id = str(uuid.uuid4())
+        confirmation_number = f"TB{datetime.datetime.now().strftime('%Y%m%d')}{str(uuid.uuid4())[:8].upper()}"
+        
+        # Simulate API processing time
+        await asyncio.sleep(1)
+        
+        # Create booking response
+        booking_response = {
+            "booking_id": booking_id,
+            "confirmation_number": confirmation_number,
+            "status": "confirmed",
+            "total_cost": booking_request.get("total_cost", 0),
+            "itinerary_summary": {
+                "destination": "Travel Destination",
+                "dates": "Selected Dates",
+                "travelers": len(booking_request.get("traveler_info", [])),
+            },
+            "next_steps": [
+                "Check your email for booking confirmation",
+                "Download your itinerary",
+                "Review travel documents",
+                "Contact support if you have questions"
+            ],
+            "contact_support": {
+                "email": "support@travelapp.com",
+                "phone": "+1-555-TRAVEL"
+            },
+            "created_at": datetime.datetime.now().isoformat()
+        }
+        
+        # Log the booking request for debugging
+        print(f"🎯 New booking created: {confirmation_number}")
+        print(f"📊 Total cost: ${booking_request.get('total_cost', 0)}")
+        print(f"👥 Travelers: {len(booking_request.get('traveler_info', []))}")
+        
+        # Send confirmation email if contact info is provided
+        try:
+            from email_service import email_service
+            
+            contact_info = booking_request.get("contact_info", {})
+            if contact_info.get("email"):
+                # Extract itinerary info for email
+                itinerary_data = {
+                    "destination": "Travel Destination",  # Would come from actual itinerary
+                    "duration": "Selected Duration",      # Would come from actual itinerary
+                }
+                
+                # Send confirmation email
+                email_sent = await email_service.send_booking_confirmation(
+                    contact_info["email"],
+                    contact_info.get("name", "Traveler"),
+                    booking_response,
+                    itinerary_data
+                )
+                
+                if email_sent:
+                    print(f"📧 Confirmation email sent to {contact_info['email']}")
+                else:
+                    print(f"⚠️ Failed to send confirmation email to {contact_info['email']}")
+                    
+        except Exception as email_error:
+            print(f"⚠️ Email service error: {str(email_error)}")
+            # Don't fail the booking if email fails
+        
+        return {
+            "success": True,
+            "message": "Booking created successfully",
+            "booking": booking_response
+        }
+        
+    except Exception as e:
+        print(f"❌ Error creating booking: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create booking")
+
+@app.get("/api/bookings/{booking_id}")
+async def get_booking(booking_id: str):
+    """Get booking details by ID"""
+    try:
+        # In a real app, this would fetch from database
+        # For testing, return mock data
+        return {
+            "success": True,
+            "booking": {
+                "id": booking_id,
+                "status": "confirmed",
+                "confirmation_number": f"TB{booking_id[:8].upper()}",
+                "created_at": "2024-01-01T00:00:00Z"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+@app.post("/api/bookings/{booking_id}/cancel")
+async def cancel_booking(booking_id: str, cancellation_reason: str = None):
+    """Cancel a booking"""
+    try:
+        # In a real app, this would:
+        # - Check cancellation policies
+        # - Process refunds
+        # - Update booking status
+        # - Send cancellation emails
+        
+        print(f"🔄 Cancelling booking: {booking_id}")
+        print(f"📝 Reason: {cancellation_reason or 'No reason provided'}")
+        
+        return {
+            "success": True,
+            "message": "Booking cancelled successfully",
+            "cancellation_fee": 0,  # Would be calculated based on policy
+            "refund_amount": 0  # Would be calculated based on policy
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to cancel booking")
+
+# Flight upgrade endpoints
+@app.get("/api/flights/upgrades")
+async def get_flight_upgrades():
+    """Get available flight upgrades and add-ons"""
+    try:
+        # In a real app, this would come from Duffel API
+        # For testing, return mock data
+        upgrades = [
+            {
+                "id": "seat-1",
+                "name": "Premium Economy Seat",
+                "description": "Extra legroom, wider seat, priority boarding",
+                "price": 75,
+                "type": "seat",
+                "category": "Seating",
+                "available": True
+            },
+            {
+                "id": "meal-1",
+                "name": "Premium Meal Service",
+                "description": "Gourmet meal with wine selection",
+                "price": 45,
+                "type": "meal",
+                "category": "Dining",
+                "available": True
+            },
+            {
+                "id": "baggage-1",
+                "name": "Extra Baggage Allowance",
+                "description": "Additional 23kg checked baggage",
+                "price": 60,
+                "type": "baggage",
+                "category": "Baggage",
+                "available": True
+            },
+            {
+                "id": "priority-1",
+                "name": "Priority Boarding",
+                "description": "Skip the line and board first",
+                "price": 25,
+                "type": "priority",
+                "category": "Service",
+                "available": True
+            },
+            {
+                "id": "lounge-1",
+                "name": "Airport Lounge Access",
+                "description": "Access to premium lounges with food and drinks",
+                "price": 85,
+                "type": "lounge",
+                "category": "Service",
+                "available": True
+            }
+        ]
+        
+        return {
+            "success": True,
+            "upgrades": upgrades
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to fetch flight upgrades")
+
+# Hotel upgrade endpoints
+@app.get("/api/hotels/upgrades")
+async def get_hotel_upgrades():
+    """Get available hotel upgrades and amenities"""
+    try:
+        # In a real app, this would come from Hotelbeds API
+        # For testing, return mock data
+        upgrades = [
+            {
+                "id": "room-1",
+                "name": "Ocean View Room",
+                "description": "Upgrade to room with ocean view",
+                "price": 120,
+                "type": "room_upgrade",
+                "category": "Room",
+                "available": True
+            },
+            {
+                "id": "breakfast-1",
+                "name": "Breakfast Included",
+                "description": "Daily continental breakfast for all guests",
+                "price": 35,
+                "type": "amenity",
+                "category": "Dining",
+                "available": True
+            },
+            {
+                "id": "spa-1",
+                "name": "Spa Package",
+                "description": "Access to spa facilities and one massage",
+                "price": 150,
+                "type": "package",
+                "category": "Wellness",
+                "available": True
+            },
+            {
+                "id": "late-checkout-1",
+                "name": "Late Checkout",
+                "description": "Extended checkout until 2 PM",
+                "price": 50,
+                "type": "service",
+                "category": "Service",
+                "available": True
+            }
+        ]
+        
+        return {
+            "success": True,
+            "upgrades": upgrades
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to fetch hotel upgrades")
+
+# Email confirmation endpoint
+@app.post("/api/bookings/{booking_id}/send-confirmation")
+async def send_booking_confirmation(booking_id: str, email_request: dict):
+    """Send booking confirmation email"""
+    try:
+        from email_service import email_service
+        
+        # Extract email details from request
+        recipient_email = email_request.get("email")
+        recipient_name = email_request.get("name", "Traveler")
+        booking_data = email_request.get("booking_data", {})
+        itinerary_data = email_request.get("itinerary_data", {})
+        
+        if not recipient_email:
+            raise HTTPException(status_code=400, detail="Email address is required")
+        
+        # Send confirmation email
+        email_sent = await email_service.send_booking_confirmation(
+            recipient_email, recipient_name, booking_data, itinerary_data
+        )
+        
+        if email_sent:
+            return {
+                "success": True,
+                "message": "Confirmation email sent successfully",
+                "email_sent_to": recipient_email
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to send email")
+        
+    except Exception as e:
+        print(f"❌ Error sending confirmation email: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to send confirmation email")
 
 # PDF Export endpoints
 @app.post("/itinerary/export")

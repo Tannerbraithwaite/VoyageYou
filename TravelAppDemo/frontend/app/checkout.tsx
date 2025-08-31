@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Modal, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
-import { EnhancedItinerary } from '@/types';
+import { 
+  EnhancedItinerary, 
+  FlightUpgrade, 
+  HotelRoomOption, 
+  TravelerInfo, 
+  PaymentInfo, 
+  ContactInfo,
+  FlightUpgradeSelection,
+  HotelUpgradeSelection,
+  BookingConfirmation
+} from '@/types';
 import { 
   validateEmail, 
   validatePhone, 
@@ -16,55 +26,103 @@ import {
   ValidationResult 
 } from '@/utils';
 
-interface TravelerInfo {
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;
-  passportNumber: string;
-  passportExpiry: string;
-  nationality: string;
-}
+// Mock upgrade options - in real app, these would come from APIs
+const mockFlightUpgrades: FlightUpgrade[] = [
+  {
+    id: 'seat-1',
+    name: 'Premium Economy Seat',
+    description: 'Extra legroom, wider seat, priority boarding',
+    price: 75,
+    type: 'seat',
+    category: 'Seating',
+    available: true
+  },
+  {
+    id: 'meal-1',
+    name: 'Premium Meal Service',
+    description: 'Gourmet meal with wine selection',
+    price: 45,
+    type: 'meal',
+    category: 'Dining',
+    available: true
+  },
+  {
+    id: 'baggage-1',
+    name: 'Extra Baggage Allowance',
+    description: 'Additional 23kg checked baggage',
+    price: 60,
+    type: 'baggage',
+    category: 'Baggage',
+    available: true
+  },
+  {
+    id: 'priority-1',
+    name: 'Priority Boarding',
+    description: 'Skip the line and board first',
+    price: 25,
+    type: 'priority',
+    category: 'Service',
+    available: true
+  },
+  {
+    id: 'lounge-1',
+    name: 'Airport Lounge Access',
+    description: 'Access to premium lounges with food and drinks',
+    price: 85,
+    type: 'lounge',
+    category: 'Service',
+    available: true
+  }
+];
 
-interface FlightInfo {
-  seatClass: string;
-  seatNumber: string;
-  mealPreference: string;
-  specialAssistance: string;
-}
-
-interface HotelInfo {
-  roomType: string;
-  roomNumber: string;
-  breakfastIncluded: boolean;
-  lateCheckout: boolean;
-  specialRequests: string;
-}
-
-interface PaymentInfo {
-  cardNumber: string;
-  cardholderName: string;
-  expiryDate: string;
-  cvv: string;
-  billingAddress: string;
-}
+const mockHotelUpgrades: HotelRoomOption[] = [
+  {
+    id: 'room-1',
+    name: 'Ocean View Room',
+    description: 'Upgrade to room with ocean view',
+    price: 120,
+    type: 'room_upgrade',
+    category: 'Room',
+    available: true
+  },
+  {
+    id: 'breakfast-1',
+    name: 'Breakfast Included',
+    description: 'Daily continental breakfast for all guests',
+    price: 35,
+    type: 'amenity',
+    category: 'Dining',
+    available: true
+  },
+  {
+    id: 'spa-1',
+    name: 'Spa Package',
+    description: 'Access to spa facilities and one massage',
+    price: 150,
+    type: 'package',
+    category: 'Wellness',
+    available: true
+  },
+  {
+    id: 'late-checkout-1',
+    name: 'Late Checkout',
+    description: 'Extended checkout until 2 PM',
+    price: 50,
+    type: 'service',
+    category: 'Service',
+    available: true
+  }
+];
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const [itinerary, setItinerary] = useState<EnhancedItinerary | null>(null);
   const [activeStep, setActiveStep] = useState(1);
-  const [enabledSteps, setEnabledSteps] = useState<{ flights: boolean; hotel: boolean; activities: boolean }>({
-    flights: true,
-    hotel: true,
-    activities: true,
-  });
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showNationalityPicker, setShowNationalityPicker] = useState(false);
-  const [showSeatClassPicker, setShowSeatClassPicker] = useState(false);
-  const [showMealPicker, setShowMealPicker] = useState(false);
-  const [showRoomTypePicker, setShowRoomTypePicker] = useState(false);
-  const [currentDateField, setCurrentDateField] = useState('');
-  const [currentTravelerIndex, setCurrentTravelerIndex] = useState(0);
-  const [tempDateInput, setTempDateInput] = useState('');
+  const [totalCost, setTotalCost] = useState(0);
+  const [selectedFlightUpgrades, setSelectedFlightUpgrades] = useState<FlightUpgradeSelection[]>([]);
+  const [selectedHotelUpgrades, setSelectedHotelUpgrades] = useState<HotelUpgradeSelection[]>([]);
+  
+  // Form states
   const [travelers, setTravelers] = useState<TravelerInfo[]>([
     {
       firstName: '',
@@ -75,70 +133,82 @@ export default function CheckoutScreen() {
       nationality: ''
     }
   ]);
-  const [flightInfo, setFlightInfo] = useState<FlightInfo>({
-    seatClass: '',
-    seatNumber: '',
-    mealPreference: '',
-    specialAssistance: ''
-  });
-  const [hotelInfo, setHotelInfo] = useState<HotelInfo>({
-    roomType: '',
-    roomNumber: '',
-    breakfastIncluded: false,
-    lateCheckout: false,
-    specialRequests: ''
-  });
+  
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo>({
     cardNumber: '',
     cardholderName: '',
     expiryDate: '',
     cvv: '',
-    billingAddress: ''
-  });
-  const [contactInfo, setContactInfo] = useState({
-    email: '',
-    phone: '',
-    emergencyContact: ''
+    billingAddress: '',
+    savePayment: false
   });
   
-  // Validation states
-  const [validationErrors, setValidationErrors] = useState<{[key: string]: string[]}>({});
+  const [contactInfo, setContactInfo] = useState<ContactInfo>({
+    email: '',
+    phone: '',
+    address: ''
+  });
+
+  // UI states
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showNationalityPicker, setShowNationalityPicker] = useState(false);
+  const [currentDateField, setCurrentDateField] = useState('');
+  const [currentTravelerIndex, setCurrentTravelerIndex] = useState(0);
+  const [tempDateInput, setTempDateInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const nationalityOptions = [
+    'United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Spain', 'Italy',
+    'Australia', 'New Zealand', 'Japan', 'South Korea', 'China', 'India', 'Brazil',
+    'Mexico', 'Argentina', 'South Africa', 'Egypt', 'Morocco', 'Turkey', 'Russia'
+  ];
 
   useEffect(() => {
-    // Load itinerary data from session storage
-    if (typeof window !== 'undefined') {
-      const storedItinerary = sessionStorage.getItem('currentItinerary');
-      const storedOptions = sessionStorage.getItem('purchaseOptions');
-      if (storedItinerary) {
-        try {
-          const itineraryData = JSON.parse(storedItinerary);
-          setItinerary(itineraryData);
-          // Determine enabled steps based on itinerary availability and user options
-          const hasFlights = Array.isArray(itineraryData.flights) && itineraryData.flights.length > 0;
-          const hasHotel = !!itineraryData.hotel;
-          const hasActivities = Array.isArray(itineraryData.schedule) && itineraryData.schedule.some((d: any) => (d.activities || []).length > 0);
-          let include = { flights: true, hotel: true, activities: true };
-          if (storedOptions) {
-            try {
-              const parsed = JSON.parse(storedOptions);
-              include = {
-                flights: (parsed.flights ?? parsed.includeFlights) ?? true,
-                hotel: (parsed.hotel ?? parsed.includeHotel) ?? true,
-                activities: (parsed.activities ?? parsed.includeActivities) ?? true,
-              };
-            } catch {}
-          }
-          setEnabledSteps({
-            flights: include.flights && hasFlights,
-            hotel: include.hotel && hasHotel,
-            activities: include.activities && hasActivities,
-          });
-        } catch (error) {
-          console.error('Error parsing itinerary:', error);
-        }
-      }
-    }
+    loadItinerary();
   }, []);
+
+  useEffect(() => {
+    calculateTotalCost();
+  }, [itinerary, selectedFlightUpgrades, selectedHotelUpgrades]);
+
+  const loadItinerary = () => {
+    try {
+      const storedItinerary = sessionStorage.getItem('selectedItinerary');
+      if (storedItinerary) {
+        const parsed = JSON.parse(storedItinerary);
+        setItinerary(parsed);
+        setTotalCost(parsed.total_cost || 0);
+      }
+    } catch (error) {
+      console.error('Error loading itinerary:', error);
+      Alert.alert('Error', 'Failed to load itinerary data');
+    }
+  };
+
+  const calculateTotalCost = () => {
+    if (!itinerary) return;
+    
+    let baseCost = itinerary.total_cost || 0;
+    let upgradeCost = 0;
+
+    // Add flight upgrade costs
+    selectedFlightUpgrades.forEach(selection => {
+      selection.upgrades.forEach(upgradeId => {
+        const upgrade = mockFlightUpgrades.find(u => u.id === upgradeId);
+        if (upgrade) upgradeCost += upgrade.price;
+      });
+    });
+
+    // Add hotel upgrade costs
+    selectedHotelUpgrades.forEach(selection => {
+      selection.upgrades.forEach(upgradeId => {
+        const upgrade = mockHotelUpgrades.find(u => u.id === upgradeId);
+        if (upgrade) upgradeCost += upgrade.price;
+      });
+    });
+
+    setTotalCost(baseCost + upgradeCost);
+  };
 
   const addTraveler = () => {
     setTravelers([...travelers, {
@@ -153,655 +223,629 @@ export default function CheckoutScreen() {
 
   const removeTraveler = (index: number) => {
     if (travelers.length > 1) {
-      setTravelers(travelers.filter((_, i) => i !== index));
+      const newTravelers = travelers.filter((_, i) => i !== index);
+      setTravelers(newTravelers);
     }
   };
 
   const updateTraveler = (index: number, field: keyof TravelerInfo, value: string) => {
-    const updatedTravelers = [...travelers];
-    updatedTravelers[index] = { ...updatedTravelers[index], [field]: value };
-    setTravelers(updatedTravelers);
+    const newTravelers = [...travelers];
+    newTravelers[index] = { ...newTravelers[index], [field]: value };
+    setTravelers(newTravelers);
   };
 
-  const updatePaymentInfo = (field: keyof PaymentInfo, value: string) => {
-    let formattedValue = value;
-    
-    // Format and validate input
-    if (field === 'cardNumber') {
-      formattedValue = formatCreditCard(value);
-      const validation = validateCreditCard(formattedValue);
-      setValidationErrors(prev => ({
-        ...prev,
-        cardNumber: validation.isValid ? [] : validation.errors
-      }));
-    } else if (field === 'expiryDate') {
-      formattedValue = formatExpiryDate(value);
-      const validation = validateExpiryDate(formattedValue);
-      setValidationErrors(prev => ({
-        ...prev,
-        expiryDate: validation.isValid ? [] : validation.errors
-      }));
-    } else if (field === 'cvv') {
-      const validation = validateCVV(value);
-      setValidationErrors(prev => ({
-        ...prev,
-        cvv: validation.isValid ? [] : validation.errors
-      }));
-    } else if (field === 'cardholderName') {
-      const validation = validateName(value);
-      setValidationErrors(prev => ({
-        ...prev,
-        cardholderName: validation.isValid ? [] : validation.errors
-      }));
-    }
-    
-    setPaymentInfo({ ...paymentInfo, [field]: formattedValue });
+  const toggleFlightUpgrade = (flightId: string, upgradeId: string) => {
+    setSelectedFlightUpgrades(prev => {
+      const existing = prev.find(s => s.flight_id === flightId);
+      if (existing) {
+        const newSelection = { ...existing };
+        if (newSelection.upgrades.includes(upgradeId)) {
+          newSelection.upgrades = newSelection.upgrades.filter(id => id !== upgradeId);
+        } else {
+          newSelection.upgrades = [...newSelection.upgrades, upgradeId];
+        }
+        return prev.map(s => s.flight_id === flightId ? newSelection : s);
+      } else {
+        return [...prev, { flight_id: flightId, upgrades: [upgradeId] }];
+      }
+    });
   };
 
-  const updateContactInfo = (field: string, value: string) => {
-    // Validate contact info
-    if (field === 'email') {
-      const validation = validateEmail(value);
-      setValidationErrors(prev => ({
-        ...prev,
-        email: validation.isValid ? [] : validation.errors
-      }));
-    } else if (field === 'phone') {
-      const validation = validatePhone(value);
-      setValidationErrors(prev => ({
-        ...prev,
-        phone: validation.isValid ? [] : validation.errors
-      }));
-    }
-    
-    setContactInfo({ ...contactInfo, [field]: value });
+  const toggleHotelUpgrade = (hotelId: string, upgradeId: string) => {
+    setSelectedHotelUpgrades(prev => {
+      const existing = prev.find(s => s.hotel_id === hotelId);
+      if (existing) {
+        const newSelection = { ...existing };
+        if (newSelection.upgrades.includes(upgradeId)) {
+          newSelection.upgrades = newSelection.upgrades.filter(id => id !== upgradeId);
+        } else {
+          newSelection.upgrades = [...newSelection.upgrades, upgradeId];
+        }
+        return prev.map(s => s.hotel_id === hotelId ? newSelection : s);
+      } else {
+        return [...prev, { hotel_id: hotelId, upgrades: [upgradeId] }];
+      }
+    });
   };
 
-  const validateStep = (step: number) => {
+  const validateStep = (step: number): boolean => {
     switch (step) {
-      case 1: // Contact Info
-        return contactInfo.email && contactInfo.phone;
-      case 2: // Traveler Info
-        return travelers.every(t => 
-          t.firstName && t.lastName && t.dateOfBirth && 
-          t.passportNumber && t.passportExpiry && t.nationality
+      case 1: // Traveler Info
+        return travelers.every(traveler => 
+          traveler.firstName && traveler.lastName && traveler.dateOfBirth && 
+          traveler.passportNumber && traveler.passportExpiry && traveler.nationality
         );
-      case 3: // Flight Info
-        return enabledSteps.flights ? (flightInfo.seatClass && flightInfo.mealPreference) : true;
-      case 4: // Hotel Info
-        return enabledSteps.hotel ? !!hotelInfo.roomType : true;
-      case 5: // Payment Info
-        return paymentInfo.cardNumber && paymentInfo.cardholderName && 
-               paymentInfo.expiryDate && paymentInfo.cvv && paymentInfo.billingAddress;
+      case 2: // Flight Upgrades
+        return true; // Optional step
+      case 3: // Hotel Upgrades
+        return true; // Optional step
+      case 4: // Payment Info
+        return !!(paymentInfo.cardNumber && paymentInfo.cardholderName && 
+                 paymentInfo.expiryDate && paymentInfo.cvv && paymentInfo.billingAddress);
+      case 5: // Contact Info
+        return !!(contactInfo.email && contactInfo.phone && contactInfo.address);
       default:
-        return true;
+        return false;
     }
   };
 
   const nextStep = () => {
-    if (!validateStep(activeStep)) {
-      Alert.alert('Incomplete Information', 'Please fill in all required fields before continuing.');
-      return;
+    if (validateStep(activeStep)) {
+      setActiveStep(activeStep + 1);
+    } else {
+      Alert.alert('Validation Error', 'Please fill in all required fields');
     }
-    // Determine the next enabled step
-    let next = activeStep + 1;
-    while (next <= 6) {
-      const isEnabled = (next === 3 && enabledSteps.flights) || (next === 4 && enabledSteps.hotel) || next === 1 || next === 2 || next === 5 || next === 6;
-      if (isEnabled) break;
-      next += 1;
-    }
-    setActiveStep(Math.min(next, 6));
   };
 
   const prevStep = () => {
-    let prev = activeStep - 1;
-    while (prev >= 1) {
-      const isEnabled = (prev === 3 && enabledSteps.flights) || (prev === 4 && enabledSteps.hotel) || prev === 1 || prev === 2 || prev === 5 || prev === 6;
-      if (isEnabled) break;
-      prev -= 1;
-    }
-    setActiveStep(Math.max(prev, 1));
+    setActiveStep(activeStep - 1);
   };
 
-  const handleSubmit = () => {
-    if (validateStep(activeStep)) {
-      // Mark the trip as booked in localStorage
-      if (typeof window !== 'undefined') {
-        try {
-          const storedItinerary = sessionStorage.getItem('currentItinerary');
-          if (storedItinerary) {
-            const itineraryData = JSON.parse(storedItinerary);
-            
-            // Find the saved schedule and update its status
-            const existingSchedules = JSON.parse(localStorage.getItem('savedSchedules') || '[]');
-            const updatedSchedules = existingSchedules.map((schedule: any) => {
-              // Match by destination and duration to find the right schedule
-              if (schedule.destination === itineraryData.destination && 
-                  schedule.duration === itineraryData.duration) {
-                return {
-                  ...schedule,
-                  status: 'booked',
-                  checkoutDate: new Date().toISOString()
-                };
-              }
-              return schedule;
-            });
-            
-            localStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
-            console.log('✅ Trip marked as booked:', itineraryData.destination);
-          }
-        } catch (error) {
-          console.error('Error updating trip status:', error);
-        }
-      }
+  const handleSubmit = async () => {
+    if (!validateStep(activeStep)) {
+      Alert.alert('Validation Error', 'Please fill in all required fields');
+      return;
+    }
 
+    setIsLoading(true);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Create booking request
+      const bookingRequest = {
+        itinerary_id: itinerary?.trip_type || 'unknown',
+        traveler_info: travelers,
+        flight_upgrades: selectedFlightUpgrades,
+        hotel_upgrades: selectedHotelUpgrades,
+        payment_info: paymentInfo,
+        contact_info: contactInfo,
+        total_cost: totalCost,
+        booking_notes: ''
+      };
+
+      // In real app, this would be sent to the backend
+      console.log('Booking request:', bookingRequest);
+
+      // Show success message
       Alert.alert(
-        'Booking Confirmed!',
-        'Your trip has been successfully booked. You will receive a confirmation email shortly.',
+        'Booking Complete! 🎉',
+        'Your travel booking has been confirmed. You will receive a confirmation email shortly.',
         [
           {
-            text: 'OK',
-            onPress: () => {
-              // Clear session storage and navigate to home
-              if (typeof window !== 'undefined') {
-                sessionStorage.removeItem('currentItinerary');
-              }
-              router.push('/(tabs)/');
-            }
+            text: 'View Itinerary',
+            onPress: () => router.push('/(tabs)/explore')
           }
         ]
       );
+
+    } catch (error) {
+      console.error('Booking error:', error);
+      Alert.alert('Error', 'Failed to complete booking. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const formatCardNumber = (text: string) => {
-    const cleaned = text.replace(/\s/g, '');
-    const match = cleaned.match(/^(\d{0,4})(\d{0,4})(\d{0,4})(\d{0,4})$/);
-    if (match) {
-      const parts = [match[1], match[2], match[3], match[4]].filter(Boolean);
-      return parts.join(' ');
-    }
-    return text;
-  };
-
-  const nationalityOptions = [
-    'United States', 'Canada', 'United Kingdom', 'Germany', 'France', 
-    'Australia', 'Netherlands', 'Switzerland', 'Sweden', 'Norway', 'India'
-  ];
-
-  const seatClassOptions = ['Economy', 'Premium Economy', 'Business Class', 'First Class'];
-  const mealOptions = ['Standard', 'Vegetarian', 'Vegan', 'Halal', 'Kosher', 'Gluten-Free'];
-  const roomTypeOptions = ['Standard Room', 'Deluxe Room', 'Suite', 'Executive Suite', 'Presidential Suite'];
-
-  const formatExpiryDate = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length >= 2) {
-      return cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4);
-    }
-    return cleaned;
-  };
-
-  const handleDateSelect = (date: string) => {
-    const updatedTravelers = [...travelers];
-    updatedTravelers[currentTravelerIndex] = {
-      ...updatedTravelers[currentTravelerIndex],
-      [currentDateField]: date
-    };
-    setTravelers(updatedTravelers);
-    setShowDatePicker(false);
-    setTempDateInput('');
-  };
-
-  const confirmDateInput = () => {
-    if (tempDateInput.trim()) {
-      handleDateSelect(tempDateInput);
-    }
-  };
-
-  const openDatePicker = (field: string, travelerIndex: number) => {
-    setCurrentDateField(field);
-    setCurrentTravelerIndex(travelerIndex);
-    setTempDateInput('');
-    setShowDatePicker(true);
-  };
-
-  const handleNationalitySelect = (nationality: string) => {
-    const updatedTravelers = [...travelers];
-    updatedTravelers[currentTravelerIndex] = {
-      ...updatedTravelers[currentTravelerIndex],
-      nationality
-    };
-    setTravelers(updatedTravelers);
-    setShowNationalityPicker(false);
-  };
-
-
-
-  const openNationalityPicker = (travelerIndex: number) => {
-    setCurrentTravelerIndex(travelerIndex);
-    setShowNationalityPicker(true);
   };
 
   const renderStepIndicator = () => (
     <View style={styles.stepIndicator}>
-      {[1, 2, 3, 4, 5, 6].map((step) => (
+      {[1, 2, 3, 4, 5].map(step => (
         <View key={step} style={styles.stepContainer}>
           <View style={[
-            styles.stepCircle,
-            step <= activeStep ? styles.activeStep : styles.inactiveStep,
-            (step === 3 && !enabledSteps.flights) && styles.disabledStep,
-            (step === 4 && !enabledSteps.hotel) && styles.disabledStep
+            styles.stepCircle, 
+            activeStep >= step ? styles.stepActive : styles.stepInactive
           ]}>
             <Text style={[
-              styles.stepNumber,
-              step <= activeStep ? styles.activeStepText : styles.inactiveStepText,
-              (step === 3 && !enabledSteps.flights) && styles.disabledStepText,
-              (step === 4 && !enabledSteps.hotel) && styles.disabledStepText
+              styles.stepNumber, 
+              activeStep >= step ? styles.stepNumberActive : styles.stepNumberInactive
             ]}>
               {step}
             </Text>
           </View>
           <Text style={[
-            styles.stepLabel,
-            step <= activeStep ? styles.activeStepText : styles.inactiveStepText,
-            (step === 3 && !enabledSteps.flights) && styles.disabledStepText,
-            (step === 4 && !enabledSteps.hotel) && styles.disabledStepText
+            styles.stepLabel, 
+            activeStep >= step ? styles.stepLabelActive : styles.stepLabelInactive
           ]}>
-            {step === 1 ? 'Contact' : step === 2 ? 'Travelers' : step === 3 ? 'Flights' : step === 4 ? 'Hotels' : step === 5 ? 'Payment' : 'Confirm'}
+            {step === 1 ? 'Travelers' : 
+             step === 2 ? 'Flights' : 
+             step === 3 ? 'Hotels' : 
+             step === 4 ? 'Payment' : 'Contact'}
           </Text>
         </View>
       ))}
     </View>
   );
 
-  const renderContactInfo = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Contact Information</Text>
-      <TextInput
-        style={[
-          styles.input,
-          validationErrors.email?.length > 0 && styles.inputError,
-          contactInfo.email.length > 0 && validationErrors.email?.length === 0 && styles.inputSuccess
-        ]}
-        placeholder="Email Address"
-        placeholderTextColor="#666"
-        value={contactInfo.email}
-        onChangeText={(text) => updateContactInfo('email', text)}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      {validationErrors.email?.map((error, index) => (
-        <Text key={index} style={styles.errorText}>{error}</Text>
-      ))}
-      
-      <TextInput
-        style={[
-          styles.input,
-          validationErrors.phone?.length > 0 && styles.inputError,
-          contactInfo.phone.length > 0 && validationErrors.phone?.length === 0 && styles.inputSuccess
-        ]}
-        placeholder="Phone Number"
-        placeholderTextColor="#666"
-        value={contactInfo.phone}
-        onChangeText={(text) => updateContactInfo('phone', text)}
-        keyboardType="phone-pad"
-      />
-      {validationErrors.phone?.map((error, index) => (
-        <Text key={index} style={styles.errorText}>{error}</Text>
-      ))}
-      <TextInput
-        style={styles.input}
-        placeholder="Emergency Contact"
-        placeholderTextColor="#666"
-        value={contactInfo.emergencyContact}
-        onChangeText={(text) => updateContactInfo('emergencyContact', text)}
-      />
-    </View>
-  );
-
   const renderTravelerInfo = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Traveler Information</Text>
-        <TouchableOpacity style={styles.addButton} onPress={addTraveler}>
-          <Text style={styles.addButtonText}>+ Add Traveler</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Traveler Information</Text>
+      <Text style={styles.stepSubtitle}>Enter details for all travelers</Text>
       
       {travelers.map((traveler, index) => (
         <View key={index} style={styles.travelerCard}>
           <View style={styles.travelerHeader}>
-            <Text style={styles.travelerTitle}>Traveler {index + 1}</Text>
+            <Text style={styles.travelerNumber}>Traveler {index + 1}</Text>
             {travelers.length > 1 && (
-              <TouchableOpacity onPress={() => removeTraveler(index)}>
-                <Text style={styles.removeButton}>Remove</Text>
+              <TouchableOpacity 
+                style={styles.removeTravelerButton}
+                onPress={() => removeTraveler(index)}
+              >
+                <Text style={styles.removeTravelerText}>Remove</Text>
               </TouchableOpacity>
             )}
           </View>
           
-          <View style={styles.row}>
-            <TextInput
-              style={[styles.input, styles.halfInput]}
-              placeholder="First Name"
-              placeholderTextColor="#666"
-              value={traveler.firstName}
-              onChangeText={(text) => updateTraveler(index, 'firstName', text)}
-            />
-            <TextInput
-              style={[styles.input, styles.halfInput]}
-              placeholder="Last Name"
-              placeholderTextColor="#666"
-              value={traveler.lastName}
-              onChangeText={(text) => updateTraveler(index, 'lastName', text)}
-            />
+          <View style={styles.inputRow}>
+            <View style={styles.inputHalf}>
+              <Text style={styles.inputLabel}>First Name *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={traveler.firstName}
+                onChangeText={(value) => updateTraveler(index, 'firstName', value)}
+                placeholder="First Name"
+              />
+            </View>
+            <View style={styles.inputHalf}>
+              <Text style={styles.inputLabel}>Last Name *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={traveler.lastName}
+                onChangeText={(value) => updateTraveler(index, 'lastName', value)}
+                placeholder="Last Name"
+              />
+            </View>
           </View>
           
-          <TouchableOpacity
-            style={styles.input}
-            onPress={() => openDatePicker('dateOfBirth', index)}
-          >
-            <Text style={traveler.dateOfBirth ? styles.inputText : styles.placeholderText}>
-              {traveler.dateOfBirth || 'Date of Birth (MM/DD/YYYY)'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.inputRow}>
+            <View style={styles.inputHalf}>
+              <Text style={styles.inputLabel}>Date of Birth *</Text>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => {
+                  setCurrentDateField('dateOfBirth');
+                  setCurrentTravelerIndex(index);
+                  setShowDatePicker(true);
+                }}
+              >
+                <Text style={traveler.dateOfBirth ? styles.dateInputText : styles.dateInputPlaceholder}>
+                  {traveler.dateOfBirth || 'MM/DD/YYYY'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.inputHalf}>
+              <Text style={styles.inputLabel}>Nationality *</Text>
+              <TouchableOpacity
+                style={styles.pickerInput}
+                onPress={() => {
+                  setCurrentTravelerIndex(index);
+                  setShowNationalityPicker(true);
+                }}
+              >
+                <Text style={traveler.nationality ? styles.pickerInputText : styles.pickerInputPlaceholder}>
+                  {traveler.nationality || 'Select Nationality'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
           
-          <TextInput
-            style={styles.input}
-            placeholder="Passport Number"
-            placeholderTextColor="#666"
-            value={traveler.passportNumber}
-            onChangeText={(text) => updateTraveler(index, 'passportNumber', text)}
-            autoCapitalize="characters"
-          />
-          
-          <View style={styles.row}>
-            <TouchableOpacity
-              style={[styles.input, styles.halfInput]}
-              onPress={() => openDatePicker('passportExpiry', index)}
-            >
-              <Text style={traveler.passportExpiry ? styles.inputText : styles.placeholderText}>
-                {traveler.passportExpiry || 'Passport Expiry'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.input, styles.halfInput]}
-              onPress={() => openNationalityPicker(index)}
-            >
-              <Text style={traveler.nationality ? styles.inputText : styles.placeholderText}>
-                {traveler.nationality || 'Nationality'}
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.inputRow}>
+            <View style={styles.inputHalf}>
+              <Text style={styles.inputLabel}>Passport Number *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={traveler.passportNumber}
+                onChangeText={(value) => updateTraveler(index, 'passportNumber', value)}
+                placeholder="Passport Number"
+              />
+            </View>
+            <View style={styles.inputHalf}>
+              <Text style={styles.inputLabel}>Passport Expiry *</Text>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => {
+                  setCurrentDateField('passportExpiry');
+                  setCurrentTravelerIndex(index);
+                  setShowDatePicker(true);
+                }}
+              >
+                <Text style={traveler.passportExpiry ? styles.dateInputText : styles.dateInputPlaceholder}>
+                  {traveler.passportExpiry || 'MM/DD/YYYY'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       ))}
+      
+      <TouchableOpacity style={styles.addTravelerButton} onPress={addTraveler}>
+        <Text style={styles.addTravelerText}>+ Add Another Traveler</Text>
+      </TouchableOpacity>
     </View>
   );
 
-  const renderFlightInfo = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Flight Preferences</Text>
+  const renderFlightUpgrades = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Flight Upgrades & Add-ons</Text>
+      <Text style={styles.stepSubtitle}>Enhance your flight experience with premium options</Text>
       
-      <View style={styles.flightCard}>
-        <Text style={styles.flightTitle}>Flight Preferences</Text>
-        
-        <View style={styles.row}>
-          <Text style={styles.flightLabel}>Seat Class:</Text>
-          <TouchableOpacity
-            style={styles.dropdownButton}
-            onPress={() => setShowSeatClassPicker(true)}
-          >
-            <Text style={flightInfo.seatClass ? styles.dropdownText : styles.placeholderText}>
-              {flightInfo.seatClass || 'Select Seat Class'}
+      {itinerary?.flights?.map((flight, flightIndex) => (
+        <View key={flightIndex} style={styles.flightCard}>
+          <View style={styles.flightHeader}>
+            <Text style={styles.flightRoute}>
+              {flight.departure} → {flight.departure.includes('Airport') ? 'Destination' : 'Arrival'}
             </Text>
-          </TouchableOpacity>
-        </View>
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Preferred Seat Number (e.g., 12A)"
-          placeholderTextColor="#666"
-          value={flightInfo.seatNumber}
-          onChangeText={(text) => setFlightInfo({...flightInfo, seatNumber: text})}
-        />
-        
-        <View style={styles.row}>
-          <Text style={styles.flightLabel}>Meal Preference:</Text>
-          <TouchableOpacity
-            style={styles.dropdownButton}
-            onPress={() => setShowMealPicker(true)}
-          >
-            <Text style={flightInfo.mealPreference ? styles.dropdownText : styles.placeholderText}>
-              {flightInfo.mealPreference || 'Select Meal'}
+            <Text style={styles.flightDetails}>
+              {flight.airline} {flight.flight} • {flight.time}
             </Text>
-          </TouchableOpacity>
+          </View>
+          
+          <View style={styles.upgradesContainer}>
+            {mockFlightUpgrades.map(upgrade => (
+              <TouchableOpacity
+                key={upgrade.id}
+                style={[
+                  styles.upgradeOption,
+                  selectedFlightUpgrades.some(s => 
+                    s.flight_id === flight.flight && s.upgrades.includes(upgrade.id)
+                  ) && styles.upgradeSelected
+                ]}
+                onPress={() => toggleFlightUpgrade(flight.flight, upgrade.id)}
+              >
+                <View style={styles.upgradeInfo}>
+                  <Text style={styles.upgradeName}>{upgrade.name}</Text>
+                  <Text style={styles.upgradeDescription}>{upgrade.description}</Text>
+                  <Text style={styles.upgradeCategory}>{upgrade.category}</Text>
+                </View>
+                <View style={styles.upgradePrice}>
+                  <Text style={styles.upgradePriceText}>${upgrade.price}</Text>
+                  <View style={[
+                    styles.upgradeCheckbox,
+                    selectedFlightUpgrades.some(s => 
+                      s.flight_id === flight.flight && s.upgrades.includes(upgrade.id)
+                    ) && styles.upgradeCheckboxSelected
+                  ]}>
+                    <Text style={styles.upgradeCheckmark}>✓</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-        
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Special Assistance Requirements (optional)"
-          placeholderTextColor="#666"
-          value={flightInfo.specialAssistance}
-          onChangeText={(text) => setFlightInfo({...flightInfo, specialAssistance: text})}
-          multiline
-          numberOfLines={3}
-        />
+      ))}
+      
+      <View style={styles.skipSection}>
+        <Text style={styles.skipText}>No upgrades needed? You can skip this step</Text>
       </View>
     </View>
   );
 
-  const renderHotelInfo = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Hotel Preferences</Text>
+  const renderHotelUpgrades = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Hotel Upgrades & Amenities</Text>
+      <Text style={styles.stepSubtitle}>Customize your hotel stay with premium options</Text>
       
-      <View style={styles.hotelCard}>
-        <Text style={styles.hotelTitle}>Hotel Preferences</Text>
-        
-        <View style={styles.row}>
-          <Text style={styles.hotelLabel}>Room Type:</Text>
-          <TouchableOpacity
-            style={styles.dropdownButton}
-            onPress={() => setShowRoomTypePicker(true)}
-          >
-            <Text style={hotelInfo.roomType ? styles.dropdownText : styles.placeholderText}>
-              {hotelInfo.roomType || 'Select Room Type'}
+      {itinerary?.trip_type === 'single_city' ? (
+        <View style={styles.hotelCard}>
+          <View style={styles.hotelHeader}>
+            <Text style={styles.hotelName}>{itinerary.hotel.name}</Text>
+            <Text style={styles.hotelDetails}>
+              {itinerary.hotel.room_type} • {itinerary.hotel.total_nights} nights
             </Text>
-          </TouchableOpacity>
+          </View>
+          
+          <View style={styles.upgradesContainer}>
+            {mockHotelUpgrades.map(upgrade => (
+              <TouchableOpacity
+                key={upgrade.id}
+                style={[
+                  styles.upgradeOption,
+                  selectedHotelUpgrades.some(s => 
+                    s.hotel_id === itinerary.hotel.name && s.upgrades.includes(upgrade.id)
+                  ) && styles.upgradeSelected
+                ]}
+                onPress={() => toggleHotelUpgrade(itinerary.hotel.name, upgrade.id)}
+              >
+                <View style={styles.upgradeInfo}>
+                  <Text style={styles.upgradeName}>{upgrade.name}</Text>
+                  <Text style={styles.upgradeDescription}>{upgrade.description}</Text>
+                  <Text style={styles.upgradeCategory}>{upgrade.category}</Text>
+                </View>
+                <View style={styles.upgradePrice}>
+                  <Text style={styles.upgradePriceText}>${upgrade.price}</Text>
+                  <View style={[
+                    styles.upgradeCheckbox,
+                    selectedHotelUpgrades.some(s => 
+                      s.hotel_id === itinerary.hotel.name && s.upgrades.includes(upgrade.id)
+                    ) && styles.upgradeCheckboxSelected
+                  ]}>
+                    <Text style={styles.upgradeCheckmark}>✓</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Preferred Room Number (optional)"
-          placeholderTextColor="#666"
-          value={hotelInfo.roomNumber}
-          onChangeText={(text) => setHotelInfo({...hotelInfo, roomNumber: text})}
-        />
-        
-        <View style={styles.checkboxRow}>
-          <TouchableOpacity
-            style={[styles.checkbox, hotelInfo.breakfastIncluded && styles.checkboxChecked]}
-            onPress={() => setHotelInfo({...hotelInfo, breakfastIncluded: !hotelInfo.breakfastIncluded})}
-          >
-            {hotelInfo.breakfastIncluded && <Text style={styles.checkboxText}>✓</Text>}
-          </TouchableOpacity>
-          <Text style={styles.checkboxLabel}>Breakfast Included</Text>
+      ) : (
+        <View style={styles.multiHotelSection}>
+          {itinerary?.hotels?.map((hotel, hotelIndex) => (
+            <View key={hotelIndex} style={styles.hotelCard}>
+              <View style={styles.hotelHeader}>
+                <Text style={styles.hotelName}>{hotel.name}</Text>
+                <Text style={styles.hotelDetails}>
+                  {hotel.city} • {hotel.room_type} • {hotel.total_nights} nights
+                </Text>
+              </View>
+              
+              <View style={styles.upgradesContainer}>
+                {mockHotelUpgrades.map(upgrade => (
+                  <TouchableOpacity
+                    key={upgrade.id}
+                    style={[
+                      styles.upgradeOption,
+                      selectedHotelUpgrades.some(s => 
+                        s.hotel_id === hotel.name && s.upgrades.includes(upgrade.id)
+                      ) && styles.upgradeSelected
+                    ]}
+                    onPress={() => toggleHotelUpgrade(hotel.name, upgrade.id)}
+                  >
+                    <View style={styles.upgradeInfo}>
+                      <Text style={styles.upgradeName}>{upgrade.name}</Text>
+                      <Text style={styles.upgradeDescription}>{upgrade.description}</Text>
+                      <Text style={styles.upgradeCategory}>{upgrade.category}</Text>
+                    </View>
+                    <View style={styles.upgradePrice}>
+                      <Text style={styles.upgradePriceText}>${upgrade.price}</Text>
+                      <View style={[
+                        styles.upgradeCheckbox,
+                        selectedHotelUpgrades.some(s => 
+                          s.hotel_id === hotel.name && s.upgrades.includes(upgrade.id)
+                        ) && styles.upgradeCheckboxSelected
+                      ]}>
+                        <Text style={styles.upgradeCheckmark}>✓</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
         </View>
-        
-        <View style={styles.checkboxRow}>
-          <TouchableOpacity
-            style={[styles.checkbox, hotelInfo.lateCheckout && styles.checkboxChecked]}
-            onPress={() => setHotelInfo({...hotelInfo, lateCheckout: !hotelInfo.lateCheckout})}
-          >
-            {hotelInfo.lateCheckout && <Text style={styles.checkboxText}>✓</Text>}
-          </TouchableOpacity>
-          <Text style={styles.checkboxLabel}>Late Checkout (2 PM)</Text>
-        </View>
-        
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Special Requests (optional)"
-          placeholderTextColor="#666"
-          value={hotelInfo.specialRequests}
-          onChangeText={(text) => setHotelInfo({...hotelInfo, specialRequests: text})}
-          multiline
-          numberOfLines={3}
-        />
+      )}
+      
+      <View style={styles.skipSection}>
+        <Text style={styles.skipText}>No upgrades needed? You can skip this step</Text>
       </View>
     </View>
   );
 
   const renderPaymentInfo = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Payment Information</Text>
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Payment Information</Text>
+      <Text style={styles.stepSubtitle}>Secure payment processing</Text>
       
-      <TextInput
-        style={[
-          styles.input,
-          validationErrors.cardNumber?.length > 0 && styles.inputError,
-          paymentInfo.cardNumber.length > 0 && validationErrors.cardNumber?.length === 0 && styles.inputSuccess
-        ]}
-        placeholder="Card Number"
-        placeholderTextColor="#666"
-        value={paymentInfo.cardNumber}
-        onChangeText={(text) => updatePaymentInfo('cardNumber', text)}
-        keyboardType="numeric"
-        maxLength={19}
-      />
-      {validationErrors.cardNumber?.map((error, index) => (
-        <Text key={index} style={styles.errorText}>{error}</Text>
-      ))}
-      
-      <TextInput
-        style={[
-          styles.input,
-          validationErrors.cardholderName?.length > 0 && styles.inputError,
-          paymentInfo.cardholderName.length > 0 && validationErrors.cardholderName?.length === 0 && styles.inputSuccess
-        ]}
-        placeholder="Cardholder Name"
-        placeholderTextColor="#666"
-        value={paymentInfo.cardholderName}
-        onChangeText={(text) => updatePaymentInfo('cardholderName', text)}
-        autoCapitalize="words"
-      />
-      {validationErrors.cardholderName?.map((error, index) => (
-        <Text key={index} style={styles.errorText}>{error}</Text>
-      ))}
-      
-      <View style={styles.row}>
-        <View style={styles.halfInput}>
-          <TextInput
-            style={[
-              styles.input,
-              validationErrors.expiryDate?.length > 0 && styles.inputError,
-              paymentInfo.expiryDate.length > 0 && validationErrors.expiryDate?.length === 0 && styles.inputSuccess
-            ]}
-            placeholder="Expiry Date (MM/YY)"
-            placeholderTextColor="#666"
-            value={paymentInfo.expiryDate}
-            onChangeText={(text) => updatePaymentInfo('expiryDate', text)}
-            keyboardType="numeric"
-            maxLength={5}
-          />
-          {validationErrors.expiryDate?.map((error, index) => (
-            <Text key={index} style={styles.errorText}>{error}</Text>
-          ))}
+      <View style={styles.paymentCard}>
+        <Text style={styles.inputLabel}>Card Number *</Text>
+        <TextInput
+          style={styles.textInput}
+          value={paymentInfo.cardNumber}
+          onChangeText={(value) => setPaymentInfo({...paymentInfo, cardNumber: value})}
+          placeholder="1234 5678 9012 3456"
+          keyboardType="numeric"
+          maxLength={19}
+        />
+        
+        <View style={styles.inputRow}>
+          <View style={styles.inputHalf}>
+            <Text style={styles.inputLabel}>Cardholder Name *</Text>
+            <TextInput
+              style={styles.textInput}
+              value={paymentInfo.cardholderName}
+              onChangeText={(value) => setPaymentInfo({...paymentInfo, cardholderName: value})}
+              placeholder="John Doe"
+            />
+          </View>
+          <View style={styles.inputHalf}>
+            <Text style={styles.inputLabel}>Expiry Date *</Text>
+            <TextInput
+              style={styles.textInput}
+              value={paymentInfo.expiryDate}
+              onChangeText={(value) => setPaymentInfo({...paymentInfo, expiryDate: value})}
+              placeholder="MM/YY"
+              maxLength={5}
+            />
+          </View>
         </View>
         
-        <View style={styles.halfInput}>
-          <TextInput
-            style={[
-              styles.input,
-              validationErrors.cvv?.length > 0 && styles.inputError,
-              paymentInfo.cvv.length > 0 && validationErrors.cvv?.length === 0 && styles.inputSuccess
-            ]}
-            placeholder="CVV"
-            placeholderTextColor="#666"
-            value={paymentInfo.cvv}
-            onChangeText={(text) => updatePaymentInfo('cvv', text)}
-            keyboardType="numeric"
-            maxLength={4}
+        <View style={styles.inputRow}>
+          <View style={styles.inputHalf}>
+            <Text style={styles.inputLabel}>CVV *</Text>
+            <TextInput
+              style={styles.textInput}
+              value={paymentInfo.cvv}
+              onChangeText={(value) => setPaymentInfo({...paymentInfo, cvv: value})}
+              placeholder="123"
+              keyboardType="numeric"
+              maxLength={4}
+            />
+          </View>
+          <View style={styles.inputHalf}>
+            <Text style={styles.inputLabel}>Billing Address *</Text>
+            <TextInput
+              style={styles.textInput}
+              value={paymentInfo.billingAddress}
+              onChangeText={(value) => setPaymentInfo({...paymentInfo, billingAddress: value})}
+              placeholder="123 Main St, City, State"
+            />
+          </View>
+        </View>
+        
+        <View style={styles.savePaymentRow}>
+          <Switch
+            value={paymentInfo.savePayment}
+            onValueChange={(value) => setPaymentInfo({...paymentInfo, savePayment: value})}
+            trackColor={{ false: '#767577', true: '#81b0ff' }}
+            thumbColor={paymentInfo.savePayment ? '#f5dd4b' : '#f4f3f4'}
           />
-          {validationErrors.cvv?.map((error, index) => (
-            <Text key={index} style={styles.errorText}>{error}</Text>
-          ))}
+          <Text style={styles.savePaymentText}>Save payment method for future use</Text>
         </View>
       </View>
-      
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        placeholder="Billing Address"
-        placeholderTextColor="#666"
-        value={paymentInfo.billingAddress}
-        onChangeText={(text) => updatePaymentInfo('billingAddress', text)}
-        multiline
-        numberOfLines={3}
-      />
     </View>
   );
 
-  const renderTripSummary = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Trip Summary</Text>
+  const renderContactInfo = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Contact Information</Text>
+      <Text style={styles.stepSubtitle}>How we can reach you about your booking</Text>
       
-      {itinerary && (
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>{itinerary.destination}</Text>
-          <Text style={styles.summarySubtitle}>{itinerary.duration} • {itinerary.description}</Text>
-          
-          <View style={styles.summaryDetails}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Flights:</Text>
-              <Text style={styles.summaryValue}>
-                ${Array.isArray(itinerary.flights) ? itinerary.flights.reduce((sum, flight) => sum + (flight.price || 0), 0) : 0}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Hotel:</Text>
-              <Text style={styles.summaryValue}>
-                ${(itinerary.hotel?.price || 0) * (itinerary.hotel?.total_nights || 1)}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Activities:</Text>
-              <Text style={styles.summaryValue}>
-                ${itinerary.schedule?.reduce((sum, day) => 
-                  sum + (day.activities?.reduce((daySum, activity) => daySum + (activity.price || 0), 0) || 0), 0
-                ) || 0}
-              </Text>
-            </View>
-            <View style={[styles.summaryRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Total:</Text>
-              <Text style={styles.totalValue}>${itinerary.total_cost}</Text>
-            </View>
-          </View>
-        </View>
-      )}
+      <View style={styles.contactCard}>
+        <Text style={styles.inputLabel}>Email Address *</Text>
+        <TextInput
+          style={styles.textInput}
+          value={contactInfo.email}
+          onChangeText={(value) => setContactInfo({...contactInfo, email: value})}
+          placeholder="your.email@example.com"
+          keyboardType="email-address"
+        />
+        
+        <Text style={styles.inputLabel}>Phone Number *</Text>
+        <TextInput
+          style={styles.textInput}
+          value={contactInfo.phone}
+          onChangeText={(value) => setContactInfo({...contactInfo, phone: value})}
+          placeholder="+1 (555) 123-4567"
+          keyboardType="phone-pad"
+        />
+        
+        <Text style={styles.inputLabel}>Address *</Text>
+        <TextInput
+          style={styles.textInput}
+          value={contactInfo.address}
+          onChangeText={(value) => setContactInfo({...contactInfo, address: value})}
+          placeholder="123 Main Street, City, State, ZIP"
+          multiline
+          numberOfLines={3}
+        />
+        
+                 <View style={styles.emergencySection}>
+           <Text style={styles.emergencyTitle}>Emergency Contact (Optional)</Text>
+           <TextInput
+             style={styles.textInput}
+             value={contactInfo.emergencyContact?.name || ''}
+             onChangeText={(value) => setContactInfo({
+               ...contactInfo, 
+               emergencyContact: { 
+                 name: value, 
+                 phone: contactInfo.emergencyContact?.phone || '', 
+                 relationship: contactInfo.emergencyContact?.relationship || '' 
+               }
+             })}
+             placeholder="Emergency Contact Name"
+           />
+           <TextInput
+             style={styles.textInput}
+             value={contactInfo.emergencyContact?.phone || ''}
+             onChangeText={(value) => setContactInfo({
+               ...contactInfo, 
+               emergencyContact: { 
+                 name: contactInfo.emergencyContact?.name || '', 
+                 phone: value, 
+                 relationship: contactInfo.emergencyContact?.relationship || '' 
+               }
+             })}
+             placeholder="Emergency Contact Phone"
+             keyboardType="phone-pad"
+           />
+           <TextInput
+             style={styles.textInput}
+             value={contactInfo.emergencyContact?.relationship || ''}
+             onChangeText={(value) => setContactInfo({
+               ...contactInfo, 
+               emergencyContact: { 
+                 name: contactInfo.emergencyContact?.name || '', 
+                 phone: contactInfo.emergencyContact?.phone || '', 
+                 relationship: value 
+               }
+             })}
+             placeholder="Relationship (e.g., Spouse, Parent)"
+           />
+         </View>
+      </View>
     </View>
   );
 
   const renderStepContent = () => {
     switch (activeStep) {
       case 1:
-        return renderContactInfo();
-      case 2:
         return renderTravelerInfo();
+      case 2:
+        return renderFlightUpgrades();
       case 3:
-        return enabledSteps.flights ? renderFlightInfo() : null;
+        return renderHotelUpgrades();
       case 4:
-        return enabledSteps.hotel ? renderHotelInfo() : null;
-      case 5:
         return renderPaymentInfo();
-      case 6:
-        return renderTripSummary();
+      case 5:
+        return renderContactInfo();
       default:
         return null;
     }
   };
 
+  const confirmDateInput = () => {
+    if (tempDateInput) {
+      updateTraveler(currentTravelerIndex, currentDateField as keyof TravelerInfo, tempDateInput);
+      setShowDatePicker(false);
+      setTempDateInput('');
+    }
+  };
+
+  const handleNationalitySelect = (nationality: string) => {
+    updateTraveler(currentTravelerIndex, 'nationality', nationality);
+    setShowNationalityPicker(false);
+  };
+
+  if (!itinerary) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.push('/')}>
+            <Text style={styles.backButton}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Checkout</Text>
+          <View style={{ width: 50 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading itinerary...</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <>
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/')}>
+          <TouchableOpacity onPress={() => router.push('/')}>
             <Text style={styles.backButton}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Checkout</Text>
@@ -815,21 +859,38 @@ export default function CheckoutScreen() {
         </ScrollView>
 
         <View style={styles.footer}>
-          {activeStep > 1 && (
-            <TouchableOpacity style={styles.secondaryButton} onPress={prevStep}>
-              <Text style={styles.secondaryButtonText}>Previous</Text>
-            </TouchableOpacity>
-          )}
+          <View style={styles.totalSection}>
+            <Text style={styles.totalLabel}>Total Cost:</Text>
+            <Text style={styles.totalAmount}>${totalCost.toFixed(2)}</Text>
+          </View>
           
-                  {activeStep < 6 ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={nextStep}>
-            <Text style={styles.primaryButtonText}>Continue</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
-            <Text style={styles.primaryButtonText}>Confirm Booking</Text>
-          </TouchableOpacity>
-        )}
+          <View style={styles.buttonRow}>
+            {activeStep > 1 && (
+              <TouchableOpacity style={styles.secondaryButton} onPress={prevStep}>
+                <Text style={styles.secondaryButtonText}>Previous</Text>
+              </TouchableOpacity>
+            )}
+            
+            {activeStep < 5 ? (
+              <TouchableOpacity 
+                style={styles.primaryButton} 
+                onPress={nextStep}
+                disabled={!validateStep(activeStep)}
+              >
+                <Text style={styles.primaryButtonText}>Continue</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={styles.primaryButton} 
+                onPress={handleSubmit}
+                disabled={!validateStep(activeStep) || isLoading}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {isLoading ? 'Processing...' : 'Confirm Booking'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
 
@@ -890,96 +951,6 @@ export default function CheckoutScreen() {
               ))}
             </ScrollView>
             <TouchableOpacity style={styles.modalButton} onPress={() => setShowNationalityPicker(false)}>
-              <Text style={styles.modalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Seat Class Picker Modal */}
-      <Modal
-        visible={showSeatClassPicker}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Seat Class</Text>
-            <ScrollView style={styles.pickerList}>
-              {seatClassOptions.map((seatClass) => (
-                <TouchableOpacity
-                  key={seatClass}
-                  style={styles.pickerItem}
-                  onPress={() => {
-                    setFlightInfo({...flightInfo, seatClass});
-                    setShowSeatClassPicker(false);
-                  }}
-                >
-                  <Text style={styles.pickerItemText}>{seatClass}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity style={styles.modalButton} onPress={() => setShowSeatClassPicker(false)}>
-              <Text style={styles.modalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Meal Preference Picker Modal */}
-      <Modal
-        visible={showMealPicker}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Meal Preference</Text>
-            <ScrollView style={styles.pickerList}>
-              {mealOptions.map((meal) => (
-                <TouchableOpacity
-                  key={meal}
-                  style={styles.pickerItem}
-                  onPress={() => {
-                    setFlightInfo({...flightInfo, mealPreference: meal});
-                    setShowMealPicker(false);
-                  }}
-                >
-                  <Text style={styles.pickerItemText}>{meal}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity style={styles.modalButton} onPress={() => setShowMealPicker(false)}>
-              <Text style={styles.modalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Room Type Picker Modal */}
-      <Modal
-        visible={showRoomTypePicker}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Room Type</Text>
-            <ScrollView style={styles.pickerList}>
-              {roomTypeOptions.map((roomType) => (
-                <TouchableOpacity
-                  key={roomType}
-                  style={styles.pickerItem}
-                  onPress={() => {
-                    setHotelInfo({...hotelInfo, roomType});
-                    setShowRoomTypePicker(false);
-                  }}
-                >
-                  <Text style={styles.pickerItemText}>{roomType}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity style={styles.modalButton} onPress={() => setShowRoomTypePicker(false)}>
               <Text style={styles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -1397,4 +1368,63 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
+  stepContent: {
+    marginBottom: 30,
+  },
+  stepTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 10,
+  },
+  stepSubtitle: {
+    fontSize: 16,
+    color: '#999',
+    marginBottom: 20,
+  },
+  travelerCard: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  travelerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  travelerNumber: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'white',
+  },
+  removeTravelerButton: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  removeTravelerText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  inputHalf: {
+    flex: 1,
+    marginRight: 10,
+  },
+  inputLabel: {
+    fontSize: 16,
+    color: '#ccc',
+    marginBottom: 8,
+  },
+
 }); 
