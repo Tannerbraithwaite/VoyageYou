@@ -872,6 +872,10 @@ export default function HomeScreen() {
   };
 
   const handleCheckout = () => {
+    // Store the current itinerary in sessionStorage for checkout
+    if (typeof window !== 'undefined' && currentItinerary) {
+      sessionStorage.setItem('selectedItinerary', JSON.stringify(currentItinerary));
+    }
     router.push('/checkout');
   };
 

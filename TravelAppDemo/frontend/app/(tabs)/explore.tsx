@@ -171,7 +171,7 @@ export default function ScheduleScreen() {
   const handleCheckout = (schedule: SavedSchedule) => {
     // Store the selected schedule in sessionStorage for checkout
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('currentItinerary', JSON.stringify(schedule.itinerary));
+      sessionStorage.setItem('selectedItinerary', JSON.stringify(schedule.itinerary));
     }
     router.push('/checkout');
   };
