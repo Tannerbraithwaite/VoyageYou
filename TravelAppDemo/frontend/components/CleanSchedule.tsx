@@ -289,15 +289,6 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                               // Combine specific alternatives with relevant ones, prioritizing specific ones
                               const combinedAlternatives = [...specificAlternatives, ...relevantAlternatives.slice(0, 3)];
                               
-                              // Separate bookable alternatives for dedicated section
-                              const bookableAlternatives = allAlternatives.filter((alt: AlternativeActivity) =>
-                                alt.type === 'bookable' &&
-                                alt.name !== activity.name &&
-                                !schedule.some(day =>
-                                  day.activities.some(act => act.name === alt.name)
-                                )
-                              );
-                              
                               console.log('🔍 Checking alternatives for activity:', {
                                 activity: activity,
                                 activityName: activity.name,
@@ -362,7 +353,61 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                                         </Text>
                                       </TouchableOpacity>
                                     )}
-                                
+                                  </View>
+                                </View>
+                              ) : null;
+                            })()}
+                            
+                            {/* Bookable Activities Section */}
+                            {(() => {
+                              // Get bookable alternatives for this activity
+                              const allAlternatives = Object.values(alternativeActivities).flat();
+                              const bookableAlternatives = allAlternatives.filter((alt: AlternativeActivity) =>
+                                alt.type === 'bookable' &&
+                                alt.name !== activity.name &&
+                                !schedule.some(day =>
+                                  day.activities.some(act => act.name === alt.name)
+                                )
+                              );
+                              
+                              return bookableAlternatives.length > 0 ? (
+                                <View style={styles.bookableSection}>
+                                  <Text style={styles.bookableSectionTitle}>🎫 Bookable Activities Available</Text>
+                                  <Text style={styles.bookableSectionSubtitle}>
+                                    These are real bookable experiences you can reserve
+                                  </Text>
+                                  <View style={styles.bookableAlternativesList}>
+                                    {bookableAlternatives.map((bookable: AlternativeActivity, bookableIndex) => (
+                                      <TouchableOpacity
+                                        key={bookableIndex}
+                                        style={styles.bookableAlternativeItem}
+                                        onPress={() => {
+                                          console.log('🎫 Adding bookable activity:', bookable);
+                                          
+                                          // Add the bookable activity to the schedule
+                                          const newActivity = {
+                                            time: activity.time,
+                                            name: bookable.name,
+                                            price: bookable.price,
+                                            type: 'bookable' as const,
+                                            description: bookable.description || ''
+                                          };
+                                          
+                                          onActivityEditSave(dayIndex, activityIndex, newActivity);
+                                        }}
+                                      >
+                                        <View style={styles.bookableAlternativeHeader}>
+                                          <Text style={styles.bookableAlternativeName}>{bookable.name}</Text>
+                                          <View style={styles.bookableBadge}>
+                                            <Text style={styles.bookableBadgeText}>🎫</Text>
+                                          </View>
+                                        </View>
+                                        {bookable.description && (
+                                          <Text style={styles.bookableAlternativeDescription}>{bookable.description}</Text>
+                                        )}
+                                        <Text style={styles.bookableAlternativePrice}>${bookable.price}</Text>
+                                      </TouchableOpacity>
+                                    ))}
                                   </View>
                                 </View>
                               ) : null;
