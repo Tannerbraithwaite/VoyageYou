@@ -75,12 +75,55 @@ export default function ScheduleScreen() {
       }
     }
     
-    // SECOND PRIORITY: If not past, then check checkout status
+    // Check if schedule has itinerary dates
+    if (schedule.itinerary && schedule.itinerary.schedule) {
+      const itineraryDates = schedule.itinerary.schedule
+        .map((day: any) => day.date)
+        .filter((date: string) => date && date !== 'Undecided Dates');
+      
+      if (itineraryDates.length > 0) {
+        try {
+          // Find the latest date in the itinerary
+          const latestTripDate = new Date(Math.max(...itineraryDates.map((date: string) => new Date(date).getTime())));
+          
+          if (latestTripDate < now) {
+            return 'past';
+          }
+        } catch (error) {
+          // Error parsing itinerary dates
+        }
+      }
+    }
+    
+    // SECOND PRIORITY: Check if this trip has been booked through checkout process
+    // Look for booking confirmation in sessionStorage or check for checkoutDate
     if (schedule.checkoutDate) {
       return 'booked';
-    } else {
-      return 'unbooked';
     }
+    
+    // Check if there's a recent booking for this schedule
+    if (typeof window !== 'undefined') {
+      try {
+        const lastBooking = sessionStorage.getItem('lastBookingConfirmation');
+        if (lastBooking) {
+          const bookingData = JSON.parse(lastBooking);
+          if (bookingData.success && bookingData.booking) {
+            // Check if the booking matches this schedule (by destination or name)
+            const bookingDestination = bookingData.booking.itinerary_summary?.destination;
+            if (bookingDestination && 
+                (schedule.destination === bookingDestination || 
+                 schedule.name.toLowerCase().includes(bookingDestination.toLowerCase()))) {
+              return 'booked';
+            }
+          }
+        }
+      } catch (error) {
+        // Error checking booking data
+      }
+    }
+    
+    // DEFAULT: If not past and not booked, it's unbooked
+    return 'unbooked';
   };
 
   // Load saved schedules from localStorage
@@ -127,8 +170,25 @@ export default function ScheduleScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadSavedSchedules();
+      // Also refresh status to detect any new bookings
+      setTimeout(refreshScheduleStatus, 100);
     }, [])
   );
+
+  // Refresh status when component focuses to detect new bookings
+  const refreshScheduleStatus = () => {
+    if (savedSchedules.length > 0) {
+      const updatedSchedules = savedSchedules.map(schedule => ({
+        ...schedule,
+        status: determineTripStatus(schedule)
+      }));
+      setSavedSchedules(updatedSchedules);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+      }
+    }
+  };
 
   useEffect(() => {
     loadSavedSchedules();
@@ -204,20 +264,7 @@ export default function ScheduleScreen() {
     }
   };
 
-  const handleStatusChange = (scheduleId: string, newStatus: 'unbooked' | 'booked' | 'past') => {
-    const updatedSchedules = savedSchedules.map(schedule => 
-      schedule.id === scheduleId ? { ...schedule, status: newStatus } : schedule
-    );
-    setSavedSchedules(updatedSchedules);
-    
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
-    }
-    
-    if (selectedSchedule?.id === scheduleId) {
-      setSelectedSchedule(updatedSchedules.find(s => s.id === scheduleId) || null);
-    }
-  };
+
 
   const setRating = (key: string, rating: number) => {
     setActivityRatings(prev => {
@@ -294,62 +341,18 @@ export default function ScheduleScreen() {
                     {/* Status description */}
                     <Text style={styles.statusDescription}>
                       {schedule.status === 'unbooked' ? 'Ready to book' : 
-                       schedule.status === 'booked' ? 'Confirmed' : 'Completed'}
+                       schedule.status === 'booked' ? 'Already booked' : 'Trip completed'}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.scheduleActions}>
-                  {/* Only show status change buttons for unbooked trips */}
-                  {schedule.status === 'unbooked' && (
-                    <>
-                      <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => handleStatusChange(schedule.id, 'booked')}
-                      >
-                        <Text style={styles.actionButtonText}>✅ Booked</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => handleStatusChange(schedule.id, 'past')}
-                      >
-                        <Text style={styles.actionButtonText}>📅 Past</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-                  {/* Show status change buttons for booked trips */}
-                  {schedule.status === 'booked' && (
-                    <>
-                      <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => handleStatusChange(schedule.id, 'unbooked')}
-                      >
-                        <Text style={styles.actionButtonText}>⏳ Unbooked</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => handleStatusChange(schedule.id, 'past')}
-                      >
-                        <Text style={styles.actionButtonText}>📅 Past</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-                  {/* Show status change buttons for past trips */}
-                  {schedule.status === 'past' && (
-                    <>
-                      <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => handleStatusChange(schedule.id, 'unbooked')}
-                      >
-                        <Text style={styles.actionButtonText}>⏳ Unbooked</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => handleStatusChange(schedule.id, 'booked')}
-                      >
-                        <Text style={styles.actionButtonText}>✅ Booked</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
+                  {/* Status is automatically determined - no manual editing */}
+                  <View style={styles.statusInfo}>
+                    <Text style={styles.statusInfoText}>
+                      {schedule.status === 'unbooked' ? 'Ready to book' : 
+                       schedule.status === 'booked' ? 'Already booked' : 'Trip completed'}
+                    </Text>
+                  </View>
                 </View>
               </TouchableOpacity>
             ))
@@ -763,6 +766,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#6366f1',
+  },
+  statusInfo: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  statusInfoText: {
+    color: '#999',
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   emptyState: {
     padding: 30,
