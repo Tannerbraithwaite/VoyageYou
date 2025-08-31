@@ -335,7 +335,7 @@ export default function CheckoutScreen() {
         [
           {
             text: 'View Itinerary',
-            onPress: () => router.push('/(tabs)/explore')
+            onPress: () => router.push('/explore')
           }
         ]
       );
@@ -1425,6 +1425,257 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ccc',
     marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: '#333',
+    borderWidth: 1,
+    borderColor: '#555',
+    borderRadius: 8,
+    padding: 12,
+    color: 'white',
+    fontSize: 16,
+  },
+  dateInput: {
+    backgroundColor: '#333',
+    borderWidth: 1,
+    borderColor: '#555',
+    borderRadius: 8,
+    padding: 12,
+    color: 'white',
+    fontSize: 16,
+    width: 150,
+    textAlign: 'center',
+  },
+  dateInputText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  dateInputPlaceholder: {
+    color: '#666',
+    fontSize: 16,
+  },
+  pickerInput: {
+    backgroundColor: '#333',
+    borderWidth: 1,
+    borderColor: '#555',
+    borderRadius: 8,
+    padding: 12,
+    color: 'white',
+    fontSize: 16,
+  },
+  pickerInputText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  pickerInputPlaceholder: {
+    color: '#666',
+    fontSize: 16,
+  },
+  addTravelerButton: {
+    backgroundColor: '#6366f1',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignSelf: 'center',
+    marginTop: 20,
+  },
+  addTravelerText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  flightCard: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  flightHeader: {
+    marginBottom: 16,
+  },
+  flightRoute: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'white',
+  },
+  flightDetails: {
+    fontSize: 14,
+    color: '#999',
+  },
+  upgradesContainer: {
+    marginTop: 10,
+  },
+  upgradeOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 10,
+    backgroundColor: '#2a2a2a',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  upgradeSelected: {
+    borderColor: '#6366f1',
+    borderWidth: 2,
+  },
+  upgradeInfo: {
+    flex: 1,
+  },
+  upgradeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: 4,
+  },
+  upgradeDescription: {
+    fontSize: 13,
+    color: '#ccc',
+    marginBottom: 4,
+  },
+  upgradeCategory: {
+    fontSize: 12,
+    color: '#6366f1',
+    fontWeight: '500',
+  },
+  upgradePrice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  upgradePriceText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6366f1',
+    marginRight: 10,
+  },
+  upgradeCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  upgradeCheckboxSelected: {
+    backgroundColor: '#6366f1',
+  },
+  upgradeCheckmark: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  skipSection: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  skipText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  multiHotelSection: {
+    marginTop: 20,
+  },
+  contactCard: {
+    marginTop: 20,
+  },
+  emergencySection: {
+    marginTop: 20,
+  },
+  emergencyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: 10,
+  },
+  savePaymentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  savePaymentText: {
+    fontSize: 14,
+    color: '#ccc',
+    marginLeft: 10,
+  },
+  totalSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  totalLabel: {
+    fontSize: 18,
+    color: 'white',
+    fontWeight: '700',
+  },
+  totalAmount: {
+    fontSize: 18,
+    color: '#6366f1',
+    fontWeight: '700',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0a0a0a',
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  // Step indicator styles
+  stepActive: {
+    backgroundColor: '#6366f1',
+    borderColor: '#6366f1',
+  },
+  stepInactive: {
+    backgroundColor: '#333',
+    borderColor: '#555',
+  },
+  stepNumberActive: {
+    color: 'white',
+  },
+  stepNumberInactive: {
+    color: '#999',
+  },
+  stepLabelActive: {
+    color: 'white',
+  },
+  stepLabelInactive: {
+    color: '#666',
+  },
+  // Hotel styles
+  hotelHeader: {
+    marginBottom: 16,
+  },
+  hotelName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'white',
+  },
+  hotelDetails: {
+    fontSize: 14,
+    color: '#999',
+  },
+  // Payment card styles
+  paymentCard: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#333',
   },
 
 }); 
