@@ -345,22 +345,23 @@ export const CleanSchedule: React.FC<CleanScheduleProps> = ({
                                         )}
                                       </TouchableOpacity>
                                     ))}
-                                                                    {combinedAlternatives.length > 2 && (
-                                  <TouchableOpacity
-                                    style={styles.alternativesPreviewMoreButton}
-                                    onPress={() => {
-                                      const key = `${dayIndex}-${activityIndex}`;
-                                      setExpandedAlternatives(prev => ({
-                                        ...prev,
-                                        [key]: !prev[key]
-                                      }));
-                                    }}
-                                  >
-                                    <Text style={styles.alternativesPreviewMore}>
-                                      {expandedAlternatives[`${dayIndex}-${activityIndex}`] ? 'Show Less' : `+${combinedAlternatives.length - 2} more`}
-                                    </Text>
-                                  </TouchableOpacity>
-                                )}
+                                    
+                                    {combinedAlternatives.length > 2 && (
+                                      <TouchableOpacity
+                                        style={styles.alternativesPreviewMoreButton}
+                                        onPress={() => {
+                                          const key = `${dayIndex}-${activityIndex}`;
+                                          setExpandedAlternatives(prev => ({
+                                            ...prev,
+                                            [key]: !prev[key]
+                                          }));
+                                        }}
+                                      >
+                                        <Text style={styles.alternativesPreviewMore}>
+                                          {expandedAlternatives[`${dayIndex}-${activityIndex}`] ? 'Show Less' : `+${combinedAlternatives.length - 2} more`}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    )}
                                 
                                 {/* Bookable Activities Section */}
                                 {bookableAlternatives.length > 0 && (

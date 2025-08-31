@@ -1393,17 +1393,7 @@ export default function HomeScreen() {
             </ScrollView>
           </View>
 
-          {/* Automatic Location Detection Status */}
-          {!userLocation && isDetectingLocation && (
-            <View style={styles.locationDetectionContainer}>
-              <View style={styles.locationDetectingContainer}>
-                <ActivityIndicator size="small" color="#007AFF" />
-                <Text style={styles.locationDetectingText}>
-                  🔍 Automatically detecting your location...
-                </Text>
-              </View>
-            </View>
-          )}
+
           
           {/* Current Location Display */}
           {userLocation && (
@@ -2249,16 +2239,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  locationDetectingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1a1a1a',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
+
   currentLocationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
