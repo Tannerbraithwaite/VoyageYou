@@ -58,46 +58,60 @@ export default function ScheduleScreen() {
     setShowDetailsModal(true);
   };
 
+  // Function to get status description text
+  const getStatusDescription = (schedule: any, status: string): string => {
+    if (status === 'unbooked') return 'Ready to book';
+    if (status === 'booked') return 'Already booked';
+    if (status === 'past') {
+      // Check if this past trip was actually booked
+      if (schedule.checkoutDate || 
+          (typeof window !== 'undefined' && sessionStorage.getItem('lastBookingConfirmation'))) {
+        return 'Trip completed (was booked)';
+      }
+      return 'Trip dates have passed';
+    }
+    return 'Ready to book';
+  };
+
   // Function to automatically determine trip status
   const determineTripStatus = (schedule: any): 'unbooked' | 'booked' | 'past' => {
     const now = new Date();
     
-    // FIRST PRIORITY: Check if this trip has been booked through checkout process
-    // Look for booking confirmation in sessionStorage or check for checkoutDate
-    if (schedule.checkoutDate) {
-      // If it was booked, check if trip dates have passed
-      if (schedule.tripEndDate) {
+    // FIRST PRIORITY: Check if trip dates have passed (time takes precedence)
+    if (schedule.tripEndDate) {
+      try {
+        const tripEnd = new Date(schedule.tripEndDate);
+        if (tripEnd < now) {
+          return 'past';
+        }
+      } catch (error) {
+        // Error parsing trip end date
+      }
+    }
+    
+    // Check if schedule has itinerary dates
+    if (schedule.itinerary && schedule.itinerary.schedule) {
+      const itineraryDates = schedule.itinerary.schedule
+        .map((day: any) => day.date)
+        .filter((date: string) => date && date !== 'Undecided Dates');
+      
+      if (itineraryDates.length > 0) {
         try {
-          const tripEnd = new Date(schedule.tripEndDate);
-          if (tripEnd < now) {
-            return 'past'; // Only booked trips can become past
+          // Find the latest date in the itinerary
+          const latestTripDate = new Date(Math.max(...itineraryDates.map((date: string) => new Date(date).getTime())));
+          
+          if (latestTripDate < now) {
+            return 'past';
           }
         } catch (error) {
-          // Error parsing trip end date
+          // Error parsing itinerary dates
         }
       }
-      
-      // Check if schedule has itinerary dates
-      if (schedule.itinerary && schedule.itinerary.schedule) {
-        const itineraryDates = schedule.itinerary.schedule
-          .map((day: any) => day.date)
-          .filter((date: string) => date && date !== 'Undecided Dates');
-        
-        if (itineraryDates.length > 0) {
-          try {
-            // Find the latest date in the itinerary
-            const latestTripDate = new Date(Math.max(...itineraryDates.map((date: string) => new Date(date).getTime())));
-            
-            if (latestTripDate < now) {
-              return 'past'; // Only booked trips can become past
-            }
-          } catch (error) {
-            // Error parsing itinerary dates
-          }
-        }
-      }
-      
-      // If booked but not past, it's still booked
+    }
+    
+    // SECOND PRIORITY: Check if this trip has been booked through checkout process
+    // Look for booking confirmation in sessionStorage or check for checkoutDate
+    if (schedule.checkoutDate) {
       return 'booked';
     }
     
@@ -113,40 +127,6 @@ export default function ScheduleScreen() {
             if (bookingDestination && 
                 (schedule.destination === bookingDestination || 
                  schedule.name.toLowerCase().includes(bookingDestination.toLowerCase()))) {
-              
-              // If it was booked, check if trip dates have passed
-              if (schedule.tripEndDate) {
-                try {
-                  const tripEnd = new Date(schedule.tripEndDate);
-                  if (tripEnd < now) {
-                    return 'past'; // Only booked trips can become past
-                  }
-                } catch (error) {
-                  // Error parsing trip end date
-                }
-              }
-              
-              // Check if schedule has itinerary dates
-              if (schedule.itinerary && schedule.itinerary.schedule) {
-                const itineraryDates = schedule.itinerary.schedule
-                  .map((day: any) => day.date)
-                  .filter((date: string) => date && date !== 'Undecided Dates');
-                
-                if (itineraryDates.length > 0) {
-                  try {
-                    // Find the latest date in the itinerary
-                    const latestTripDate = new Date(Math.max(...itineraryDates.map((date: string) => new Date(date).getTime())));
-                    
-                    if (latestTripDate < now) {
-                      return 'past'; // Only booked trips can become past
-                    }
-                  } catch (error) {
-                    // Error parsing itinerary dates
-                  }
-                }
-              }
-              
-              // If booked but not past, it's still booked
               return 'booked';
             }
           }
@@ -156,7 +136,7 @@ export default function ScheduleScreen() {
       }
     }
     
-    // DEFAULT: If not booked, it's unbooked (even if dates have passed)
+    // DEFAULT: If not past and not booked, it's unbooked
     return 'unbooked';
   };
 
@@ -374,8 +354,7 @@ export default function ScheduleScreen() {
                     </View>
                     {/* Status description */}
                     <Text style={styles.statusDescription}>
-                      {schedule.status === 'unbooked' ? 'Ready to book' : 
-                       schedule.status === 'booked' ? 'Already booked' : 'Trip completed (was booked)'}
+                      {getStatusDescription(schedule, schedule.status)}
                     </Text>
                   </View>
                 </View>
@@ -383,8 +362,7 @@ export default function ScheduleScreen() {
                   {/* Status is automatically determined - no manual editing */}
                   <View style={styles.statusInfo}>
                     <Text style={styles.statusInfoText}>
-                      {schedule.status === 'unbooked' ? 'Ready to book' : 
-                       schedule.status === 'booked' ? 'Already booked' : 'Trip completed (was booked)'}
+                      {getStatusDescription(schedule, schedule.status)}
                     </Text>
                   </View>
                 </View>
@@ -659,7 +637,7 @@ export default function ScheduleScreen() {
                     
                     {selectedSchedule.status === 'past' && (
                       <View style={[styles.checkoutButton, { backgroundColor: '#6b7280' }]}>
-                        <Text style={styles.checkoutButtonText}>📅 Trip Completed (was booked)</Text>
+                        <Text style={styles.checkoutButtonText}>📅 {getStatusDescription(selectedSchedule, 'past')}</Text>
                       </View>
                     )}
                   </View>
