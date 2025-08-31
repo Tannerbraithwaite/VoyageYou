@@ -1844,32 +1844,16 @@ export default function HomeScreen() {
                     }
                   </Text>
                   <CleanSchedule
-                    schedule={(() => {
-                      const mappedSchedule = mapItineraryToSchedule(currentItinerary.trip_type === 'multi_city' 
-                        ? schedule.filter(day => day.city === currentItinerary.hotels?.[0]?.city)
-                        : schedule
-                      );
-                      console.log('🔍 Schedule being passed to CleanSchedule (1):', {
-                        originalSchedule: schedule,
-                        mappedSchedule: mappedSchedule,
-                        firstActivity: mappedSchedule[0]?.activities[0],
-                        firstActivityKeys: mappedSchedule[0]?.activities[0] ? Object.keys(mappedSchedule[0].activities[0]) : []
-                      });
-                      return mappedSchedule;
-                    })()}
+                    schedule={mapItineraryToSchedule(currentItinerary.trip_type === 'multi_city' 
+                      ? schedule.filter(day => day.city === currentItinerary.hotels?.[0]?.city)
+                      : schedule
+                    )}
                     onEditActivity={handleActivityEdit}
                     onDeleteActivity={handleDeleteActivity}
                     onAddActivity={handleAddActivity}
                     totalActivities={totalActivities}
                     editingActivity={editingActivity}
-                    alternativeActivities={(() => {
-                      console.log('🔍 Passing alternativeActivities to CleanSchedule (1):', {
-                        alternativeActivities,
-                        keys: Object.keys(alternativeActivities),
-                        totalAlternatives: Object.values(alternativeActivities).flat().length
-                      });
-                      return alternativeActivities;
-                    })()}
+                    alternativeActivities={alternativeActivities}
                     onActivityEditSave={handleActivityEditSave}
                     onActivityEditCancel={handleActivityEditCancel}
                     formatPrice={formatPrice}
@@ -1889,14 +1873,7 @@ export default function HomeScreen() {
                       onAddActivity={handleAddActivity}
                       totalActivities={totalActivities}
                       editingActivity={editingActivity}
-                      alternativeActivities={(() => {
-                        console.log('🔍 Passing alternativeActivities to CleanSchedule (2):', {
-                          alternativeActivities,
-                          key: Object.keys(alternativeActivities),
-                          totalAlternatives: Object.values(alternativeActivities).flat().length
-                        });
-                        return alternativeActivities;
-                      })()}
+                      alternativeActivities={alternativeActivities}
                       onActivityEditSave={handleActivityEditSave}
                       onActivityEditCancel={handleActivityEditCancel}
                       formatPrice={formatPrice}
