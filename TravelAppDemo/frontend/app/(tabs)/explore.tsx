@@ -242,15 +242,7 @@ export default function ScheduleScreen() {
     );
   };
 
-  // Helper function to check if a schedule is compatible with current format
-  const isScheduleCompatible = (schedule: any): boolean => {
-    return schedule && 
-           schedule.schedule && 
-           Array.isArray(schedule.schedule) &&
-           schedule.schedule.every((day: any) => 
-             day && day.activities && Array.isArray(day.activities)
-           );
-  };
+
 
   return (
     <View style={styles.container}>
@@ -265,17 +257,6 @@ export default function ScheduleScreen() {
 
         {/* Schedules List */}
         <View style={styles.schedulesSection}>
-          {/* Warning for incompatible schedules */}
-          {savedSchedules.some(schedule => !isScheduleCompatible(schedule)) && (
-            <GlassCard style={styles.warningCard}>
-              <Text style={styles.warningIcon}>⚠️</Text>
-              <Text style={styles.warningTitle}>Some schedules may be incompatible</Text>
-              <Text style={styles.warningText}>
-                Some of your saved schedules are from an older version and may not display correctly. 
-                You can delete them and create new ones using the improved travel planning system.
-              </Text>
-            </GlassCard>
-          )}
           
           {savedSchedules.length === 0 ? (
             <GlassCard style={styles.emptyState}>
@@ -1137,28 +1118,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'white',
   },
-  warningCard: {
-    backgroundColor: '#1f2937',
-    borderColor: '#f59e0b',
-    borderWidth: 1,
-    marginBottom: 16,
-  },
-  warningIcon: {
-    fontSize: 24,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  warningTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#f59e0b',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#ccc',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+
 });
