@@ -6,7 +6,7 @@ import authService from '@/services/auth';
 
 export default function ProfileScreen() {
   const [name, setName] = useState('Sarah Johnson');
-  const [email, setEmail] = useState('');
+
   const [phone, setPhone] = useState('');
   const [birthdate, setBirthdate] = useState('');
   const [age, setAge] = useState<number | null>(null);
@@ -65,7 +65,6 @@ export default function ProfileScreen() {
         
         // Update state with loaded data
         setName(profileData.name || 'Sarah Johnson');
-        setEmail(profileData.email || '');
         setPhone(profileData.phone || '');
         setBirthdate(profileData.birthdate || '');
         setAge(profileData.birthdate ? calculateAge(profileData.birthdate) : null);
@@ -239,7 +238,6 @@ export default function ProfileScreen() {
         },
         body: JSON.stringify({
           name,
-          email,
           phone,
           birthdate: birthdate ? new Date(birthdate).toISOString().split('T')[0] : null,
           gender,
@@ -340,18 +338,7 @@ export default function ProfileScreen() {
           />
         </View>
         
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            style={styles.textInput}
-            placeholder="Enter your email"
-            placeholderTextColor="#666"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
+
         
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Phone Number</Text>
@@ -619,7 +606,7 @@ export default function ProfileScreen() {
           We never share your data with third parties without your explicit consent.
         </Text>
         <Text style={styles.privacySubtext}>
-          Required fields: Name, Email{'\n'}
+          Required fields: Name{'\n'}
           Optional fields: All other information helps us provide better travel suggestions
         </Text>
       </GlassCard>

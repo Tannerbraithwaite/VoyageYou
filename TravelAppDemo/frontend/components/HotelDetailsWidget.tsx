@@ -47,6 +47,7 @@ export default function HotelDetailsWidget({ hotel, onClose }: HotelDetailsWidge
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'information-circle' },
+    { id: 'images', label: 'Photos', icon: 'images' },
     { id: 'amenities', label: 'Amenities', icon: 'star' },
     { id: 'location', label: 'Location', icon: 'location' },
     { id: 'policies', label: 'Policies', icon: 'document-text' },
@@ -89,6 +90,34 @@ export default function HotelDetailsWidget({ hotel, onClose }: HotelDetailsWidge
                   <Text style={styles.detailValue}>{hotel.total_nights}</Text>
                 </View>
               </View>
+            </View>
+          </View>
+        );
+
+      case 'images':
+        return (
+          <View style={styles.tabContent}>
+            <View style={styles.imagesSection}>
+              <Text style={styles.sectionTitle}>Hotel Photos</Text>
+              {hotel.images && hotel.images.length > 0 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
+                  {hotel.images.map((image, index) => (
+                    <View key={index} style={styles.imageCard}>
+                      <Image
+                        source={{ uri: image.url }}
+                        style={styles.hotelImage}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.imageCaption}>
+                        <Text style={styles.imageCaptionText}>{image.caption}</Text>
+                        <Text style={styles.imageCategoryText}>{image.category}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              ) : (
+                <Text style={styles.noDataText}>No photos available for this hotel</Text>
+              )}
             </View>
           </View>
         );
@@ -450,5 +479,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     lineHeight: 20,
+  },
+  imagesSection: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  imagesContainer: {
+    marginBottom: 16,
+  },
+  imageCard: {
+    marginRight: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f8f9fa',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  hotelImage: {
+    width: 280,
+    height: 200,
+    borderRadius: 12,
+  },
+  imageCaption: {
+    padding: 12,
+    backgroundColor: 'white',
+  },
+  imageCaptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  imageCategoryText: {
+    fontSize: 12,
+    color: '#666',
+    textTransform: 'capitalize',
   },
 });

@@ -515,14 +515,14 @@ export default function HomeScreen() {
           }
         }
         
-        // If no location in profile, check if we should auto-detect
-        const shouldAutoDetect = await Location.getForegroundPermissionsAsync();
-        if (shouldAutoDetect.status === 'granted') {
-          // User has already granted permission, offer to detect
-          console.log('Location permission already granted, offering auto-detection');
-        }
+        // If no location in profile, automatically try to detect it
+        console.log('No location in profile, attempting automatic detection...');
+        await detectUserLocation();
       } catch (error) {
         console.error('Error loading user location:', error);
+        // If profile loading fails, still try to auto-detect
+        console.log('Profile loading failed, attempting automatic detection...');
+        await detectUserLocation();
       }
     };
     
@@ -1393,26 +1393,15 @@ export default function HomeScreen() {
             </ScrollView>
           </View>
 
-          {/* Location Detection Button */}
-          {!userLocation && (
+          {/* Automatic Location Detection Status */}
+          {!userLocation && isDetectingLocation && (
             <View style={styles.locationDetectionContainer}>
-              <TouchableOpacity 
-                style={[styles.locationButton, isDetectingLocation && styles.locationButtonDisabled]}
-                onPress={detectUserLocation}
-                disabled={isDetectingLocation}
-              >
-                <Ionicons 
-                  name="location" 
-                  size={20} 
-                  color={isDetectingLocation ? "#999" : "#007AFF"} 
-                />
-                <Text style={styles.locationButtonText}>
-                  {isDetectingLocation ? 'Detecting...' : '📍 Detect My Location'}
+              <View style={styles.locationDetectingContainer}>
+                <ActivityIndicator size="small" color="#007AFF" />
+                <Text style={styles.locationDetectingText}>
+                  🔍 Automatically detecting your location...
                 </Text>
-              </TouchableOpacity>
-              <Text style={styles.locationHintText}>
-                Enable location to get better flight planning from your current city
-              </Text>
+              </View>
             </View>
           )}
           
@@ -2259,6 +2248,16 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 14,
     textAlign: 'center',
+  },
+  locationDetectingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1a1a1a',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginBottom: 8,
   },
   currentLocationContainer: {
     flexDirection: 'row',
