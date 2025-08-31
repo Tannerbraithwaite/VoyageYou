@@ -329,24 +329,43 @@ export default function CheckoutScreen() {
         booking_notes: ''
       };
 
-      // In real app, this would be sent to the backend
+      // Send booking request to backend
       console.log('Booking request:', bookingRequest);
+      
+      const response = await fetch('http://localhost:8000/api/bookings/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingRequest)
+      });
 
-      // Show success message
-      Alert.alert(
-        'Booking Complete! 🎉',
-        'Your travel booking has been confirmed. You will receive a confirmation email shortly.',
-        [
-          {
-            text: 'View Itinerary',
-            onPress: () => router.push('/explore')
-          }
-        ]
-      );
+      const result = await response.json();
+
+      // Store booking confirmation for the confirmation page
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('lastBookingConfirmation', JSON.stringify(result));
+      }
+
+      // Navigate to confirmation page
+      router.push('/booking-confirmation');
 
     } catch (error) {
       console.error('Booking error:', error);
-      Alert.alert('Error', 'Failed to complete booking. Please try again.');
+      
+      // Store error information for the confirmation page
+      const errorResult = {
+        success: false,
+        message: 'Failed to complete booking. Please try again or contact support.',
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+      
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('lastBookingConfirmation', JSON.stringify(errorResult));
+      }
+      
+      // Navigate to confirmation page to show error
+      router.push('/booking-confirmation');
     } finally {
       setIsLoading(false);
     }
