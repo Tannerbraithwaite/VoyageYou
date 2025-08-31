@@ -168,6 +168,10 @@ export default function CheckoutScreen() {
   }, []);
 
   useEffect(() => {
+    loadItinerary();
+  }, []);
+
+  useEffect(() => {
     calculateTotalCost();
   }, [itinerary, selectedFlightUpgrades, selectedHotelUpgrades]);
 
