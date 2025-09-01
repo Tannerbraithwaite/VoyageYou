@@ -372,6 +372,12 @@ class FlightInfo(BaseModel):
     price: float
     type: str  # "outbound" or "return"
     alternatives: Optional[List['FlightInfo']] = []
+    
+    @validator('type')
+    def validate_type(cls, v):
+        if v not in ['outbound', 'return']:
+            raise ValueError('Type must be either "outbound" or "return"')
+        return v
 
 class HotelInfo(BaseModel):
     city: Optional[str] = None  # For multi-city trips

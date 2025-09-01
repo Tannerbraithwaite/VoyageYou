@@ -1,15 +1,6 @@
 import sys
 import os
 import asyncio
-print(f"[DEBUG] Python executable: {sys.executable}")
-try:
-    import openai
-    print(f"[DEBUG] OpenAI version: {openai.__version__}")
-    print(f"[DEBUG] Has ChatCompletion: {hasattr(openai, 'ChatCompletion')}")
-    print(f"[DEBUG] Has OpenAI class: {hasattr(openai, 'OpenAI')}")
-except Exception as e:
-    print(f"[DEBUG] OpenAI import error: {e}")
-print(f"[DEBUG] Current working directory: {os.getcwd()}")
 
 from fastapi import FastAPI, Depends, HTTPException, status, Response, Request
 from datetime import datetime
@@ -76,7 +67,7 @@ app.add_middleware(SlowAPIMiddleware)
 
 # Create database tables on startup
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
     create_tables()
 
 # Health and readiness endpoints

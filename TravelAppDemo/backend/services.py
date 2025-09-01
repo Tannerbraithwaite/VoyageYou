@@ -1,5 +1,5 @@
 import os
-print(f"[DEBUG] Loading services.py from: {os.path.abspath(__file__)}")
+
 
 from sqlalchemy.orm import Session
 from database import User, UserInterest, Trip, Activity, Flight, Hotel, Recommendation, ChatMessage

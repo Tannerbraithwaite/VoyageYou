@@ -10,10 +10,10 @@ from logging_config import get_oauth_logger
 
 # OAuth Configuration
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "1082045743309-dmv4ea2mp7vig54cbuybvfh6vb4s26i6.apps.googleusercontent.com")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret")
-APPLE_CLIENT_ID = os.getenv("APPLE_CLIENT_ID", "your-apple-client-id")
-APPLE_TEAM_ID = os.getenv("APPLE_TEAM_ID", "your-apple-team-id")
-APPLE_KEY_ID = os.getenv("APPLE_KEY_ID", "your-apple-key-id")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+APPLE_CLIENT_ID = os.getenv("APPLE_CLIENT_ID")
+APPLE_TEAM_ID = os.getenv("APPLE_TEAM_ID")
+APPLE_KEY_ID = os.getenv("APPLE_KEY_ID")
 
 class OAuthService:
     def __init__(self):
@@ -103,7 +103,7 @@ class OAuthService:
         user = User(
             name=oauth_user.get("name", "OAuth User"),
             email=email,
-            password=AuthService.get_password_hash("oauth-user-password"),  # Placeholder password
+            password=AuthService.get_password_hash(secrets.token_urlsafe(32)),  # Generate secure random password
             travel_style="solo",  # Default values
             budget_range="moderate",
             additional_info=f"Signed up via {oauth_user.get('provider', 'OAuth')}"
