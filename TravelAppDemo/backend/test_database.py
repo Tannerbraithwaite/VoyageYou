@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database import Base, get_db
-from models import User, ChatMessage
+from database import User, ChatMessage
 from unittest.mock import MagicMock
 
 # Test database

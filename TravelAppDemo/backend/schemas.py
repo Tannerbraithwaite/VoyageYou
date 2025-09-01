@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, validator, root_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from typing import List, Optional, ForwardRef, Union
 from datetime import datetime, timedelta, date
 import re
@@ -43,7 +43,8 @@ class ResetPasswordRequest(BaseModel):
     token: str = Field(..., min_length=1, description="Reset token required")
     new_password: str = Field(..., min_length=8, max_length=128, description="Strong password required")
     
-    @validator('new_password')
+    @field_validator('new_password')
+    @classmethod
     def validate_new_password(cls, v):
         if not re.search(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', v):
             raise ValueError('Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character (@$!%*?&)')
@@ -63,13 +64,15 @@ class SignupRequest(BaseModel):
     email: EmailStr = Field(..., description="Valid email address required")
     password: str = Field(..., min_length=8, max_length=128, description="Strong password required")
     
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def validate_password(cls, v):
         if not re.search(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$', v):
             raise ValueError('Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character (@$!%*?&)')
         return v
     
-    @validator('name')
+    @field_validator('name')
+    @classmethod
     def validate_name(cls, v):
         if not v.strip():
             raise ValueError('Name cannot be empty')
@@ -373,7 +376,8 @@ class FlightInfo(BaseModel):
     type: str  # "outbound" or "return"
     alternatives: Optional[List['FlightInfo']] = []
     
-    @validator('type')
+    @field_validator('type')
+    @classmethod
     def validate_type(cls, v):
         if v not in ['outbound', 'return']:
             raise ValueError('Type must be either "outbound" or "return"')
@@ -438,7 +442,8 @@ class CreditCardInfo(BaseModel):
     cvv: str = Field(..., pattern=r'^\d{3,4}$', description="3-4 digit CVV")
     billing_address: str = Field(..., min_length=10, max_length=200, description="Complete billing address")
     
-    @validator('card_number')
+    @field_validator('card_number')
+    @classmethod
     def validate_card_number(cls, v):
         # Luhn algorithm for credit card validation
         def luhn_checksum(card_num):
@@ -457,7 +462,8 @@ class CreditCardInfo(BaseModel):
             raise ValueError('Invalid credit card number')
         return cleaned
     
-    @validator('expiry_date')
+    @field_validator('expiry_date')
+    @classmethod
     def validate_expiry_date(cls, v):
         try:
             month, year = v.split('/')
@@ -471,7 +477,8 @@ class CreditCardInfo(BaseModel):
             raise ValueError('Invalid expiry date format. Use MM/YY')
         return v
     
-    @validator('cardholder_name')
+    @field_validator('cardholder_name')
+    @classmethod
     def validate_cardholder_name(cls, v):
         if not re.match(r'^[a-zA-Z\s\-\']+$', v.strip()):
             raise ValueError('Cardholder name can only contain letters, spaces, hyphens, and apostrophes')
@@ -485,13 +492,15 @@ class TravelerInfo(BaseModel):
     passport_expiry: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$', description="YYYY-MM-DD format")
     nationality: str = Field(..., min_length=2, max_length=50, description="Nationality")
     
-    @validator('first_name', 'last_name')
+    @field_validator('first_name', 'last_name')
+    @classmethod
     def validate_names(cls, v):
         if not re.match(r'^[a-zA-Z\s\-\']+$', v.strip()):
             raise ValueError('Names can only contain letters, spaces, hyphens, and apostrophes')
         return v.strip()
     
-    @validator('date_of_birth')
+    @field_validator('date_of_birth')
+    @classmethod
     def validate_date_of_birth(cls, v):
         try:
             birth_date = datetime.strptime(v, '%Y-%m-%d')
@@ -506,7 +515,8 @@ class TravelerInfo(BaseModel):
             raise e
         return v
     
-    @validator('passport_expiry')
+    @field_validator('passport_expiry')
+    @classmethod
     def validate_passport_expiry(cls, v):
         try:
             exp_date = datetime.strptime(v, '%Y-%m-%d')
@@ -518,7 +528,8 @@ class TravelerInfo(BaseModel):
             raise e
         return v
     
-    @validator('passport_number')
+    @field_validator('passport_number')
+    @classmethod
     def validate_passport_number(cls, v):
         cleaned = v.strip().upper()
         if not re.match(r'^[A-Z0-9]+$', cleaned):
@@ -531,7 +542,8 @@ class ContactInfo(BaseModel):
     emergency_contact_name: str = Field(..., min_length=2, max_length=50, description="Emergency contact name")
     emergency_contact_phone: str = Field(..., description="Emergency contact phone")
     
-    @validator('phone', 'emergency_contact_phone')
+    @field_validator('phone', 'emergency_contact_phone')
+    @classmethod
     def validate_phone_numbers(cls, v):
         # Remove common formatting characters
         cleaned = re.sub(r'[\s()-]', '', v)
@@ -539,14 +551,15 @@ class ContactInfo(BaseModel):
             raise ValueError('Please enter a valid phone number')
         return cleaned
     
-    @validator('emergency_contact_name')
+    @field_validator('emergency_contact_name')
+    @classmethod
     def validate_emergency_name(cls, v):
         if not re.match(r'^[a-zA-Z\s\-\']+$', v.strip()):
             raise ValueError('Emergency contact name can only contain letters, spaces, hyphens, and apostrophes')
         return v.strip()
 
 class CheckoutRequest(BaseModel):
-    travelers: List[TravelerInfo] = Field(..., min_items=1, max_items=10, description="Traveler information")
+    travelers: List[TravelerInfo] = Field(..., min_length=1, max_length=10, description="Traveler information")
     payment_info: CreditCardInfo = Field(..., description="Payment information")
     contact_info: ContactInfo = Field(..., description="Contact information")
     itinerary_data: dict = Field(..., description="Trip itinerary data")
