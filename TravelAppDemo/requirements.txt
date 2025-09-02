@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic[email]
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+alembic
+openai
+pytest
+pytest-asyncio
+httpx
+pytest-cov
+slowapi
+reportlab
+weasyprint

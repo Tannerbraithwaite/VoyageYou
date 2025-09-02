@@ -1,0 +1,9 @@
+frontend/
+docs/
+*.log
+*.pid
+start_app.sh
+stop_app.sh
+APP_SCRIPTS_README.md
+TESTING.md
+.gitignore
