@@ -26,7 +26,12 @@ class EmailService:
         self.sender_password = os.getenv('SENDER_PASSWORD', '')
         
         # For testing purposes, we'll use a mock service
-        self.is_test_mode = os.getenv('ENV', 'development') == 'development'
+        # If SMTP credentials are missing, force test mode
+        self.is_test_mode = (
+            os.getenv('ENV', 'development') == 'development' or 
+            not self.sender_password or 
+            not os.getenv('SMTP_USERNAME')
+        )
         
     def generate_verification_token(self) -> str:
         """Generate a secure verification token"""
