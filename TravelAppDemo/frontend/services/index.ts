@@ -84,16 +84,31 @@ export class UserService {
 
   static async register(email: string, password: string, name: string): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+      const url = `${API_BASE_URL}/auth/signup`;
+      console.log('🔍 Register URL:', url);
+      console.log('🔍 API_BASE_URL:', API_BASE_URL);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password, name }),
       });
-      return await response.json();
+      
+      console.log('🔍 Response status:', response.status);
+      console.log('🔍 Response headers:', response.headers);
+      
+      const result = await response.json();
+      console.log('🔍 Response data:', result);
+      return result;
     } catch (error) {
-      console.error('Error registering:', error);
+      console.error('❌ Error registering:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
       throw error;
     }
   }

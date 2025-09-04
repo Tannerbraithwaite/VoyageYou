@@ -8,10 +8,12 @@ const RAILWAY_BACKEND_URL = 'https://travel-app-demo-production.up.railway.app';
 export const getBaseURL = () => {
   // For web development, use localhost
   if (Platform.OS === 'web') {
+    console.log('🌐 Using localhost for web platform');
     return 'http://localhost:8000';
   }
   
   // For mobile development, use Railway backend
+  console.log('📱 Using Railway backend for mobile platform:', RAILWAY_BACKEND_URL);
   return RAILWAY_BACKEND_URL;
 };
 
