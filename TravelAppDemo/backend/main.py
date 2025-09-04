@@ -136,55 +136,77 @@ def login(login_data: LoginRequest, response: Response, db: Session = Depends(ge
 @app.post("/auth/signup", response_model=SignupResponse)
 async def signup(user_data: SignupRequest, db: Session = Depends(get_db)):
     """Create a new user account with email verification"""
-    # Check if user already exists
-    existing_user = UserService.get_user_by_email(db, user_data.email)
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User with this email already exists")
-    
-    # Hash the password
-    hashed_password = AuthService.get_password_hash(user_data.password)
-    
-    # Generate verification token
-    verification_token = email_service.generate_verification_token()
-    verification_expires = email_service.get_verification_expiry()
-    
-    # Create user with verification fields
-    user = User(
-        name=user_data.name,
-        email=user_data.email,
-        password=hashed_password,
-        travel_style="solo",
-        budget_range="moderate",
-        is_verified=False,
-        verification_token=verification_token,
-        verification_expires=verification_expires
-    )
-    
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    
-    # Send verification email
     try:
-        email_sent = await email_service.send_verification_email(
-            user_data.email, 
-            user_data.name, 
-            verification_token
+        logger.info(f"Starting signup process for email: {user_data.email}")
+        
+        # Check if user already exists
+        existing_user = UserService.get_user_by_email(db, user_data.email)
+        if existing_user:
+            logger.warning(f"User already exists: {user_data.email}")
+            raise HTTPException(status_code=400, detail="User with this email already exists")
+        
+        # Hash the password
+        logger.info("Hashing password...")
+        hashed_password = AuthService.get_password_hash(user_data.password)
+        
+        # Generate verification token
+        logger.info("Generating verification token...")
+        verification_token = email_service.generate_verification_token()
+        verification_expires = email_service.get_verification_expiry()
+        
+        # Create user with verification fields
+        logger.info("Creating user in database...")
+        user = User(
+            name=user_data.name,
+            email=user_data.email,
+            password=hashed_password,
+            travel_style="solo",
+            budget_range="moderate",
+            is_verified=False,
+            verification_token=verification_token,
+            verification_expires=verification_expires
         )
         
-        if not email_sent:
-            # Log the error but don't delete the user - they can still verify manually
-            logger.error(f"Failed to send verification email to {user_data.email}, but user created successfully")
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        logger.info(f"User created successfully with ID: {user.id}")
+        
+        # Send verification email
+        logger.info("Attempting to send verification email...")
+        try:
+            email_sent = await email_service.send_verification_email(
+                user_data.email, 
+                user_data.name, 
+                verification_token
+            )
+            
+            if not email_sent:
+                # Log the error but don't delete the user - they can still verify manually
+                logger.error(f"Failed to send verification email to {user_data.email}, but user created successfully")
+            else:
+                logger.info(f"Verification email sent successfully to {user_data.email}")
+        except Exception as e:
+            # Log the error but don't delete the user
+            logger.error(f"Exception sending verification email to {user_data.email}: {str(e)}")
+            email_sent = False
+        
+        logger.info("Signup process completed successfully")
+        return SignupResponse(
+            message="Account created successfully. Please check your email to verify your account.",
+            user_id=user.id,
+            email=user.email
+        )
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
-        # Log the error but don't delete the user
-        logger.error(f"Exception sending verification email to {user_data.email}: {str(e)}")
-        email_sent = False
-    
-    return SignupResponse(
-        message="Account created successfully. Please check your email to verify your account.",
-        user_id=user.id,
-        email=user.email
-    )
+        logger.error(f"Unexpected error during signup: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.get("/auth/verify")
 async def verify_email(token: str, db: Session = Depends(get_db)):

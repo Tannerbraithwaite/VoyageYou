@@ -109,8 +109,17 @@ export default function SignupScreen() {
       console.log('✅ Signup request completed');
       console.log('🔍 Response status:', response.status);
 
-      const data = await response.json();
-      console.log('🔍 Response data:', data);
+      let data;
+      try {
+        data = await response.json();
+        console.log('🔍 Response data:', data);
+      } catch (jsonError) {
+        console.error('Failed to parse JSON response:', jsonError);
+        const textResponse = await response.text();
+        console.log('🔍 Raw response:', textResponse);
+        Alert.alert('Error', `Server error: ${textResponse || 'Unknown error'}`);
+        return;
+      }
 
       if (response.ok) {
         console.log('Signup successful:', data);
@@ -118,7 +127,7 @@ export default function SignupScreen() {
         router.push(`/auth/verify-email?email=${encodeURIComponent(email.trim())}`);
       } else {
         console.error('Signup failed:', data);
-        Alert.alert('Error', data.detail || 'Signup failed. Please try again.');
+        Alert.alert('Error', data.detail || data.message || 'Signup failed. Please try again.');
       }
     } catch (error) {
       console.error('Signup error:', error);
