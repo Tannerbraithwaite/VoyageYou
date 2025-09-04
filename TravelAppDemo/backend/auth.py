@@ -12,7 +12,11 @@ import os
 # Security configuration
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
-    raise RuntimeError("SECRET_KEY is not set. Please configure SECRET_KEY in the environment.")
+    # Generate a fallback secret key for development/testing
+    import secrets
+    SECRET_KEY = secrets.token_urlsafe(32)
+    print(f"⚠️  WARNING: SECRET_KEY not set, using generated fallback: {SECRET_KEY[:10]}...")
+    print("⚠️  For production, set SECRET_KEY environment variable!")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
