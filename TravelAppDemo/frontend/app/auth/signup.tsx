@@ -110,11 +110,20 @@ export default function SignupScreen() {
       console.log('🔍 Response status:', response.status);
 
       let data;
-      try {
-        data = await response.json();
-        console.log('🔍 Response data:', data);
-      } catch (jsonError) {
-        console.error('Failed to parse JSON response:', jsonError);
+      const contentType = response.headers.get('content-type');
+      console.log('🔍 Response content-type:', contentType);
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+          console.log('🔍 Response data:', data);
+        } catch (jsonError) {
+          console.error('Failed to parse JSON response:', jsonError);
+          Alert.alert('Error', 'Invalid response from server. Please try again.');
+          return;
+        }
+      } else {
+        // Handle non-JSON responses (like plain text errors)
         const textResponse = await response.text();
         console.log('🔍 Raw response:', textResponse);
         Alert.alert('Error', `Server error: ${textResponse || 'Unknown error'}`);

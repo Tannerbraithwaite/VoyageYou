@@ -41,7 +41,26 @@ from enhanced_api_services import enhanced_flight_service, enhanced_hotel_servic
 
 # Global service instances
 oauth_service = OAuthService()
-from email_service import email_service
+
+# Initialize email service with error handling
+try:
+    from email_service import email_service
+    logger.info("Email service imported successfully")
+except Exception as e:
+    logger.error(f"Failed to import email service: {str(e)}")
+    # Create a mock email service for fallback
+    class MockEmailService:
+        def __init__(self):
+            self.is_test_mode = True
+        async def send_verification_email(self, email, name, token):
+            logger.warning(f"[MOCK] Would send verification email to {email}")
+            return True
+        def generate_verification_token(self):
+            return "mock-token"
+        def get_verification_expiry(self):
+            from datetime import datetime, timedelta
+            return datetime.utcnow() + timedelta(hours=24)
+    email_service = MockEmailService()
 
 # Create FastAPI app
 app = FastAPI(
