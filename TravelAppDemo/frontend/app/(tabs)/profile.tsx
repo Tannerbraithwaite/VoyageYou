@@ -54,7 +54,7 @@ export default function ProfileScreen() {
       }
       
       // Load user profile
-      const profileResponse = await fetch(`http://localhost:8000/users/${effectiveUserId}`, {
+      const profileResponse = await fetch(`${API_BASE_URL}/users/${effectiveUserId}`, {
         credentials: 'include'
       });
       console.log('Profile load response status:', profileResponse.status);
@@ -78,7 +78,7 @@ export default function ProfileScreen() {
         setAdditionalInfo(profileData.additional_info || '');
         
         // Load user interests
-        const interestsResponse = await fetch(`http://localhost:8000/users/${effectiveUserId}/interests/`, {
+        const interestsResponse = await fetch(`${API_BASE_URL}/users/${effectiveUserId}/interests/`, {
           credentials: 'include'
         });
         console.log('Interests load response status:', interestsResponse.status);
@@ -113,7 +113,7 @@ export default function ProfileScreen() {
       }
       
       // Load user profile to get location
-      const profileResponse = await fetch(`http://localhost:8000/users/${effectiveUserId}`, {
+      const profileResponse = await fetch(`${API_BASE_URL}/users/${effectiveUserId}`, {
         credentials: 'include'
       });
       
@@ -231,7 +231,7 @@ export default function ProfileScreen() {
       
       console.log('Making profile update request...');
       // Update user profile
-      const profileResponse = await fetch(`http://localhost:8000/users/${userId}`, {
+      const profileResponse = await fetch(`${API_BASE_URL}/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -258,7 +258,7 @@ export default function ProfileScreen() {
 
       console.log('Making interests update request...');
       // Update user interests
-      const interestsResponse = await fetch(`http://localhost:8000/users/${userId}/interests/`, {
+      const interestsResponse = await fetch(`${API_BASE_URL}/users/${userId}/interests/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

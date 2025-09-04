@@ -26,7 +26,7 @@ class ExportService {
         email_pdf: isMobile // Email on mobile, download on web
       };
 
-      const response = await fetch('http://localhost:8000/itinerary/export', {
+      const response = await fetch('${API_BASE_URL}/itinerary/export', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

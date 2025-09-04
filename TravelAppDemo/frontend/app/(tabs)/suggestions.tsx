@@ -106,7 +106,7 @@ export default function SuggestionsScreen() {
       const user = await authService.getCurrentUser();
       if (user) {
         // Load initial profile data
-        const profileResponse = await fetch(`http://localhost:8000/users/${user.id}`, {
+        const profileResponse = await fetch(`${API_BASE_URL}/users/${user.id}`, {
           credentials: 'include'
         });
         
@@ -131,7 +131,7 @@ export default function SuggestionsScreen() {
       }
 
       // Fetch user profile data
-      const profileResponse = await fetch(`http://localhost:8000/users/${user.id}`, {
+      const profileResponse = await fetch(`${API_BASE_URL}/users/${user.id}`, {
         credentials: 'include'
       });
       
@@ -142,7 +142,7 @@ export default function SuggestionsScreen() {
       const profileData = await profileResponse.json();
       
       // Fetch user's past trips (completed trips with ratings)
-      const tripsResponse = await fetch(`http://localhost:8000/users/${user.id}/trips/`, {
+      const tripsResponse = await fetch(`${API_BASE_URL}/users/${user.id}/trips/`, {
         credentials: 'include'
       });
       
@@ -157,7 +157,7 @@ export default function SuggestionsScreen() {
       let allActivitiesWithRatings: any[] = [];
       
       for (const trip of completedTrips) {
-        const activitiesResponse = await fetch(`http://localhost:8000/trips/${trip.id}/activities/`, {
+        const activitiesResponse = await fetch(`${API_BASE_URL}/trips/${trip.id}/activities/`, {
           credentials: 'include'
         });
         
@@ -169,7 +169,7 @@ export default function SuggestionsScreen() {
       }
       
       // Fetch user interests
-      const interestsResponse = await fetch(`http://localhost:8000/users/${user.id}/interests/`, {
+      const interestsResponse = await fetch(`${API_BASE_URL}/users/${user.id}/interests/`, {
         credentials: 'include'
       });
       
@@ -244,7 +244,7 @@ Return ONLY the JSON array, no other text.`;
 
       
       // Send to LLM
-      const response = await fetch('http://localhost:8000/chat/', {
+      const response = await fetch('${API_BASE_URL}/chat/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -596,7 +596,7 @@ Return ONLY the JSON array, no other text.`;
       }
 
       // Fetch user profile data
-      const profileResponse = await fetch(`http://localhost:8000/users/${user.id}`, {
+      const profileResponse = await fetch(`${API_BASE_URL}/users/${user.id}`, {
         credentials: 'include'
       });
       
@@ -607,7 +607,7 @@ Return ONLY the JSON array, no other text.`;
       const profileData = await profileResponse.json();
       
       // Fetch user's past trips (completed trips with ratings)
-      const tripsResponse = await fetch(`http://localhost:8000/users/${user.id}/trips/`, {
+      const tripsResponse = await fetch(`${API_BASE_URL}/users/${user.id}/trips/`, {
         credentials: 'include'
       });
       
@@ -622,7 +622,7 @@ Return ONLY the JSON array, no other text.`;
       let allActivitiesWithRatings: any[] = [];
       
       for (const trip of completedTrips) {
-        const activitiesResponse = await fetch(`http://localhost:8000/trips/${trip.id}/activities/`, {
+        const activitiesResponse = await fetch(`${API_BASE_URL}/trips/${trip.id}/activities/`, {
           credentials: 'include'
         });
         
@@ -634,7 +634,7 @@ Return ONLY the JSON array, no other text.`;
       }
       
       // Fetch user interests
-      const interestsResponse = await fetch(`http://localhost:8000/users/${user.id}/interests/`, {
+      const interestsResponse = await fetch(`${API_BASE_URL}/users/${user.id}/interests/`, {
         credentials: 'include'
       });
       
@@ -682,7 +682,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
 
       
       // Send to LLM using the travel profile endpoint
-      const response = await fetch('http://localhost:8000/chat/travel-profile/', {
+      const response = await fetch('${API_BASE_URL}/chat/travel-profile/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -796,7 +796,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
     
     try {
       // Call the LLM directly
-      const response = await fetch('http://localhost:8000/chat/enhanced/', {
+      const response = await fetch('${API_BASE_URL}/chat/enhanced/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -858,7 +858,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
       } else {
         console.error('❌ LLM API error:', response.status);
         // Fallback to regular chat endpoint
-        const fallbackResponse = await fetch('http://localhost:8000/chat/', {
+        const fallbackResponse = await fetch('${API_BASE_URL}/chat/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

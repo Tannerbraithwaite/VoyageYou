@@ -40,7 +40,7 @@ class AuthService {
 
   async login(email: string, password: string, rememberMe: boolean = false): Promise<LoginResponse> {
     try {
-      const response = await fetch('http://localhost:8000/auth/login', {
+      const response = await fetch('${API_BASE_URL}/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ class AuthService {
     additional_info?: string;
   }, rememberMe: boolean = false): Promise<LoginResponse> {
     try {
-      const response = await fetch('http://localhost:8000/auth/signup', {
+      const response = await fetch('${API_BASE_URL}/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ class AuthService {
   async logout(): Promise<void> {
     try {
       // Call logout endpoint to clear server-side cookies
-      await fetch('http://localhost:8000/auth/logout', {
+      await fetch('${API_BASE_URL}/auth/logout', {
         method: 'POST',
         credentials: 'include',
       });
@@ -149,7 +149,7 @@ class AuthService {
 
   async forgotPassword(email: string): Promise<{ message: string }> {
     try {
-      const response = await fetch('http://localhost:8000/auth/forgot-password', {
+      const response = await fetch('${API_BASE_URL}/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
@@ -167,7 +167,7 @@ class AuthService {
 
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     try {
-      const response = await fetch('http://localhost:8000/auth/reset-password', {
+      const response = await fetch('${API_BASE_URL}/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, new_password: newPassword }),
@@ -189,7 +189,7 @@ class AuthService {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/auth/me', {
+      const response = await fetch('${API_BASE_URL}/auth/me', {
         method: 'GET',
         credentials: 'include', // Use cookies instead of Authorization header
       });
@@ -214,7 +214,7 @@ class AuthService {
 
   async refreshAccessToken(): Promise<boolean> {
     try {
-      const response = await fetch('http://localhost:8000/auth/refresh', {
+      const response = await fetch('${API_BASE_URL}/auth/refresh', {
         method: 'POST',
         credentials: 'include', // Use cookies instead of body
       });

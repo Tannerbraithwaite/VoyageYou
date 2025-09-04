@@ -19,7 +19,7 @@ export default function VerifyEmailScreen() {
   const verifyEmail = async (verificationToken: string) => {
     setIsVerifying(true);
     try {
-      const response = await fetch(`http://localhost:8000/auth/verify?token=${verificationToken}`);
+      const response = await fetch(`${API_BASE_URL}/auth/verify?token=${verificationToken}`);
       
       if (response.ok) {
         setVerificationStatus('success');

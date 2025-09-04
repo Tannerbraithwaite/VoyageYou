@@ -332,7 +332,7 @@ export default function CheckoutScreen() {
       // Send booking request to backend
       console.log('Booking request:', bookingRequest);
       
-      const response = await fetch('http://localhost:8000/api/bookings/create', {
+      const response = await fetch('${API_BASE_URL}/api/bookings/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
