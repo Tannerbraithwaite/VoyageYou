@@ -64,6 +64,8 @@ class EmailService:
                 logger.info(f"📧 [MOCK] Verification token: {verification_token}")
                 return True
             
+            logger.info(f"📧 [REAL] Attempting to send verification email to {recipient_email}")
+            
             subject = "🔐 Verify Your TravelApp Account"
             
             # Create verification URL
@@ -750,10 +752,15 @@ class EmailService:
             # Create secure connection and send email
             context = ssl.create_default_context()
             
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+            logger.info(f"📧 Connecting to SMTP server: {self.smtp_server}:{self.smtp_port}")
+            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10) as server:
+                logger.info("📧 Starting TLS...")
                 server.starttls(context=context)
+                logger.info("📧 Logging in...")
                 server.login(self.sender_email, self.sender_password)
+                logger.info("📧 Sending email...")
                 server.sendmail(self.sender_email, recipient_email, message.as_string())
+                logger.info("📧 Email sent successfully!")
             
             return True
             

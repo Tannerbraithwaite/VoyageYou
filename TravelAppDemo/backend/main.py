@@ -165,17 +165,20 @@ async def signup(user_data: SignupRequest, db: Session = Depends(get_db)):
     db.refresh(user)
     
     # Send verification email
-    email_sent = await email_service.send_verification_email(
-        user_data.email, 
-        user_data.name, 
-        verification_token
-    )
-    
-    if not email_sent:
-        # If email fails, delete the user
-        db.delete(user)
-        db.commit()
-        raise HTTPException(status_code=500, detail="Failed to send verification email")
+    try:
+        email_sent = await email_service.send_verification_email(
+            user_data.email, 
+            user_data.name, 
+            verification_token
+        )
+        
+        if not email_sent:
+            # Log the error but don't delete the user - they can still verify manually
+            logger.error(f"Failed to send verification email to {user_data.email}, but user created successfully")
+    except Exception as e:
+        # Log the error but don't delete the user
+        logger.error(f"Exception sending verification email to {user_data.email}: {str(e)}")
+        email_sent = False
     
     return SignupResponse(
         message="Account created successfully. Please check your email to verify your account.",
