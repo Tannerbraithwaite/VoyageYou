@@ -1,6 +1,5 @@
 // Service layer for API calls and external integrations
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '../config/api';
 
 // Export auth service
 export { default as authService } from './auth';

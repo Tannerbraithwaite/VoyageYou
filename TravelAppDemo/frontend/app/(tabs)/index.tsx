@@ -10,6 +10,7 @@ import DetailsModal from '@/components/DetailsModal';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDateForChat, calculateTripDuration } from '@/utils';
 import exportService from '@/services/export';
+import { API_BASE_URL } from '@/config/api';
 
 
 interface Activity {
@@ -118,7 +119,7 @@ export default function HomeScreen() {
         }
         
         // Call enhanced flight API to get detailed information
-        const response = await fetch('http://localhost:8000/api/flights/enhanced', {
+        const response = await fetch(`${API_BASE_URL}/api/flights/enhanced`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -161,7 +162,7 @@ export default function HomeScreen() {
         }
         
         // Call enhanced hotel API to get detailed information
-        const response = await fetch('http://localhost:8000/api/hotels/enhanced', {
+        const response = await fetch(`${API_BASE_URL}/api/hotels/enhanced`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -250,7 +251,7 @@ export default function HomeScreen() {
         
         // Update user profile with detected location
         try {
-          const response = await fetch(`http://localhost:8000/users/${userId}/test`, {
+          const response = await fetch(`${API_BASE_URL}/users/${userId}/test`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -467,7 +468,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const testBackendConnection = async () => {
       try {
-        const response = await fetch('http://localhost:8000/');
+        const response = await fetch(`${API_BASE_URL}/`);
         if (response.ok) {
           // Backend connection successful
         } else {
@@ -503,7 +504,7 @@ export default function HomeScreen() {
     const loadUserLocation = async () => {
       try {
         // First try to get location from user profile
-        const response = await fetch(`http://localhost:8000/users/${userId}/profile`, {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/profile`, {
           credentials: 'include'
         });
         
@@ -640,8 +641,8 @@ export default function HomeScreen() {
   const sendMessageToAPI = async (messageToSend: string) => {
 
     try {
-      // Try tools endpoint first (enhanced with function calling and question handling)
-      const response = await fetch('http://localhost:8000/chat/tools/test', {
+      // Use LangChain endpoint for better conversation context and structured output
+      const response = await fetch(`${API_BASE_URL}/chat/langchain/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -669,13 +670,23 @@ export default function HomeScreen() {
           return;
         }
         
+        // Check if we have a valid itinerary response
+        if (!result || (!result.destination && !result.destinations)) {
+          // Handle case where response doesn't contain expected itinerary data
+          const errorMessage = "Sorry, I encountered an error processing your request. Please try again.";
+          setResponse(errorMessage);
+          setChatHistory(prev => [...prev, { message: errorMessage, isBot: true }]);
+          setIsLoading(false);
+          return;
+        }
+        
         // Store the itinerary data
         setCurrentItinerary(result);
         
         // If we used a detected location for trip planning, update the user's profile
         if (userLocation && !result.location_updated) {
           try {
-            const profileUpdateResponse = await fetch(`http://localhost:8000/users/${userId}/test`, {
+            const profileUpdateResponse = await fetch(`${API_BASE_URL}/users/${userId}/test`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
@@ -698,26 +709,30 @@ export default function HomeScreen() {
         
         if (result.trip_type === 'multi_city') {
           // Multi-city trip
-          const destinations = result.destinations.join(' and ');
-          const hotelCount = result.hotels.length;
-          const flightCount = result.flights.length;
+          const destinations = result.destinations ? result.destinations.join(' and ') : 'your destinations';
+          const hotelCount = result.hotels ? result.hotels.length : 0;
+          const flightCount = result.flights ? result.flights.length : 0;
+          const totalCost = result.total_cost || 'TBD';
           
           botResponse = `I've created a detailed multi-city itinerary for your trip to ${destinations}!\n\n` +
-            `📅 Duration: ${result.duration}\n` +
+            `📅 Duration: ${result.duration || 'TBD'}\n` +
             `✈️ Flights: ${flightCount} flights with multiple options\n` +
             `🏨 Hotels: ${hotelCount} hotels with alternatives to choose from\n` +
             `🚄 Inter-city transport included\n` +
-            `💰 Total Cost: $${result.total_cost}\n\n` +
+            `💰 Total Cost: $${totalCost}\n\n` +
             `💡 **Tip**: Click on flights and hotels to see alternative options!\n\n` +
             `Your chronological schedule has been loaded below. You can continue chatting with me to make changes or ask questions!`;
         } else {
           // Single city trip
-          const flightCount = result.flights.length;
-          botResponse = `I've created a detailed itinerary for your trip to ${result.destination}!\n\n` +
-            `📅 Duration: ${result.duration}\n` +
+          const flightCount = result.flights ? result.flights.length : 0;
+          const hotelName = result.hotel && result.hotel.name ? result.hotel.name : 'Hotel included';
+          const totalCost = result.total_cost || 'TBD';
+          
+          botResponse = `I've created a detailed itinerary for your trip to ${result.destination || 'your destination'}!\n\n` +
+            `📅 Duration: ${result.duration || 'TBD'}\n` +
             `✈️ Flights: ${flightCount} flights with multiple options\n` +
-            `🏨 Hotel: ${result.hotel.name} with alternatives\n` +
-            `💰 Total Cost: $${result.total_cost}\n\n` +
+            `🏨 Hotel: ${hotelName} with alternatives\n` +
+            `💰 Total Cost: $${totalCost}\n\n` +
             `💡 **Tip**: Click on flights and hotels to see alternative options!\n\n` +
             `Your chronological schedule has been loaded below. You can continue chatting with me to make changes or ask questions!`;
         }
@@ -733,9 +748,8 @@ export default function HomeScreen() {
           sessionStorage.setItem('currentItinerary', JSON.stringify(result));
         }
       } else {
-        // Enhanced endpoint failed, falling back to regular chat endpoint
-        // Fallback to regular chat endpoint
-        const fallbackResponse = await fetch('http://localhost:8000/chat/', {
+        // LangChain endpoint failed, falling back to enhanced endpoint
+        const fallbackResponse = await fetch(`${API_BASE_URL}/chat/enhanced/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

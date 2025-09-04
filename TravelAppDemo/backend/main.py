@@ -1,6 +1,7 @@
 import sys
 import os
 import asyncio
+import json
 
 from fastapi import FastAPI, Depends, HTTPException, status, Response, Request
 from datetime import datetime
@@ -406,15 +407,6 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
     if current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
     """Update user profile"""
-    user = UserService.update_user(db, user_id, user_update.dict(exclude_unset=True))
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
-
-# Temporary testing endpoint - bypasses authentication for development
-@app.put("/users/{user_id}/test", response_model=schemas.User)
-def update_user_test(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
-    """Update user profile for testing (bypasses authentication)"""
     user = UserService.update_user(db, user_id, user_update.dict(exclude_unset=True))
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -928,7 +920,33 @@ async def chat_with_enhanced_itinerary(chat_request: ChatRequest, db: Session = 
                         # Silently handle database errors
                         pass
                 
-                # Return the raw itinerary_data dictionary
+                # POST-PROCESSING: Remove fake hotel and flight data
+                # Check if hotel data is fake (contains Vicenza, Italy coordinates or other fake data)
+                if 'hotel' in itinerary_data:
+                    hotel = itinerary_data['hotel']
+                    if hotel and isinstance(hotel, dict):
+                        # Check for fake data indicators
+                        address = hotel.get('address', '').lower()
+                        if 'vicenza' in address or '45.5359' in str(hotel.get('address', '')):
+                            print("🚫 Removing fake hotel data (Vicenza, Italy)")
+                            del itinerary_data['hotel']
+                        elif 'chicago' in address and 'victoria' in chat_request.message.lower():
+                            print("🚫 Removing fake hotel data (wrong city)")
+                            del itinerary_data['hotel']
+                
+                # Check if flight data is fake (contains fake airlines or wrong destinations)
+                if 'flights' in itinerary_data:
+                    flights = itinerary_data['flights']
+                    if flights and isinstance(flights, list):
+                        # Check for fake flight data
+                        fake_indicators = ['duffel airways', 'jfk', 'ord']
+                        for flight in flights:
+                            if any(indicator in str(flight).lower() for indicator in fake_indicators):
+                                print("🚫 Removing fake flight data")
+                                del itinerary_data['flights']
+                                break
+                
+                # Return the cleaned itinerary_data dictionary
                 return itinerary_data
             else:
                 # If no JSON found, return a default structure
@@ -1588,6 +1606,82 @@ async def send_booking_confirmation(booking_id: str, email_request: dict):
     except Exception as e:
         print(f"❌ Error sending confirmation email: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to send confirmation email")
+
+# LangChain-based Chat endpoint
+@app.post("/chat/langchain/")
+async def chat_with_langchain(chat_request: ChatRequest, db: Session = Depends(get_db)):
+    """
+    Chat with AI using LangChain for structured, reliable travel itinerary generation.
+    
+    This endpoint uses LangChain chains for:
+    - Input validation and parsing
+    - Structured output with guaranteed JSON format
+    - Real API integration for hotels, flights, and events
+    - Enhanced error handling and fallbacks
+    """
+    # Get OpenAI API key from environment variable
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=500, 
+            detail="OpenAI API key not configured. Please set the OPENAI_API_KEY environment variable with your API key."
+        )
+    
+    try:
+        print(f"🚀 LangChain Chat: Processing request from user {chat_request.user_id}")
+        print(f"📝 Message: {chat_request.message}")
+        
+        # Initialize simplified LangChain service
+        from simple_langchain_service import get_simple_langchain_service
+        langchain_service = get_simple_langchain_service(api_key)
+        
+        # Generate itinerary using LangChain pipeline
+        itinerary_data = await langchain_service.generate_itinerary(
+            db=db,
+            user_id=chat_request.user_id,
+            user_input=chat_request.message
+        )
+        
+        print(f"✅ LangChain: Generated itinerary with {len(itinerary_data.get('schedule', []))} days")
+        
+        # Save bot response to database
+        if db is not None:
+            try:
+                response_text = json.dumps(itinerary_data, indent=2)
+                ChatbotService.save_bot_response(db, chat_request.user_id, response_text)
+            except Exception as e:
+                print(f"Warning: Could not save bot response: {e}")
+        
+        # Return the structured itinerary
+        return itinerary_data
+        
+    except Exception as e:
+        print(f"❌ LangChain Chat error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Return structured error response
+        error_response = {
+            "error": "LangChain processing failed",
+            "message": f"I encountered an error while planning your trip: {str(e)}. Please try rephrasing your request.",
+            "trip_type": "single_city",
+            "destination": "Unknown",
+            "duration": "3 days",
+            "schedule": [],
+            "total_cost": 0,
+            "bookable_cost": 0,
+            "estimated_cost": 0
+        }
+        
+        # Save error response to database
+        if db is not None:
+            try:
+                error_text = json.dumps(error_response, indent=2)
+                ChatbotService.save_bot_response(db, chat_request.user_id, error_text)
+            except Exception:
+                pass
+        
+        return error_response
 
 # PDF Export endpoints
 @app.post("/itinerary/export")

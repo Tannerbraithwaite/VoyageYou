@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
+import { API_BASE_URL } from '@/config/api';
 
 interface ChatMessage {
   id: number;
@@ -79,7 +80,7 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
   useEffect(() => {
     const testBackendConnection = async () => {
       try {
-        const response = await fetch('http://localhost:8000/');
+        const response = await fetch(`${API_BASE_URL}/`);
         if (response.ok) {
           await response.json();
         }
@@ -90,7 +91,7 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
 
     const loadChatHistory = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/users/${userId}/chat/history/`);
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/chat/history/`);
         
         if (response.ok) {
           const history = await response.json();
@@ -121,7 +122,7 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
       // Debug: log full prompt before sending
       try { console.log('FULL_PROMPT (TravelChatbot):', userMessage); } catch {}
 
-      const response = await fetch('http://localhost:8000/chat/tools/', {
+      const response = await fetch(`${API_BASE_URL}/chat/langchain/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -179,9 +180,9 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
 
         setMessages(prev => [...prev, newUserMessage, newBotMessage]);
       } else {
-        // Fallback to regular chat endpoint
+        // Fallback to enhanced endpoint
         
-        const fallbackResponse = await fetch('http://localhost:8000/chat/', {
+        const fallbackResponse = await fetch(`${API_BASE_URL}/chat/enhanced/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

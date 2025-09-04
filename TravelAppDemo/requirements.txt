@@ -16,3 +16,6 @@ slowapi
 reportlab
 weasyprint
 requests
+langchain
+langchain-openai
+langchain-core

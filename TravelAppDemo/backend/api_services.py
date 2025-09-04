@@ -274,6 +274,11 @@ class HotelbedsHotelService:
                     "LOS ANGELES": "LAX",
                     "LAS VEGAS": "LAS",
                     "MIAMI": "MIA",
+                    # Canada
+                    "VICTORIA": "YYJ",  # Victoria, BC airport code
+                    "VANCOUVER": "YVR",  # Vancouver, BC airport code
+                    "TORONTO": "YYZ",
+                    "MONTREAL": "YUL",
                     # Europe
                     "PARIS": "PAR",
                     "LONDON": "LON",
@@ -281,8 +286,18 @@ class HotelbedsHotelService:
                     "BERLIN": "BER",
                 }
 
+                # Clean destination name (remove commas, keep spaces, handle common patterns)
+                clean_destination = destination.upper().replace(',', '').strip()
+                # Handle common patterns like "Victoria,BC" -> "VICTORIA"
+                if clean_destination.endswith('BC'):
+                    clean_destination = clean_destination[:-2].strip()
+                elif clean_destination.endswith('ON'):
+                    clean_destination = clean_destination[:-2].strip()
+                elif clean_destination.endswith('CA'):
+                    clean_destination = clean_destination[:-2].strip()
+                
                 # Fallback – use first 3 letters of the city
-                dest_code = city_to_code.get(destination.upper(), destination.upper()[:3])
+                dest_code = city_to_code.get(clean_destination, destination.upper()[:3])
 
                 # -------------------------------
                 # Build availability search body
@@ -317,14 +332,14 @@ class HotelbedsHotelService:
                 if hotels_response.status_code != 200:
                     print(f"Hotelbeds hotels error: {hotels_response.status_code}")
                     print(f"Response body: {hotels_response.text}")
-                    return self._get_mock_hotel(destination, checkin, checkout)
+                    return {"message": f"Hotel search service unavailable for {destination}", "hotel": None}
                 
                 hotels_data = hotels_response.json()
                 return self._parse_hotel_data(hotels_data, destination, checkin, checkout)
                 
         except Exception as e:
             print(f"Error searching hotels: {e}")
-            return self._get_mock_hotel(destination, checkin, checkout)
+            return {"message": f"Unable to search hotels for {destination} due to an error", "hotel": None}
     
     def _parse_hotel_data(self, hotels_data: Dict, destination: str, 
                          checkin: str, checkout: str) -> Dict[str, Any]:
@@ -398,8 +413,8 @@ class HotelbedsHotelService:
             print(f"   📍 Address: {hotel_address}")
             return {"hotel": hotel_info}
         
-        print(f"🏨 No real hotel data found, using mock for {destination}")
-        return self._get_mock_hotel(destination, checkin, checkout)
+        print(f"🏨 No real hotel data found for {destination}")
+        return {"message": f"No hotels available for {destination} on the requested dates", "hotel": None}
     
     def _get_mock_hotel(self, destination: str, checkin: str, checkout: str) -> Dict[str, Any]:
         """Return mock hotel data when API fails"""

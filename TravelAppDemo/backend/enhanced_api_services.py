@@ -266,15 +266,15 @@ class EnhancedHotelbedsService:
                         return self._enhance_basic_hotel_data(basic_hotel, destination, check_in, check_out, rooms, adults)
                 else:
                     print(f"🔍 No basic hotel data available")
-                    return self._get_enhanced_mock_hotels(destination, check_in, check_out, rooms, adults)
+                    return {"message": f"No hotels available for {destination} on the requested dates", "hotel": None}
                     
             except Exception as error:
                 print(f"🔍 Error getting hotel data: {error}")
-                return self._get_enhanced_mock_hotels(destination, check_in, check_out, rooms, adults)
+                return {"message": f"Unable to search hotels for {destination} due to an error", "hotel": None}
             
         except Exception as e:
             logger.error(f"Error in enhanced hotel search: {e}")
-            return self._get_enhanced_mock_hotels(destination, check_in, check_out, rooms, adults)
+            return {"message": f"Unable to search hotels for {destination} due to an error", "hotel": None}
     
     async def _get_hotel_content_batch(self, basic_hotel: Dict) -> Optional[Dict[str, Any]]:
         """
