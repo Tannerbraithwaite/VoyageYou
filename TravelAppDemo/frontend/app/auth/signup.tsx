@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { validateEmail, validatePassword, validateName, ValidationResult } from '@/utils';
+import { API_BASE_URL } from '@/config/api';
 
 export default function SignupScreen() {
   const [name, setName] = useState('');
@@ -81,7 +82,11 @@ export default function SignupScreen() {
     setIsLoading(true);
     
     try {
-      const response = await fetch('http://localhost:8000/auth/signup', {
+      const url = `${API_BASE_URL}/auth/signup`;
+      console.log('🔍 Signup URL:', url);
+      console.log('🔍 API_BASE_URL:', API_BASE_URL);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
