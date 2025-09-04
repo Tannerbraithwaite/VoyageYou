@@ -30,8 +30,18 @@ class EmailService:
         self.is_test_mode = (
             os.getenv('ENV', 'development') == 'development' or 
             not self.sender_password or 
-            not os.getenv('SMTP_USERNAME')
+            not self.sender_email or
+            self.sender_email == 'noreply@travelapp.com'
         )
+        
+        # Log email service configuration for debugging
+        logger.info(f"Email Service Configuration:")
+        logger.info(f"  SMTP Server: {self.smtp_server}")
+        logger.info(f"  SMTP Port: {self.smtp_port}")
+        logger.info(f"  Sender Email: {self.sender_email}")
+        logger.info(f"  Has Password: {'Yes' if self.sender_password else 'No'}")
+        logger.info(f"  Is Test Mode: {self.is_test_mode}")
+        logger.info(f"  ENV: {os.getenv('ENV', 'development')}")
         
     def generate_verification_token(self) -> str:
         """Generate a secure verification token"""
