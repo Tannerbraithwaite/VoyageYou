@@ -83,21 +83,31 @@ export class UserService {
   }
 
   static async register(email: string, password: string, name: string): Promise<any> {
+    console.log('🚀 Starting register function');
+    console.log('📧 Email:', email);
+    console.log('🔑 Password length:', password.length);
+    console.log('👤 Name:', name);
+    
     try {
       const url = `${API_BASE_URL}/auth/signup`;
       console.log('🔍 Register URL:', url);
       console.log('🔍 API_BASE_URL:', API_BASE_URL);
       
+      const requestBody = JSON.stringify({ email, password, name });
+      console.log('📦 Request body:', requestBody);
+      
+      console.log('🌐 Making fetch request...');
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, name }),
+        body: requestBody,
       });
       
+      console.log('✅ Fetch completed');
       console.log('🔍 Response status:', response.status);
-      console.log('🔍 Response headers:', response.headers);
+      console.log('🔍 Response headers:', Object.fromEntries(response.headers.entries()));
       
       const result = await response.json();
       console.log('🔍 Response data:', result);
