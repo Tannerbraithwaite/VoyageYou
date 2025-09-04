@@ -244,7 +244,7 @@ Return ONLY the JSON array, no other text.`;
 
       
       // Send to LLM
-      const response = await fetch('${API_BASE_URL}/chat/', {
+      const response = await fetch(`${API_BASE_URL}/chat/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -682,7 +682,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
 
       
       // Send to LLM using the travel profile endpoint
-      const response = await fetch('${API_BASE_URL}/chat/travel-profile/', {
+      const response = await fetch(`${API_BASE_URL}/chat/travel-profile/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -796,7 +796,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
     
     try {
       // Call the LLM directly
-      const response = await fetch('${API_BASE_URL}/chat/enhanced/', {
+      const response = await fetch(`${API_BASE_URL}/chat/enhanced/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -858,7 +858,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
       } else {
         console.error('❌ LLM API error:', response.status);
         // Fallback to regular chat endpoint
-        const fallbackResponse = await fetch('${API_BASE_URL}/chat/', {
+        const fallbackResponse = await fetch(`${API_BASE_URL}/chat/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

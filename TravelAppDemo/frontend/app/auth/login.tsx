@@ -57,7 +57,19 @@ export default function LoginScreen() {
       }
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Login failed. Please check your credentials.');
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid credentials') || error.message.includes('incorrect')) {
+          errorMessage = 'Incorrect password. Please try again.';
+        } else if (error.message.includes('User not found') || error.message.includes('not found')) {
+          errorMessage = 'No account found with this email address.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert('Login Failed', errorMessage);
     } finally {
       setIsLoading(false);
     }

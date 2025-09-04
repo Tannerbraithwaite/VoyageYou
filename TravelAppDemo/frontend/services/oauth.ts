@@ -56,7 +56,7 @@ class OAuthService {
       };
 
       // Send to backend for verification
-      const response = await fetch('${API_BASE_URL}/auth/oauth', {
+      const response = await fetch(`${API_BASE_URL}/auth/oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ class OAuthService {
       };
 
       // Send to backend for verification
-      const response = await fetch('${API_BASE_URL}/auth/oauth', {
+      const response = await fetch(`${API_BASE_URL}/auth/oauth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ class OAuthService {
         console.log('Google OAuth successful, sending token to backend...');
         
         // Send the ID token to your backend
-        const response = await fetch('${API_BASE_URL}/auth/oauth', {
+        const response = await fetch(`${API_BASE_URL}/auth/oauth`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

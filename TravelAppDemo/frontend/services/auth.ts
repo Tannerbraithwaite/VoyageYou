@@ -40,7 +40,7 @@ class AuthService {
 
   async login(email: string, password: string, rememberMe: boolean = false): Promise<LoginResponse> {
     try {
-      const response = await fetch('${API_BASE_URL}/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -54,7 +54,18 @@ class AuthService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Login failed');
+        let errorMessage = errorData.detail || 'Login failed';
+        
+        // Provide more user-friendly error messages
+        if (response.status === 401) {
+          if (errorMessage.includes('Invalid credentials')) {
+            errorMessage = 'Invalid credentials';
+          } else if (errorMessage.includes('not found')) {
+            errorMessage = 'User not found';
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data: LoginResponse = await response.json();
@@ -86,7 +97,7 @@ class AuthService {
     additional_info?: string;
   }, rememberMe: boolean = false): Promise<LoginResponse> {
     try {
-      const response = await fetch('${API_BASE_URL}/auth/signup', {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +134,7 @@ class AuthService {
   async logout(): Promise<void> {
     try {
       // Call logout endpoint to clear server-side cookies
-      await fetch('${API_BASE_URL}/auth/logout', {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -149,7 +160,7 @@ class AuthService {
 
   async forgotPassword(email: string): Promise<{ message: string }> {
     try {
-      const response = await fetch('${API_BASE_URL}/auth/forgot-password', {
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
@@ -167,7 +178,7 @@ class AuthService {
 
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     try {
-      const response = await fetch('${API_BASE_URL}/auth/reset-password', {
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, new_password: newPassword }),
@@ -189,7 +200,7 @@ class AuthService {
     }
 
     try {
-      const response = await fetch('${API_BASE_URL}/auth/me', {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
         method: 'GET',
         credentials: 'include', // Use cookies instead of Authorization header
       });
@@ -214,7 +225,7 @@ class AuthService {
 
   async refreshAccessToken(): Promise<boolean> {
     try {
-      const response = await fetch('${API_BASE_URL}/auth/refresh', {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         credentials: 'include', // Use cookies instead of body
       });
