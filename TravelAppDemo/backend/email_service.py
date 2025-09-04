@@ -12,6 +12,8 @@ import secrets
 import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -19,27 +21,33 @@ logger = logging.getLogger(__name__)
 
 class EmailService:
     def __init__(self):
-        # Email configuration - in production, these would be environment variables
-        self.smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-        self.smtp_port = int(os.getenv('SMTP_PORT', '587'))
+        # SendGrid configuration
+        self.sendgrid_api_key = os.getenv('SENDGRID_API_KEY', '')
         self.sender_email = os.getenv('SENDER_EMAIL', 'noreply@travelapp.com')
-        self.sender_password = os.getenv('SENDER_PASSWORD', '')
         
         # For testing purposes, we'll use a mock service
-        # If SMTP credentials are missing, force test mode
+        # If SendGrid API key is missing, force test mode
         self.is_test_mode = (
             os.getenv('ENV', 'development') == 'development' or 
-            not self.sender_password or 
+            not self.sendgrid_api_key or 
             not self.sender_email or
             self.sender_email == 'noreply@travelapp.com'
         )
         
+        # Initialize SendGrid client if not in test mode
+        if not self.is_test_mode:
+            try:
+                self.sendgrid_client = SendGridAPIClient(api_key=self.sendgrid_api_key)
+                logger.info("✅ SendGrid client initialized successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize SendGrid client: {str(e)}")
+                self.is_test_mode = True
+        
         # Log email service configuration for debugging
         logger.info(f"Email Service Configuration:")
-        logger.info(f"  SMTP Server: {self.smtp_server}")
-        logger.info(f"  SMTP Port: {self.smtp_port}")
+        logger.info(f"  Service: {'SendGrid' if not self.is_test_mode else 'Mock/Test'}")
         logger.info(f"  Sender Email: {self.sender_email}")
-        logger.info(f"  Has Password: {'Yes' if self.sender_password else 'No'}")
+        logger.info(f"  Has API Key: {'Yes' if self.sendgrid_api_key else 'No'}")
         logger.info(f"  Is Test Mode: {self.is_test_mode}")
         logger.info(f"  ENV: {os.getenv('ENV', 'development')}")
         
@@ -733,39 +741,31 @@ class EmailService:
         html_content: str, 
         text_content: str
     ) -> bool:
-        """Send email via SMTP"""
+        """Send email via SendGrid API"""
         
         try:
-            # Create message
-            message = MIMEMultipart("alternative")
-            message["Subject"] = subject
-            message["From"] = self.sender_email
-            message["To"] = recipient_email
+            # Create SendGrid mail object
+            message = Mail(
+                from_email=self.sender_email,
+                to_emails=recipient_email,
+                subject=subject,
+                html_content=html_content,
+                plain_text_content=text_content
+            )
             
-            # Add both HTML and text parts
-            text_part = MIMEText(text_content, "plain")
-            html_part = MIMEText(html_content, "html")
+            logger.info(f"📧 Sending email via SendGrid to {recipient_email}")
+            response = self.sendgrid_client.send(message)
+            logger.info(f"📧 SendGrid response status: {response.status_code}")
             
-            message.attach(text_part)
-            message.attach(html_part)
-            
-            # Create secure connection and send email
-            context = ssl.create_default_context()
-            
-            logger.info(f"📧 Connecting to SMTP server: {self.smtp_server}:{self.smtp_port}")
-            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10) as server:
-                logger.info("📧 Starting TLS...")
-                server.starttls(context=context)
-                logger.info("📧 Logging in...")
-                server.login(self.sender_email, self.sender_password)
-                logger.info("📧 Sending email...")
-                server.sendmail(self.sender_email, recipient_email, message.as_string())
-                logger.info("📧 Email sent successfully!")
-            
-            return True
+            if response.status_code in [200, 201, 202]:
+                logger.info("📧 Email sent successfully via SendGrid!")
+                return True
+            else:
+                logger.error(f"❌ SendGrid error: {response.status_code} - {response.body}")
+                return False
             
         except Exception as e:
-            logger.error(f"❌ SMTP error: {str(e)}")
+            logger.error(f"❌ SendGrid error: {str(e)}")
             return False
     
     async def _send_email_with_attachment(
@@ -808,18 +808,38 @@ class EmailService:
             )
             message.attach(attachment_part)
             
-            # Create secure connection and send email
-            context = ssl.create_default_context()
+            # Create SendGrid mail object with attachment
+            message = Mail(
+                from_email=self.sender_email,
+                to_emails=recipient_email,
+                subject=subject,
+                html_content=html_content,
+                plain_text_content=text_content
+            )
             
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                server.starttls(context=context)
-                server.login(self.sender_email, self.sender_password)
-                server.sendmail(self.sender_email, recipient_email, message.as_string())
+            # Add attachment to SendGrid message
+            import base64
+            encoded_content = base64.b64encode(attachment_content).decode()
+            message.attachment = {
+                "content": encoded_content,
+                "filename": attachment_filename,
+                "type": "application/pdf",
+                "disposition": "attachment"
+            }
             
-            return True
+            logger.info(f"📧 Sending email with attachment via SendGrid to {recipient_email}")
+            response = self.sendgrid_client.send(message)
+            logger.info(f"📧 SendGrid response status: {response.status_code}")
+            
+            if response.status_code in [200, 201, 202]:
+                logger.info("📧 Email with attachment sent successfully via SendGrid!")
+                return True
+            else:
+                logger.error(f"❌ SendGrid error: {response.status_code} - {response.body}")
+                return False
             
         except Exception as e:
-            logger.error(f"❌ SMTP error with attachment: {str(e)}")
+            logger.error(f"❌ SendGrid error with attachment: {str(e)}")
             return False
     
     async def send_travel_updates(
