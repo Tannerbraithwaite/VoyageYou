@@ -85,7 +85,13 @@ export default function SignupScreen() {
       const url = `${API_BASE_URL}/auth/signup`;
       console.log('🔍 Signup URL:', url);
       console.log('🔍 API_BASE_URL:', API_BASE_URL);
+      console.log('🔍 Request body:', { name: name.trim(), email: email.trim(), password: '[HIDDEN]' });
       
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      console.log('🌐 Making signup request...');
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -95,21 +101,32 @@ export default function SignupScreen() {
           name: name.trim(),
           email: email.trim(),
           password: password
-        })
+        }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
+      console.log('✅ Signup request completed');
+      console.log('🔍 Response status:', response.status);
 
       const data = await response.json();
+      console.log('🔍 Response data:', data);
 
       if (response.ok) {
         console.log('Signup successful:', data);
         // Navigate to email verification page
         router.push(`/auth/verify-email?email=${encodeURIComponent(email.trim())}`);
       } else {
+        console.error('Signup failed:', data);
         Alert.alert('Error', data.detail || 'Signup failed. Please try again.');
       }
     } catch (error) {
       console.error('Signup error:', error);
-      Alert.alert('Error', 'Network error. Please try again.');
+      if (error.name === 'AbortError') {
+        Alert.alert('Error', 'Request timed out. Please check your connection and try again.');
+      } else {
+        Alert.alert('Error', `Network error: ${error.message}. Please try again.`);
+      }
     } finally {
       setIsLoading(false);
     }
