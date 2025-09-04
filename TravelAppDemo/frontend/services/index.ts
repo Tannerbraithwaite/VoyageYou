@@ -84,7 +84,7 @@ export class UserService {
 
   static async register(email: string, password: string, name: string): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
