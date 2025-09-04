@@ -2,6 +2,7 @@ import sys
 import os
 import asyncio
 import json
+import logging
 
 from fastapi import FastAPI, Depends, HTTPException, status, Response, Request
 from datetime import datetime
@@ -22,6 +23,10 @@ load_dotenv()  # First try current directory
 # If running from project root, also try backend/.env
 if not os.getenv('OPENAI_API_KEY'):
     load_dotenv('backend/.env')
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 from database import get_db, create_tables, UserInterest, Flight, Hotel, User
 import schemas

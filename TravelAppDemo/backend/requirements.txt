@@ -19,4 +19,3 @@ requests
 langchain
 langchain-openai
 langchain-core
-logger
