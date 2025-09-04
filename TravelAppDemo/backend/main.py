@@ -45,15 +45,15 @@ oauth_service = OAuthService()
 # Initialize email service with error handling
 try:
     from email_service import email_service
-    logger.info("Email service imported successfully")
+    print("✅ Email service imported successfully")
 except Exception as e:
-    logger.error(f"Failed to import email service: {str(e)}")
+    print(f"❌ Failed to import email service: {str(e)}")
     # Create a mock email service for fallback
     class MockEmailService:
         def __init__(self):
             self.is_test_mode = True
         async def send_verification_email(self, email, name, token):
-            logger.warning(f"[MOCK] Would send verification email to {email}")
+            print(f"[MOCK] Would send verification email to {email}")
             return True
         def generate_verification_token(self):
             return "mock-token"
