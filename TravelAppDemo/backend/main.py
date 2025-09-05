@@ -1505,6 +1505,167 @@ async def cancel_booking(booking_id: str, cancellation_reason: str = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to cancel booking")
 
+# Trip Management endpoints
+@app.get("/api/trips/{trip_id}/policies")
+async def get_trip_policies(trip_id: str):
+    """Get cancellation and modification policies for a trip"""
+    try:
+        # In a real app, this would fetch actual policies from airlines/hotels
+        # For now, we'll return sample policies
+        
+        policies = {
+            "flight_policies": {
+                "cancellation": {
+                    "free_cancellation_hours": 24,
+                    "cancellation_fee": 50,
+                    "refund_percentage": 90,
+                    "policy_text": "Free cancellation up to 24 hours before departure. After that, $50 fee applies with 90% refund."
+                },
+                "modification": {
+                    "free_modification_hours": 24,
+                    "modification_fee": 25,
+                    "policy_text": "Free modifications up to 24 hours before departure. After that, $25 fee applies."
+                },
+                "baggage": {
+                    "included_bags": 1,
+                    "additional_bag_fee": 35,
+                    "policy_text": "1 checked bag included. Additional bags: $35 each."
+                },
+                "meals": {
+                    "included_meals": "None",
+                    "meal_options": ["Standard Meal - $15", "Premium Meal - $25", "Vegetarian - $12"],
+                    "policy_text": "No meals included. Upgrade options available."
+                }
+            },
+            "hotel_policies": {
+                "cancellation": {
+                    "free_cancellation_hours": 24,
+                    "cancellation_fee": 0,
+                    "refund_percentage": 100,
+                    "policy_text": "Free cancellation up to 24 hours before check-in. Full refund provided."
+                },
+                "modification": {
+                    "free_modification_hours": 24,
+                    "modification_fee": 0,
+                    "policy_text": "Free modifications up to 24 hours before check-in."
+                },
+                "room_upgrades": {
+                    "available_upgrades": ["Ocean View - $50/night", "Suite - $150/night", "Presidential - $300/night"],
+                    "policy_text": "Room upgrades available based on availability."
+                }
+            }
+        }
+        
+        return {
+            "success": True,
+            "trip_id": trip_id,
+            "policies": policies
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error fetching trip policies: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch trip policies")
+
+@app.post("/api/trips/{trip_id}/modify")
+async def modify_trip(trip_id: str, modification_request: dict):
+    """Modify trip details (dates, flights, hotels, etc.)"""
+    try:
+        modification_type = modification_request.get("type")
+        changes = modification_request.get("changes", {})
+        
+        logger.info(f"🔄 Modifying trip {trip_id}: {modification_type}")
+        
+        # Calculate fees and refunds based on policies
+        fees = {
+            "modification_fee": 0,
+            "refund_amount": 0,
+            "additional_cost": 0
+        }
+        
+        if modification_type == "change_dates":
+            fees["modification_fee"] = 25
+            fees["refund_amount"] = 0
+            
+        elif modification_type == "change_flight":
+            fees["modification_fee"] = 25
+            fees["refund_amount"] = 0
+            
+        elif modification_type == "change_hotel":
+            fees["modification_fee"] = 0
+            fees["refund_amount"] = 0
+            
+        elif modification_type == "add_baggage":
+            fees["additional_cost"] = 35 * changes.get("bags", 1)
+            
+        elif modification_type == "add_meal":
+            fees["additional_cost"] = 15 * changes.get("meals", 1)
+            
+        elif modification_type == "upgrade_room":
+            fees["additional_cost"] = 50 * changes.get("nights", 1)
+        
+        # In a real app, this would:
+        # - Validate the modification request
+        # - Check availability
+        # - Process payment changes
+        # - Update the booking
+        # - Send confirmation email
+        
+        return {
+            "success": True,
+            "trip_id": trip_id,
+            "modification_type": modification_type,
+            "changes": changes,
+            "fees": fees,
+            "new_total": modification_request.get("current_total", 0) + fees["additional_cost"] - fees["refund_amount"],
+            "message": f"Trip modification successful. {modification_type.replace('_', ' ').title()} applied."
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error modifying trip: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to modify trip")
+
+@app.post("/api/trips/{trip_id}/cancel")
+async def cancel_trip(trip_id: str, cancellation_request: dict):
+    """Cancel a trip with policy-based refund calculation"""
+    try:
+        cancellation_reason = cancellation_request.get("reason", "No reason provided")
+        hours_until_departure = cancellation_request.get("hours_until_departure", 48)
+        
+        logger.info(f"🔄 Cancelling trip {trip_id}: {cancellation_reason}")
+        
+        # Calculate refund based on policies
+        if hours_until_departure >= 24:
+            # Free cancellation
+            refund_percentage = 100
+            cancellation_fee = 0
+        else:
+            # Late cancellation
+            refund_percentage = 90
+            cancellation_fee = 50
+        
+        total_cost = cancellation_request.get("total_cost", 0)
+        refund_amount = (total_cost * refund_percentage / 100) - cancellation_fee
+        
+        # In a real app, this would:
+        # - Process the cancellation
+        # - Issue refunds
+        # - Update booking status
+        # - Send cancellation confirmation
+        
+        return {
+            "success": True,
+            "trip_id": trip_id,
+            "cancellation_reason": cancellation_reason,
+            "refund_percentage": refund_percentage,
+            "cancellation_fee": cancellation_fee,
+            "refund_amount": max(0, refund_amount),
+            "message": f"Trip cancelled successfully. Refund of ${refund_amount:.2f} will be processed within 5-7 business days."
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error cancelling trip: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to cancel trip")
+
 # Flight upgrade endpoints
 @app.get("/api/flights/upgrades")
 async def get_flight_upgrades():

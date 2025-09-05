@@ -250,7 +250,21 @@ export default function ScheduleScreen() {
     router.push('/checkout');
   };
 
-  // Inject the selected schedule back into the Home tab for editing
+  // Navigate to trip edit screen for booked trips
+  const handleEditTrip = (schedule: SavedSchedule) => {
+    // Store trip data for the edit screen
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('selectedTripForEdit', JSON.stringify(schedule));
+    }
+
+    // Close the details modal before navigating
+    setShowScheduleDetails(false);
+
+    // Navigate to the trip edit screen
+    router.push('/trip-edit');
+  };
+
+  // Inject the selected schedule back into the Home tab for editing (for unbooked trips)
   const handleEditSchedule = (schedule: SavedSchedule) => {
     // Persist itinerary so the Home screen can pick it up
     if (typeof window !== 'undefined') {
@@ -576,15 +590,26 @@ export default function ScheduleScreen() {
                   {/* Secondary Actions */}
                   <View style={styles.secondaryActions}>
                     
-                    {/* Edit button - only for unbooked and booked trips */}
-                    {(selectedSchedule.status === 'unbooked' || selectedSchedule.status === 'booked') && (
+                    {/* Edit button - different behavior for booked vs unbooked trips */}
+                    {selectedSchedule.status === 'unbooked' && (
                       <TouchableOpacity 
                         style={styles.editButton}
                         onPress={() => {
                           handleEditSchedule(selectedSchedule);
                         }}
                       >
-                        <Text style={styles.editButtonText}>✏️ Edit</Text>
+                        <Text style={styles.editButtonText}>✏️ Edit Schedule</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {selectedSchedule.status === 'booked' && (
+                      <TouchableOpacity 
+                        style={styles.editButton}
+                        onPress={() => {
+                          handleEditTrip(selectedSchedule);
+                        }}
+                      >
+                        <Text style={styles.editButtonText}>🔧 Manage Trip</Text>
                       </TouchableOpacity>
                     )}
                     
@@ -628,11 +653,16 @@ export default function ScheduleScreen() {
                       </TouchableOpacity>
                     )}
                     
-                    {/* Status info for booked and past trips */}
+                    {/* Manage Trip button for booked trips */}
                     {selectedSchedule.status === 'booked' && (
-                      <View style={[styles.checkoutButton, { backgroundColor: '#10b981' }]}>
-                        <Text style={styles.checkoutButtonText}>✅ Already Booked</Text>
-                      </View>
+                      <TouchableOpacity 
+                        style={[styles.checkoutButton, { backgroundColor: '#8b5cf6' }]}
+                        onPress={() => {
+                          handleEditTrip(selectedSchedule);
+                        }}
+                      >
+                        <Text style={styles.checkoutButtonText}>🔧 Manage Trip</Text>
+                      </TouchableOpacity>
                     )}
                     
                     {selectedSchedule.status === 'past' && (
