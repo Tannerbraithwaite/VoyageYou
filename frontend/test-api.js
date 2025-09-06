@@ -1,5 +1,5 @@
 // Simple API test script
-const API_BASE_URL = 'https://travel-app-demo-production.up.railway.app';
+const API_BASE_URL = 'https://voyageyou-production.up.railway.app';
 
 async function testAPI() {
   console.log('Testing API connection to:', API_BASE_URL);

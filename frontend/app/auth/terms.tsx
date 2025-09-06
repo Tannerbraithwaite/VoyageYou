@@ -18,7 +18,7 @@ export default function TermsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>1. Acceptance of Terms</Text>
           <Text style={styles.sectionText}>
-            By accessing and using the TravelApp service, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+            By accessing and using the Voyage Yo service, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
           </Text>
         </View>
 
@@ -85,7 +85,7 @@ export default function TermsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>8. Limitation of Liability</Text>
           <Text style={styles.sectionText}>
-            TravelApp is provided "as is" without warranties of any kind. We are not liable for any damages arising from the use of our service, including but not limited to travel disruptions, booking errors, or data loss.
+            Voyage Yo is provided "as is" without warranties of any kind. We are not liable for any damages arising from the use of our service, including but not limited to travel disruptions, booking errors, or data loss.
           </Text>
           <Text style={styles.sectionText}>
             We are not responsible for the actions of third-party service providers, including airlines, hotels, tour operators, or payment processors.
@@ -122,7 +122,7 @@ export default function TermsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>12. Governing Law</Text>
           <Text style={styles.sectionText}>
-            These terms are governed by the laws of the jurisdiction in which TravelApp operates. Any disputes will be resolved in the appropriate courts of that jurisdiction.
+            These terms are governed by the laws of the jurisdiction in which Voyage Yo operates. Any disputes will be resolved in the appropriate courts of that jurisdiction.
           </Text>
         </View>
 
@@ -132,7 +132,7 @@ export default function TermsScreen() {
             If you have questions about these terms, please contact us at:
           </Text>
           <Text style={styles.contactInfo}>
-            Email: legal@travelapp.com{'\n'}
+            Email: legal@voyageyo.com{'\n'}
             Address: 123 Travel Street, Adventure City, AC 12345{'\n'}
             Phone: +1 (555) 123-4567
           </Text>
@@ -140,7 +140,7 @@ export default function TermsScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            By using TravelApp, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.
+            By using Voyage Yo, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.
           </Text>
         </View>
       </ScrollView>

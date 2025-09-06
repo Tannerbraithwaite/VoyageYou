@@ -372,7 +372,7 @@ class TestHealthAndMonitoring:
         """Test root endpoint"""
         response = client.get("/")
         assert response.status_code == 200
-        assert "TravelApp API is running" in response.json()["message"]
+        assert "Voyage Yo API is running" in response.json()["message"]
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

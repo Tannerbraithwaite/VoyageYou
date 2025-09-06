@@ -1,4 +1,4 @@
-# 🚀 TravelApp V1 Deployment Checklist
+# 🚀 Voyage Yo V1 Deployment Checklist
 
 ## ✅ **Code Cleanup & Quality**
 

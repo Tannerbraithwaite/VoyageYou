@@ -1,4 +1,4 @@
-# 📧 Gmail SMTP Setup Guide for TravelApp
+# 📧 Gmail SMTP Setup Guide for Voyage Yo
 
 ## 🎯 **Gmail SMTP Configuration**
 
@@ -51,7 +51,7 @@ The app will automatically test email sending for:
 
 ---
 
-## 🔧 **Email Functionality in TravelApp**
+## 🔧 **Email Functionality in Voyage Yo**
 
 ### **Email Types Sent via Gmail SMTP:**
 1. **User Registration Verification**

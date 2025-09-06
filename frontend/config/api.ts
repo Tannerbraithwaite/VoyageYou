@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 
 // Railway backend URL (your deployed backend)
-const RAILWAY_BACKEND_URL = 'https://travel-app-demo-production.up.railway.app';
+const RAILWAY_BACKEND_URL = 'https://voyageyou-production.up.railway.app';
 
 // Determine the base URL based on platform and environment
 export const getBaseURL = () => {

@@ -83,7 +83,7 @@ async def test_sendgrid_service():
         print("ℹ️  Test mode enabled - emails are mocked")
 
 if __name__ == "__main__":
-    print("🚀 TravelApp SendGrid Email Service Test")
+    print("🚀 Voyage Yo SendGrid Email Service Test")
     print("This script tests SendGrid email functionality")
     print()
     

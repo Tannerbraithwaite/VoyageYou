@@ -1,4 +1,4 @@
-# TravelApp Backend
+# Voyage Yo Backend
 
 A robust FastAPI backend with SQLite database for the AI-powered travel planning application.
 

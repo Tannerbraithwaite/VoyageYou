@@ -23,19 +23,19 @@ This document provides comprehensive information about the testing setup for bot
 ### Run All Tests
 ```bash
 # From the backend directory
-cd TravelAppDemo/backend
+cd Voyage Yo/backend
 python run_tests.py
 ```
 
 ### Run Backend Tests Only
 ```bash
-cd TravelAppDemo/backend
+cd Voyage Yo/backend
 python -m pytest test_main.py test_database.py -v --cov=. --cov-report=html
 ```
 
 ### Run Frontend Tests Only
 ```bash
-cd TravelAppDemo/frontend
+cd Voyage Yo/frontend
 npm test
 ```
 

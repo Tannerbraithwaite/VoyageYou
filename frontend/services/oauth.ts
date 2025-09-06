@@ -10,13 +10,13 @@ const GOOGLE_CLIENT_ID = '1082045743309-dmv4ea2mp7vig54cbuybvfh6vb4s26i6.apps.go
 
 // Create redirect URI that works with Expo development
 const GOOGLE_REDIRECT_URI = AuthSession.makeRedirectUri({
-  scheme: 'travelapp',
+  scheme: 'voyageyo',
   path: 'auth'
 });
 
 const APPLE_CLIENT_ID = 'your-apple-client-id';
 const APPLE_REDIRECT_URI = AuthSession.makeRedirectUri({
-  scheme: 'travelapp',
+  scheme: 'voyageyo',
   path: 'auth'
 });
 

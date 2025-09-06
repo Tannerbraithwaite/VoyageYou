@@ -31,7 +31,7 @@ The Expo development server should be running. You'll see a QR code in your term
 ### App Configuration
 - **Name**: VoyageYou
 - **Slug**: travel-app-demo
-- **Scheme**: travelapp
+- **Scheme**: voyageyo
 
 ## ✅ What's Working
 

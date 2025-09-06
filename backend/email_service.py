@@ -23,7 +23,7 @@ class EmailService:
     def __init__(self):
         # SendGrid configuration
         self.sendgrid_api_key = os.getenv('SENDGRID_API_KEY', '')
-        self.sender_email = os.getenv('SENDER_EMAIL', 'noreply@travelapp.com')
+        self.sender_email = os.getenv('SENDER_EMAIL', 'noreply@voyageyo.com')
         
         # For testing purposes, we'll use a mock service
         # If SendGrid API key is missing, force test mode
@@ -31,7 +31,7 @@ class EmailService:
             os.getenv('ENV', 'development') == 'development' or 
             not self.sendgrid_api_key or 
             not self.sender_email or
-            self.sender_email == 'noreply@travelapp.com'
+            self.sender_email == 'noreply@voyageyo.com'
         )
         
         # Initialize SendGrid client if not in test mode
@@ -74,11 +74,11 @@ class EmailService:
             
             logger.info(f"📧 [REAL] Attempting to send verification email to {recipient_email}")
             
-            subject = "🔐 Verify Your TravelApp Account"
+            subject = "🔐 Verify Your Voyage Yo Account"
             
             # Create verification URL
             base_url = os.getenv('FRONTEND_URL', 'http://localhost:8081')
-            verification_url = f"{base_url}/auth/verify?token={verification_token}"
+            verification_url = f"{base_url}/auth/verify-email?token={verification_token}"
             
             # Create HTML email content
             html_content = self._create_verification_email_html(
@@ -117,7 +117,7 @@ class EmailService:
                 logger.info(f"📧 [MOCK] Sending welcome email to {recipient_email}")
                 return True
             
-            subject = "🎉 Welcome to TravelApp!"
+            subject = "🎉 Welcome to Voyage Yo!"
             
             # Create HTML email content
             html_content = self._create_welcome_email_html(recipient_name)
@@ -154,7 +154,7 @@ class EmailService:
                 logger.info(f"📧 [MOCK] Reset token: {reset_token}")
                 return True
             
-            subject = "🔑 Reset Your TravelApp Password"
+            subject = "🔑 Reset Your Voyage Yo Password"
             
             # Create reset URL
             base_url = os.getenv('FRONTEND_URL', 'http://localhost:8081')
@@ -287,7 +287,7 @@ class EmailService:
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Verify Your TravelApp Account</title>
+            <title>Verify Your Voyage Yo Account</title>
             <style>
                 body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
                 .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
@@ -302,13 +302,13 @@ class EmailService:
             <div class="container">
                 <div class="header">
                     <h1>🔐 Verify Your Account</h1>
-                    <p>Welcome to TravelApp!</p>
+                    <p>Welcome to Voyage Yo!</p>
                 </div>
                 
                 <div class="content">
                     <p>Dear <strong>{recipient_name}</strong>,</p>
                     
-                    <p>Thank you for signing up for TravelApp! To complete your registration and start planning your next adventure, please verify your email address.</p>
+                    <p>Thank you for signing up for Voyage Yo! To complete your registration and start planning your next adventure, please verify your email address.</p>
                     
                     <p>Click the button below to verify your account:</p>
                     
@@ -321,15 +321,15 @@ class EmailService:
                     
                     <p><strong>This link will expire in 24 hours.</strong></p>
                     
-                    <p>If you didn't create an account with TravelApp, you can safely ignore this email.</p>
+                    <p>If you didn't create an account with Voyage Yo, you can safely ignore this email.</p>
                     
                     <p>Happy travels!</p>
-                    <p><strong>The TravelApp Team</strong></p>
+                    <p><strong>The Voyage Yo Team</strong></p>
                 </div>
                 
                 <div class="footer">
-                    <p>Need help? Contact us at <a href="mailto:support@travelapp.com">support@travelapp.com</a></p>
-                    <p>© 2024 TravelApp. All rights reserved.</p>
+                    <p>Need help? Contact us at <a href="mailto:support@voyageyo.com">support@voyageyo.com</a></p>
+                    <p>© 2024 Voyage Yo. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -344,20 +344,20 @@ class EmailService:
         
         Dear {recipient_name},
         
-        Thank you for signing up for TravelApp! To complete your registration and start planning your next adventure, please verify your email address.
+        Thank you for signing up for Voyage Yo! To complete your registration and start planning your next adventure, please verify your email address.
         
         Click the link below to verify your account:
         {verification_url}
         
         This link will expire in 24 hours.
         
-        If you didn't create an account with TravelApp, you can safely ignore this email.
+        If you didn't create an account with Voyage Yo, you can safely ignore this email.
         
         Happy travels!
-        The TravelApp Team
+        The Voyage Yo Team
         
-        Need help? Contact us at support@travelapp.com
-        © 2024 TravelApp. All rights reserved.
+        Need help? Contact us at support@voyageyo.com
+        © 2024 Voyage Yo. All rights reserved.
         """
         return text
     
@@ -369,7 +369,7 @@ class EmailService:
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Welcome to TravelApp!</title>
+            <title>Welcome to Voyage Yo!</title>
             <style>
                 body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
                 .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
@@ -382,14 +382,14 @@ class EmailService:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🎉 Welcome to TravelApp!</h1>
+                    <h1>🎉 Welcome to Voyage Yo!</h1>
                     <p>Your account is now verified</p>
                 </div>
                 
                 <div class="content">
                     <p>Dear <strong>{recipient_name}</strong>,</p>
                     
-                    <p>Welcome to TravelApp! Your account has been successfully verified and you're now ready to start planning your next adventure.</p>
+                    <p>Welcome to Voyage Yo! Your account has been successfully verified and you're now ready to start planning your next adventure.</p>
                     
                     <h2>🚀 What you can do now:</h2>
                     <ul>
@@ -407,12 +407,12 @@ class EmailService:
                     <p>We're excited to help you discover amazing destinations and create unforgettable travel experiences!</p>
                     
                     <p>Happy travels!</p>
-                    <p><strong>The TravelApp Team</strong></p>
+                    <p><strong>The Voyage Yo Team</strong></p>
                 </div>
                 
                 <div class="footer">
-                    <p>Need help? Contact us at <a href="mailto:support@travelapp.com">support@travelapp.com</a></p>
-                    <p>© 2024 TravelApp. All rights reserved.</p>
+                    <p>Need help? Contact us at <a href="mailto:support@voyageyo.com">support@voyageyo.com</a></p>
+                    <p>© 2024 Voyage Yo. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -423,11 +423,11 @@ class EmailService:
     def _create_welcome_email_text(self, recipient_name: str) -> str:
         """Create plain text version of welcome email"""
         text = f"""
-        🎉 WELCOME TO TRAVELAPP!
+        🎉 WELCOME TO VOYAGE YO!
         
         Dear {recipient_name},
         
-        Welcome to TravelApp! Your account has been successfully verified and you're now ready to start planning your next adventure.
+        Welcome to Voyage Yo! Your account has been successfully verified and you're now ready to start planning your next adventure.
         
         🚀 WHAT YOU CAN DO NOW:
         - Browse destinations and travel inspiration
@@ -441,10 +441,10 @@ class EmailService:
         We're excited to help you discover amazing destinations and create unforgettable travel experiences!
         
         Happy travels!
-        The TravelApp Team
+        The Voyage Yo Team
         
-        Need help? Contact us at support@travelapp.com
-        © 2024 TravelApp. All rights reserved.
+        Need help? Contact us at support@voyageyo.com
+        © 2024 Voyage Yo. All rights reserved.
         """
         return text
     
@@ -456,7 +456,7 @@ class EmailService:
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Reset Your TravelApp Password</title>
+            <title>Reset Your Voyage Yo Password</title>
             <style>
                 body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
                 .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
@@ -471,13 +471,13 @@ class EmailService:
             <div class="container">
                 <div class="header">
                     <h1>🔑 Reset Your Password</h1>
-                    <p>TravelApp Password Reset</p>
+                    <p>Voyage Yo Password Reset</p>
                 </div>
                 
                 <div class="content">
                     <p>Dear <strong>{recipient_name}</strong>,</p>
                     
-                    <p>We received a request to reset your TravelApp password. Click the button below to create a new password:</p>
+                    <p>We received a request to reset your Voyage Yo password. Click the button below to create a new password:</p>
                     
                     <div style="text-align: center;">
                         <a href="{reset_url}" class="button">Reset Password</a>
@@ -498,12 +498,12 @@ class EmailService:
                     <p>If you have any questions, please contact our support team.</p>
                     
                     <p>Best regards,</p>
-                    <p><strong>The TravelApp Team</strong></p>
+                    <p><strong>The Voyage Yo Team</strong></p>
                 </div>
                 
                 <div class="footer">
-                    <p>Need help? Contact us at <a href="mailto:support@travelapp.com">support@travelapp.com</a></p>
-                    <p>© 2024 TravelApp. All rights reserved.</p>
+                    <p>Need help? Contact us at <a href="mailto:support@voyageyo.com">support@voyageyo.com</a></p>
+                    <p>© 2024 Voyage Yo. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -518,7 +518,7 @@ class EmailService:
         
         Dear {recipient_name},
         
-        We received a request to reset your TravelApp password. Click the link below to create a new password:
+        We received a request to reset your Voyage Yo password. Click the link below to create a new password:
         
         {reset_url}
         
@@ -530,10 +530,10 @@ class EmailService:
         If you have any questions, please contact our support team.
         
         Best regards,
-        The TravelApp Team
+        The Voyage Yo Team
         
-        Need help? Contact us at support@travelapp.com
-        © 2024 TravelApp. All rights reserved.
+        Need help? Contact us at support@voyageyo.com
+        © 2024 Voyage Yo. All rights reserved.
         """
         return text
     
@@ -574,12 +574,12 @@ class EmailService:
                     <p>We hope you have an amazing trip! If you need any assistance, don't hesitate to contact us.</p>
                     
                     <p>Safe travels!</p>
-                    <p><strong>The TravelApp Team</strong></p>
+                    <p><strong>The Voyage Yo Team</strong></p>
                 </div>
                 
                 <div class="footer">
-                    <p>Need help? Contact us at <a href="mailto:support@travelapp.com">support@travelapp.com</a></p>
-                    <p>© 2024 TravelApp. All rights reserved.</p>
+                    <p>Need help? Contact us at <a href="mailto:support@voyageyo.com">support@voyageyo.com</a></p>
+                    <p>© 2024 Voyage Yo. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -604,10 +604,10 @@ class EmailService:
         We hope you have an amazing trip! If you need any assistance, don't hesitate to contact us.
         
         Safe travels!
-        The TravelApp Team
+        The Voyage Yo Team
         
-        Need help? Contact us at support@travelapp.com
-        © 2024 TravelApp. All rights reserved.
+        Need help? Contact us at support@voyageyo.com
+        © 2024 Voyage Yo. All rights reserved.
         """
         return text
 
@@ -682,7 +682,7 @@ class EmailService:
                 </div>
                 
                 <div class="footer">
-                    <p>Need help? Contact us at <a href="mailto:support@travelapp.com">support@travelapp.com</a></p>
+                    <p>Need help? Contact us at <a href="mailto:support@voyageyo.com">support@voyageyo.com</a></p>
                     <p>© 2024 VoyageYou. All rights reserved.</p>
                 </div>
             </div>
@@ -728,7 +728,7 @@ class EmailService:
         Safe travels!
         The VoyageYou Team
         
-        Need help? Contact us at support@travelapp.com
+        Need help? Contact us at support@voyageyo.com
         © 2024 VoyageYou. All rights reserved.
         """
         

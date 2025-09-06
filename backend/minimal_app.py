@@ -12,11 +12,11 @@ if not os.getenv('OPENAI_API_KEY'):
     load_dotenv('backend/.env')
 
 # Create minimal FastAPI app
-app = FastAPI(title="TravelApp API - Minimal", version="1.0.0")
+app = FastAPI(title="Voyage Yo API - Minimal", version="1.0.0")
 
 @app.get("/")
 async def root():
-    return {"message": "TravelApp API is running!", "status": "ok"}
+    return {"message": "Voyage Yo API is running!", "status": "ok"}
 
 @app.get("/healthz")
 async def healthz():

@@ -69,7 +69,7 @@ except Exception as e:
 
 # Create FastAPI app
 app = FastAPI(
-    title="TravelApp API",
+    title="Voyage Yo API",
     description="AI-powered travel planning and recommendation system",
     version="1.0.0"
 )
@@ -98,7 +98,7 @@ async def startup_event():
 # Health and readiness endpoints
 @app.get("/")
 async def root():
-    return {"message": "TravelApp API is running!"}
+    return {"message": "Voyage Yo API is running!"}
 
 @app.get("/healthz")
 async def healthz():
@@ -1414,7 +1414,7 @@ async def create_booking(booking_request: dict):
                 "Contact support if you have questions"
             ],
             "contact_support": {
-                "email": "support@travelapp.com",
+                "email": "support@voyageyo.com",
                 "phone": "+1-555-TRAVEL"
             },
             "created_at": datetime.datetime.now().isoformat()

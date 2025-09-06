@@ -23,7 +23,7 @@
 - **HTML and Text versions** for all email types
 - **Professional design** with gradients and modern styling
 - **Responsive layout** for mobile and desktop
-- **Branded TravelApp styling** with consistent colors
+- **Branded Voyage Yo styling** with consistent colors
 - **Security warnings** for password reset emails
 - **Clear call-to-action buttons** for verification and reset links
 

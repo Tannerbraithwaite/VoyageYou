@@ -13,7 +13,7 @@ class TestMainEndpoints:
         """Test the health check endpoint"""
         response = client.get("/")
         assert response.status_code == 200
-        assert response.json() == {"message": "TravelApp API is running!"}
+        assert response.json() == {"message": "Voyage Yo API is running!"}
     
     def test_chat_enhanced_success(self):
         """Test successful enhanced chat endpoint"""

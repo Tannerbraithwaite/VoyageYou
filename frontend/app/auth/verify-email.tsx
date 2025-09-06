@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE_URL } from '../../config/api';
 
 export default function VerifyEmailScreen() {
   const [isVerifying, setIsVerifying] = useState(false);

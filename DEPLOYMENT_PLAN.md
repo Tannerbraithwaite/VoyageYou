@@ -1,4 +1,4 @@
-# 🚀 TravelApp Deployment Plan for Test Users
+# 🚀 Voyage Yo Deployment Plan for Test Users
 
 ## 📱 **Deployment Strategy Overview**
 
@@ -125,12 +125,12 @@ railway status
 ```json
 {
   "expo": {
-    "name": "TravelApp",
+    "name": "Voyage Yo",
     "slug": "travel-app-demo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "travelapp",
+    "scheme": "voyageyo",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -139,14 +139,14 @@ railway status
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.travelapp"
+      "bundleIdentifier": "com.yourcompany.voyageyo"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yourcompany.travelapp"
+      "package": "com.yourcompany.voyageyo"
     },
     "extra": {
       "eas": {
@@ -230,12 +230,12 @@ eas update --branch production --message "Initial release"
 
 #### **Step 4.2: User Instructions**
 ```
-📱 How to Test TravelApp:
+📱 How to Test Voyage Yo:
 
 1. Download "Expo Go" from App Store or Google Play Store
 2. Open Expo Go app
 3. Scan the QR code provided by the developer
-4. Your TravelApp will load automatically
+4. Your Voyage Yo will load automatically
 5. Create an account and start planning your trips!
 ```
 
@@ -410,4 +410,4 @@ The app will automatically test email sending for:
 
 ---
 
-**🎯 Goal**: Get your TravelApp into test users' hands within 2-4 hours with Railway backend and Gmail email functionality!
+**🎯 Goal**: Get your Voyage Yo into test users' hands within 2-4 hours with Railway backend and Gmail email functionality!

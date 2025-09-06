@@ -18,7 +18,7 @@ from email_service import EmailService
 async def test_smtp_configuration():
     """Test SMTP configuration and email sending functionality"""
     
-    print("🧪 Testing SMTP Configuration for TravelApp")
+    print("🧪 Testing SMTP Configuration for Voyage Yo")
     print("=" * 50)
     
     # Create email service instance
@@ -149,7 +149,7 @@ def test_gmail_app_password():
         return False
 
 if __name__ == "__main__":
-    print("🚀 TravelApp SMTP Configuration Test")
+    print("🚀 Voyage Yo SMTP Configuration Test")
     print("This script tests email functionality for Railway deployment")
     print()
     
