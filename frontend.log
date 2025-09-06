@@ -1,8 +1,16 @@
-npm error code ENOENT
-npm error syscall open
-npm error path /Users/tannerbraithwaite/TravelAppDemo/TravelAppDemo/package.json
-npm error errno -2
-npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/Users/tannerbraithwaite/TravelAppDemo/TravelAppDemo/package.json'
-npm error enoent This is related to npm not being able to find a file.
-npm error enoent
-npm error A complete log of this run can be found in: /Users/tannerbraithwaite/.npm/_logs/2025-08-28T05_11_05_389Z-debug-0.log
+
+> frontend@1.0.0 start
+> expo start
+
+Starting project at /Users/tannerbraithwaite/TravelAppDemo/TravelAppDemo/frontend
+Starting Metro Bundler
+The following packages should be updated for best compatibility with the installed expo version:
+  @react-native-async-storage/async-storage@2.2.0 - expected version: 2.1.2
+  @react-native-community/datetimepicker@8.4.3 - expected version: 8.4.1
+  expo@53.0.20 - expected version: 53.0.22
+  expo-router@5.1.4 - expected version: ~5.1.5
+  expo-system-ui@5.0.10 - expected version: ~5.0.11
+  jest-expo@53.0.9 - expected version: ~53.0.10
+Your project may not work correctly until you install the expected versions of the packages.
+Waiting on http://localhost:8081
+Logs for your project will appear below.
