@@ -1,20 +1,8 @@
 {
   "version": 2,
   "name": "voyage-you",
-  "builds": [
-    {
-      "src": "dist/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/dist/$1"
-    },
-    {
-      "src": "/",
-      "dest": "/dist/index.html"
-    }
-  ]
+  "buildCommand": "npm install && npx expo export --platform web",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": null
 }
