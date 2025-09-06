@@ -39,8 +39,8 @@ def test_sendgrid():
     message = Mail(
         from_email='tannerbraithwaite@gmail.com',
         to_emails='tannerbraithwaite@gmail.com',
-        subject='Test Email from Travel App - Updated Key',
-        html_content='<strong>SendGrid is working with updated key!</strong><br><p>This is a test email from your Travel App.</p>'
+        subject='Test Email from VoyageYou - Updated Key',
+        html_content='<strong>SendGrid is working with updated key!</strong><br><p>This is a test email from your VoyageYou.</p>'
     )
     
     try:

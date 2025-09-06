@@ -1,6 +1,6 @@
-# 📚 Travel App API Documentation
+# 📚 VoyageYou API Documentation
 
-Comprehensive API reference for the Travel App backend, including all endpoints, request/response formats, and authentication details.
+Comprehensive API reference for the VoyageYou backend, including all endpoints, request/response formats, and authentication details.
 
 ## 🔐 **Authentication**
 
@@ -378,7 +378,7 @@ GET /
 **Response:**
 ```json
 {
-  "message": "Travel App API is running",
+  "message": "VoyageYou API is running",
   "version": "1.0.0",
   "status": "healthy"
 }

@@ -120,7 +120,7 @@ export default function LoginScreen() {
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to your travel account</Text>
+          <Text style={styles.subtitle}>Sign in to your VoyageYou account</Text>
         </View>
 
         <View style={styles.form}>

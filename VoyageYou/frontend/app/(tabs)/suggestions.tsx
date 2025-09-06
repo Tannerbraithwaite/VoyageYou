@@ -7,6 +7,7 @@ import DatePicker from '@/components/DatePicker';
 import { calculateTripDuration } from '@/utils';
 import { TripDates } from '@/types';
 import authService from '@/services/auth';
+import { VoyageYouHeader } from '@/components';
 
 export default function SuggestionsScreen() {
   const { settings, update } = useTripSettings();
@@ -953,6 +954,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
 
   return (
     <View style={styles.container}>
+      <VoyageYouHeader />
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text style={styles.title}>Your Next Adventure</Text>

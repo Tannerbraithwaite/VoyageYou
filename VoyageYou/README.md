@@ -1,4 +1,4 @@
-# 🚀 Travel App Demo - AI-Powered Travel Planning
+# 🚀 VoyageYou - AI-Powered Travel Planning
 
 A modern, AI-powered travel planning application built with FastAPI backend and React Native frontend. Features intelligent trip planning, OAuth authentication, and real-time travel data integration.
 

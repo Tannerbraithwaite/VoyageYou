@@ -1,5 +1,5 @@
 """
-Logging configuration for the Travel App backend
+Logging configuration for the VoyageYou backend
 Provides structured logging with different levels and output formats
 """
 

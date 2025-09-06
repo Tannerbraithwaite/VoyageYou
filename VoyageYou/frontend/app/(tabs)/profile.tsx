@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert 
 import GlassCard from '@/components/ui/GlassCard';
 import { router } from 'expo-router';
 import authService from '@/services/auth';
+import { VoyageYouHeader } from '@/components';
 
 export default function ProfileScreen() {
   const [name, setName] = useState('Sarah Johnson');
@@ -313,10 +314,12 @@ export default function ProfileScreen() {
   console.log('Budget levels:', budgetLevels);
 
   return (
-    <ScrollView 
-      style={styles.container}
-      onScrollBeginDrag={() => setShowNationalityDropdown(false)}
-    >
+    <View style={styles.container}>
+      <VoyageYouHeader />
+      <ScrollView 
+        style={styles.scrollView}
+        onScrollBeginDrag={() => setShowNationalityDropdown(false)}
+      >
       <Text style={styles.title}>Your Profile</Text>
       
       {isLoading && (
@@ -614,7 +617,8 @@ export default function ProfileScreen() {
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -622,6 +626,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0a0a0a',
+  },
+  scrollView: {
+    flex: 1,
     padding: 20,
   },
   header: {

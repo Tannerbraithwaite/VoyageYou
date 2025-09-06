@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Starting Travel App..."
+echo "🚀 Starting VoyageYou..."
 echo "=========================="
 
 # Function to kill processes on a specific port
@@ -85,7 +85,7 @@ echo $BACKEND_PID > ../backend.pid
 echo $FRONTEND_PID > ../frontend.pid
 
 echo ""
-echo "🎉 Travel App is now running!"
+echo "🎉 VoyageYou is now running!"
 echo "=========================="
 echo "🌐 Frontend: http://localhost:8081"
 echo "🔧 Backend:  http://localhost:8000"

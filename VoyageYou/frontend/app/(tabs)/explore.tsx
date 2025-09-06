@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import DetailsModal from '@/components/DetailsModal';
 import { Ionicons } from '@expo/vector-icons';
+import { VoyageYouHeader } from '@/components';
 
 interface Activity {
   time: string;
@@ -321,6 +322,7 @@ export default function ScheduleScreen() {
 
   return (
     <View style={styles.container}>
+      <VoyageYouHeader />
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <GlassCard style={styles.header}>

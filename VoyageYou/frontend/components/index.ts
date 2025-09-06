@@ -11,6 +11,7 @@ export { ThemedText } from './ThemedText';
 export { ThemedView } from './ThemedView';
 export { AlternativesSelector } from './AlternativesSelector';
 export { CurrencyConverter, useCurrencyConverter } from './CurrencyConverter';
+export { default as VoyageYouHeader } from './VoyageYouHeader';
 
 // UI components
 export { IconSymbol } from './ui/IconSymbol';

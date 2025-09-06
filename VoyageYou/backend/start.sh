@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Travel App Backend Startup Script
-echo "🚀 Starting Travel App Backend with Python 3.11.9..."
+# VoyageYou Backend Startup Script
+echo "🚀 Starting VoyageYou Backend with Python 3.11.9..."
 
 # Activate virtual environment
 source venv/bin/activate

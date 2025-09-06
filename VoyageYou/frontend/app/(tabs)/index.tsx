@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import GlassCard from '@/components/ui/GlassCard';
 import { router, useLocalSearchParams } from 'expo-router';
-import { DatePicker, CleanSchedule, AlternativesSelector, CurrencyConverter, useCurrencyConverter, type Currency } from '@/components';
+import { DatePicker, CleanSchedule, AlternativesSelector, CurrencyConverter, useCurrencyConverter, type Currency, VoyageYouHeader } from '@/components';
 import { TripDates, EnhancedItinerary, ItineraryActivity, FlightInfo, HotelInfo, ItineraryDay, MultiCityItinerary, SingleCityItinerary } from '@/types';
 import DetailsModal from '@/components/DetailsModal';
 import { Ionicons } from '@expo/vector-icons';
@@ -1286,7 +1286,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      
+      <VoyageYouHeader />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Chat Section */}

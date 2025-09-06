@@ -1,4 +1,4 @@
-# Travel App Frontend
+# VoyageYou Frontend
 
 A React Native/Expo app for travel planning and recommendations.
 

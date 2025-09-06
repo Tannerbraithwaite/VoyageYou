@@ -1,6 +1,6 @@
-# 🧪 Testing Guide for Travel App
+# 🧪 Testing Guide for VoyageYou
 
-This document provides comprehensive information about the testing setup for both backend and frontend components of the Travel App.
+This document provides comprehensive information about the testing setup for both backend and frontend components of the VoyageYou.
 
 ## 📋 Test Coverage
 

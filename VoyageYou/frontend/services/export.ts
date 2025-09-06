@@ -51,7 +51,7 @@ class ExportService {
         
         // Extract filename from response headers or create default
         const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = 'travel_itinerary.pdf';
+        let filename = 'voyageyou_itinerary.pdf';
         if (contentDisposition) {
           const filenameMatch = contentDisposition.match(/filename=(.+)/);
           if (filenameMatch) {

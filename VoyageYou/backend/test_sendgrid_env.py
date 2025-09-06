@@ -24,8 +24,8 @@ def test_sendgrid():
         message = Mail(
             from_email='tannerbraithwaite@gmail.com',
             to_emails='tannerbraithwaite@gmail.com',
-            subject='Test Email from Travel App',
-            html_content='<strong>SendGrid is working!</strong><br><p>This is a test email from your Travel App.</p>'
+            subject='Test Email from VoyageYou',
+            html_content='<strong>SendGrid is working!</strong><br><p>This is a test email from your VoyageYou.</p>'
         )
         
         sg = SendGridAPIClient(api_key)

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🛑 Stopping Travel App..."
+echo "🛑 Stopping VoyageYou..."
 echo "=========================="
 
 # Function to kill processes on a specific port
@@ -54,7 +54,7 @@ kill_port 8000
 kill_port 8081
 
 echo ""
-echo "✅ Travel App has been stopped!"
+echo "✅ VoyageYou has been stopped!"
 echo "=========================="
 echo "🌐 Frontend: http://localhost:8081 (stopped)"
 echo "🔧 Backend:  http://localhost:8000 (stopped)"

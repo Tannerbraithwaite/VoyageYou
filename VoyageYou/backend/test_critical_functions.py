@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for critical functions in the Travel App backend
+Unit tests for critical functions in the VoyageYou backend
 Tests core functionality, error handling, and edge cases
 """
 

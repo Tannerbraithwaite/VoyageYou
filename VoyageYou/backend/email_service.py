@@ -678,12 +678,12 @@ class EmailService:
                     <p>We'll send you additional details about your flights, accommodations, and activities closer to your departure date.</p>
                     
                     <p>Safe travels!</p>
-                    <p><strong>The Travel App Team</strong></p>
+                    <p><strong>The VoyageYou Team</strong></p>
                 </div>
                 
                 <div class="footer">
                     <p>Need help? Contact us at <a href="mailto:support@travelapp.com">support@travelapp.com</a></p>
-                    <p>© 2024 Travel App. All rights reserved.</p>
+                    <p>© 2024 VoyageYou. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -726,10 +726,10 @@ class EmailService:
         We'll send you additional details about your flights, accommodations, and activities closer to your departure date.
         
         Safe travels!
-        The Travel App Team
+        The VoyageYou Team
         
         Need help? Contact us at support@travelapp.com
-        © 2024 Travel App. All rights reserved.
+        © 2024 VoyageYou. All rights reserved.
         """
         
         return text

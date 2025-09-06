@@ -1,6 +1,6 @@
-# Travel App Scripts
+# VoyageYou Scripts
 
-This directory contains scripts to easily start and stop the Travel App.
+This directory contains scripts to easily start and stop the VoyageYou.
 
 ## 🚀 Quick Start
 

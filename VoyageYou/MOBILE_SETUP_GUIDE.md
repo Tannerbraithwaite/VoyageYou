@@ -1,8 +1,8 @@
-# 📱 Mobile Setup Guide - Travel App with Railway Backend
+# 📱 Mobile Setup Guide - VoyageYou with Railway Backend
 
 ## 🚀 Quick Start
 
-Your Travel App is now configured to use your Railway backend for mobile development!
+Your VoyageYou is now configured to use your Railway backend for mobile development!
 
 ### 1. **Install Expo Go App**
 - **iOS**: Download "Expo Go" from the App Store
@@ -29,7 +29,7 @@ The Expo development server should be running. You'll see a QR code in your term
 - **Smart switching**: Platform detection handles the routing
 
 ### App Configuration
-- **Name**: Travel App
+- **Name**: VoyageYou
 - **Slug**: travel-app-demo
 - **Scheme**: travelapp
 
@@ -79,4 +79,4 @@ If you encounter any issues:
 3. Check Expo development server logs
 4. Test backend directly in browser
 
-Your Travel App is now ready for mobile testing with your Railway backend! 🚀
+Your VoyageYou is now ready for mobile testing with your Railway backend! 🚀

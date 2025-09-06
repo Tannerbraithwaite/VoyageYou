@@ -1,6 +1,6 @@
-# 🛠️ Travel App Development Guide
+# 🛠️ VoyageYou Development Guide
 
-Comprehensive guide for developers contributing to the Travel App project, including setup, coding standards, testing, and deployment.
+Comprehensive guide for developers contributing to the VoyageYou project, including setup, coding standards, testing, and deployment.
 
 ## 🚀 **Quick Start**
 

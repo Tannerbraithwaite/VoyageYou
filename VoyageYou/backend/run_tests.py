@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test runner for the Travel App backend
+Test runner for the VoyageYou backend
 """
 
 import subprocess
@@ -61,7 +61,7 @@ def run_frontend_tests():
 
 def main():
     """Run all tests"""
-    print("🚀 Starting Test Suite for Travel App")
+    print("🚀 Starting Test Suite for VoyageYou")
     print("=" * 50)
     
     backend_success = run_backend_tests()
