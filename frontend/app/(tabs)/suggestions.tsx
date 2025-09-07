@@ -115,6 +115,32 @@ export default function SuggestionsScreen() {
         
         if (profileResponse.ok) {
           const profileData = await profileResponse.json();
+
+      // Check if user has enough data for profile generation
+      const hasProfileData = profileData && (
+        profileData.name || 
+        profileData.travel_style || 
+        profileData.budget_range || 
+        profileData.additional_info
+      );
+
+      if (!hasProfileData) {
+        Alert.alert(
+          'Complete Your Profile First', 
+          'To generate personalized travel insights, please complete your profile with travel preferences and interests first.',
+          [
+            {
+              text: 'Go to Profile',
+              onPress: () => router.push('/(tabs)/profile')
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
+        return;
+      }
           console.log('Loaded profile data:', profileData);
         }
       }
@@ -139,10 +165,36 @@ export default function SuggestionsScreen() {
       });
       
       if (!profileResponse.ok) {
-        throw new Error('Failed to fetch user profile');
+        console.warn('User profile not found or empty - this is normal for new users');
       }
       
       const profileData = await profileResponse.json();
+
+      // Check if user has enough data for profile generation
+      const hasProfileData = profileData && (
+        profileData.name || 
+        profileData.travel_style || 
+        profileData.budget_range || 
+        profileData.additional_info
+      );
+
+      if (!hasProfileData) {
+        Alert.alert(
+          'Complete Your Profile First', 
+          'To generate personalized travel insights, please complete your profile with travel preferences and interests first.',
+          [
+            {
+              text: 'Go to Profile',
+              onPress: () => router.push('/(tabs)/profile')
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
+        return;
+      }
       
       // Fetch user's past trips (completed trips with ratings)
       const tripsResponse = await fetch(`${API_BASE_URL}/users/${user.id}/trips/`, {
@@ -604,10 +656,36 @@ Return ONLY the JSON array, no other text.`;
       });
       
       if (!profileResponse.ok) {
-        throw new Error('Failed to fetch user profile');
+        console.warn('User profile not found or empty - this is normal for new users');
       }
       
       const profileData = await profileResponse.json();
+
+      // Check if user has enough data for profile generation
+      const hasProfileData = profileData && (
+        profileData.name || 
+        profileData.travel_style || 
+        profileData.budget_range || 
+        profileData.additional_info
+      );
+
+      if (!hasProfileData) {
+        Alert.alert(
+          'Complete Your Profile First', 
+          'To generate personalized travel insights, please complete your profile with travel preferences and interests first.',
+          [
+            {
+              text: 'Go to Profile',
+              onPress: () => router.push('/(tabs)/profile')
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
+        return;
+      }
       
       // Fetch user's past trips (completed trips with ratings)
       const tripsResponse = await fetch(`${API_BASE_URL}/users/${user.id}/trips/`, {
