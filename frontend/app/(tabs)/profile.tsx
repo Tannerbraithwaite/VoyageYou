@@ -4,6 +4,7 @@ import GlassCard from '@/components/ui/GlassCard';
 import { router } from 'expo-router';
 import authService from '@/services/auth';
 import { VoyageYouHeader } from '@/components';
+import { API_BASE_URL } from '@/config/api';
 
 export default function ProfileScreen() {
   const [name, setName] = useState('');
