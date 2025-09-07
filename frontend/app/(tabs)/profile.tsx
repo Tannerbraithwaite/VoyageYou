@@ -220,6 +220,16 @@ export default function ProfileScreen() {
   };
 
   const handleSaveProfile = async () => {
+    // First check if user is authenticated
+    const currentUser = await authService.getCurrentUser();
+    if (!currentUser) {
+      Alert.alert('Authentication Required', 'Please log in to save your profile.', [
+        { text: 'Login', onPress: () => router.push('/auth/login') }
+      ]);
+      setIsSaving(false);
+      return;
+    }
+    console.log('Current user:', currentUser);
     console.log('=== SAVE PROFILE STARTED ===');
     setIsSaving(true);
     setSaveStatus('');
