@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/config/api';
+import { safeSessionStorage } from '@/utils/storage';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Modal, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
@@ -177,7 +179,7 @@ export default function CheckoutScreen() {
 
   const loadItinerary = () => {
     try {
-      const storedItinerary = sessionStorage.getItem('selectedItinerary');
+      const storedItinerary = safeSessionStorage.getItem('selectedItinerary');
       if (storedItinerary) {
         const parsed = JSON.parse(storedItinerary);
         setItinerary(parsed);
@@ -344,7 +346,7 @@ export default function CheckoutScreen() {
 
       // Store booking confirmation for the confirmation page
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem('lastBookingConfirmation', JSON.stringify(result));
+        safeSessionStorage.setItem('lastBookingConfirmation', JSON.stringify(result));
       }
 
       // Navigate to confirmation page
@@ -361,7 +363,7 @@ export default function CheckoutScreen() {
       };
       
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem('lastBookingConfirmation', JSON.stringify(errorResult));
+        safeSessionStorage.setItem('lastBookingConfirmation', JSON.stringify(errorResult));
       }
       
       // Navigate to confirmation page to show error

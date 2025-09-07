@@ -6,6 +6,8 @@ import { router } from 'expo-router';
 import DetailsModal from '@/components/DetailsModal';
 import { Ionicons } from '@expo/vector-icons';
 import { VoyageYouHeader } from '@/components';
+import { safeLocalStorage } from '@/utils/storage';
+import { safeSessionStorage } from '@/utils/storage';
 
 interface Activity {
   time: string;
@@ -66,7 +68,7 @@ export default function ScheduleScreen() {
     if (status === 'past') {
       // Check if this past trip was actually booked
       if (schedule.checkoutDate || 
-          (typeof window !== 'undefined' && sessionStorage.getItem('lastBookingConfirmation'))) {
+          (typeof window !== 'undefined' && safeSessionStorage.getItem('lastBookingConfirmation'))) {
         return 'Trip completed (was booked)';
       }
       return 'Trip dates have passed';
@@ -111,7 +113,7 @@ export default function ScheduleScreen() {
     }
     
     // SECOND PRIORITY: Check if this trip has been booked through checkout process
-    // Look for booking confirmation in sessionStorage or check for checkoutDate
+    // Look for booking confirmation in safeSessionStorage or check for checkoutDate
     if (schedule.checkoutDate) {
       return 'booked';
     }
@@ -119,7 +121,7 @@ export default function ScheduleScreen() {
     // Check if there's a recent booking for this schedule
     if (typeof window !== 'undefined') {
       try {
-        const lastBooking = sessionStorage.getItem('lastBookingConfirmation');
+        const lastBooking = safeSessionStorage.getItem('lastBookingConfirmation');
         if (lastBooking) {
           const bookingData = JSON.parse(lastBooking);
           if (bookingData.success && bookingData.booking) {
@@ -141,11 +143,11 @@ export default function ScheduleScreen() {
     return 'unbooked';
   };
 
-  // Load saved schedules from localStorage
+  // Load saved schedules from safeLocalStorage
   const loadSavedSchedules = () => {
     if (typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem('savedSchedules');
+        const stored = safeLocalStorage.getItem('savedSchedules');
         if (stored) {
           const schedules = JSON.parse(stored);
           
@@ -167,16 +169,16 @@ export default function ScheduleScreen() {
           
           setSavedSchedules(updatedSchedules);
           
-          // If we filtered out any invalid schedules, update localStorage
+          // If we filtered out any invalid schedules, update safeLocalStorage
           if (validSchedules.length !== schedules.length) {
-            localStorage.setItem('savedSchedules', JSON.stringify(validSchedules));
+            safeLocalStorage.setItem('savedSchedules', JSON.stringify(validSchedules));
             console.log(`Filtered out ${schedules.length - validSchedules.length} invalid schedules`);
           }
         }
       } catch (error) {
         console.error('Error loading saved schedules:', error);
         // Clear corrupted data
-        localStorage.removeItem('savedSchedules');
+        safeLocalStorage.removeItem('savedSchedules');
         setSavedSchedules([]);
       }
     }
@@ -200,7 +202,7 @@ export default function ScheduleScreen() {
       setSavedSchedules(updatedSchedules);
       
       if (typeof window !== 'undefined') {
-        localStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+        safeLocalStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
       }
     }
   };
@@ -244,9 +246,9 @@ export default function ScheduleScreen() {
   };
 
   const handleCheckout = (schedule: SavedSchedule) => {
-    // Store the selected schedule in sessionStorage for checkout
+    // Store the selected schedule in safeSessionStorage for checkout
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('selectedItinerary', JSON.stringify(schedule.itinerary));
+      safeSessionStorage.setItem('selectedItinerary', JSON.stringify(schedule.itinerary));
     }
     router.push('/checkout');
   };
@@ -255,7 +257,7 @@ export default function ScheduleScreen() {
   const handleEditTrip = (schedule: SavedSchedule) => {
     // Store trip data for the edit screen
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('selectedTripForEdit', JSON.stringify(schedule));
+      safeSessionStorage.setItem('selectedTripForEdit', JSON.stringify(schedule));
     }
 
     // Close the details modal before navigating
@@ -269,7 +271,7 @@ export default function ScheduleScreen() {
   const handleEditSchedule = (schedule: SavedSchedule) => {
     // Persist itinerary so the Home screen can pick it up
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('currentItinerary', JSON.stringify(schedule.itinerary));
+      safeSessionStorage.setItem('currentItinerary', JSON.stringify(schedule.itinerary));
     }
 
     // Close the details modal before navigating
@@ -284,7 +286,7 @@ export default function ScheduleScreen() {
     setSavedSchedules(updatedSchedules);
     
     if (typeof window !== 'undefined') {
-      localStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+      safeLocalStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
     }
     
     if (selectedSchedule?.id === scheduleId) {
@@ -299,7 +301,7 @@ export default function ScheduleScreen() {
     setActivityRatings(prev => {
       const updated = { ...prev, [key]: rating };
       if (typeof window !== 'undefined') {
-        try { localStorage.setItem('activityRatings', JSON.stringify(updated)); } catch {}
+        try { safeLocalStorage.setItem('activityRatings', JSON.stringify(updated)); } catch {}
       }
       return updated;
     });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { safeSessionStorage } from '@/utils/storage';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { BookingConfirmation } from '@/types';
@@ -11,7 +12,7 @@ export default function BookingConfirmationScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get booking data from route params or sessionStorage
+    // Get booking data from route params or safeSessionStorage
     const loadBookingData = () => {
       try {
         if (params.bookingData) {
@@ -19,8 +20,8 @@ export default function BookingConfirmationScreen() {
           const data = JSON.parse(params.bookingData as string);
           setBookingData(data);
         } else {
-          // Try to get from sessionStorage as fallback
-          const storedData = sessionStorage.getItem('lastBookingConfirmation');
+          // Try to get from safeSessionStorage as fallback
+          const storedData = safeSessionStorage.getItem('lastBookingConfirmation');
           if (storedData) {
             const data = JSON.parse(storedData);
             setBookingData(data);
@@ -40,10 +41,10 @@ export default function BookingConfirmationScreen() {
   }, [params]);
 
   const handleBackToHome = () => {
-    // Clear the booking data from sessionStorage
+    // Clear the booking data from safeSessionStorage
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('lastBookingConfirmation');
-      sessionStorage.removeItem('selectedItinerary');
+      safeSessionStorage.removeItem('lastBookingConfirmation');
+      safeSessionStorage.removeItem('selectedItinerary');
     }
     router.push('/');
   };

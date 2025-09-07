@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { safeSessionStorage } from '@/utils/storage';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Alert, TextInput } from 'react-native';
 import GlassCard from '@/components/ui/GlassCard';
 import { router } from 'expo-router';
@@ -91,7 +92,7 @@ export default function TripEditScreen() {
 
       // Load trip data from session storage
       if (typeof window !== 'undefined') {
-        const savedTrip = sessionStorage.getItem('selectedTripForEdit');
+        const savedTrip = safeSessionStorage.getItem('selectedTripForEdit');
         if (savedTrip) {
           setTrip(JSON.parse(savedTrip));
         }

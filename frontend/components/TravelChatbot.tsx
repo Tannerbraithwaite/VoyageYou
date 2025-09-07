@@ -12,6 +12,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { API_BASE_URL } from '@/config/api';
+import { safeSessionStorage } from '@/utils/storage';
 
 interface ChatMessage {
   id: number;
@@ -160,9 +161,9 @@ export default function TravelChatbot({ userId }: ChatbotProps) {
           return;
         }
 
-        // Store the itinerary data in sessionStorage for home screen
+        // Store the itinerary data in safeSessionStorage for home screen
         if (result.destination && typeof window !== 'undefined') {
-          sessionStorage.setItem('currentItinerary', JSON.stringify(result));
+          safeSessionStorage.setItem('currentItinerary', JSON.stringify(result));
         }
 
         // Create a user-friendly summary instead of raw JSON

@@ -8,6 +8,7 @@ import { calculateTripDuration } from '@/utils';
 import { TripDates } from '@/types';
 import authService from '@/services/auth';
 import { VoyageYouHeader } from '@/components';
+import { safeSessionStorage, safeLocalStorage } from '@/utils/storage';
 
 export default function SuggestionsScreen() {
   const { settings, update } = useTripSettings();
@@ -36,12 +37,12 @@ export default function SuggestionsScreen() {
     loadSavedData();
   }, []);
 
-  // Load saved travel profile and recommendations from localStorage
+  // Load saved travel profile and recommendations from safeLocalStorage
   const loadSavedData = () => {
     try {
       if (typeof window !== 'undefined') {
         // Load saved travel profile
-        const savedProfile = localStorage.getItem('userTravelProfile');
+        const savedProfile = safeLocalStorage.getItem('userTravelProfile');
         if (savedProfile) {
           const profileData = JSON.parse(savedProfile);
           setUserInsights(profileData.insights);
@@ -50,7 +51,7 @@ export default function SuggestionsScreen() {
         }
 
         // Load saved recommendations
-        const savedRecommendations = localStorage.getItem('userTripRecommendations');
+        const savedRecommendations = safeLocalStorage.getItem('userTripRecommendations');
         if (savedRecommendations) {
           const recommendationsData = JSON.parse(savedRecommendations);
           setPersonalizedRecommendations(recommendationsData.recommendations);
@@ -63,7 +64,7 @@ export default function SuggestionsScreen() {
     }
   };
 
-  // Save travel profile to localStorage
+  // Save travel profile to safeLocalStorage
   const saveTravelProfile = (insights: string[]) => {
     try {
       if (typeof window !== 'undefined') {
@@ -71,7 +72,7 @@ export default function SuggestionsScreen() {
           insights,
           generatedAt: new Date().toISOString()
         };
-        localStorage.setItem('userTravelProfile', JSON.stringify(profileData));
+        safeLocalStorage.setItem('userTravelProfile', JSON.stringify(profileData));
 
       }
     } catch (error) {
@@ -79,7 +80,7 @@ export default function SuggestionsScreen() {
     }
   };
 
-  // Save trip recommendations to localStorage
+  // Save trip recommendations to safeLocalStorage
   const saveTripRecommendations = (recommendations: any[]) => {
     try {
       if (typeof window !== 'undefined') {
@@ -87,7 +88,7 @@ export default function SuggestionsScreen() {
           recommendations,
           generatedAt: new Date().toISOString()
         };
-        localStorage.setItem('userTripRecommendations', JSON.stringify(recommendationsData));
+        safeLocalStorage.setItem('userTripRecommendations', JSON.stringify(recommendationsData));
 
       }
     } catch (error) {
@@ -591,7 +592,7 @@ Return ONLY the JSON array, no other text.`;
         setHasGeneratedRecommendations(false);
         // Clear saved recommendations
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('userTripRecommendations');
+          safeLocalStorage.removeItem('userTripRecommendations');
         }
 
       }
@@ -812,9 +813,9 @@ Make the insights specific, data-driven, and actionable for future trip planning
         const result = await response.json();
         console.log('✅ LLM response received:', result);
         
-        // Store the itinerary data in sessionStorage
+        // Store the itinerary data in safeSessionStorage
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem('currentItinerary', JSON.stringify(result));
+          safeSessionStorage.setItem('currentItinerary', JSON.stringify(result));
           console.log('💾 Itinerary saved to session storage');
         }
         
@@ -896,7 +897,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
           };
           
           if (typeof window !== 'undefined') {
-            sessionStorage.setItem('currentItinerary', JSON.stringify(simplifiedItinerary));
+            safeSessionStorage.setItem('currentItinerary', JSON.stringify(simplifiedItinerary));
             console.log('💾 Simplified itinerary saved to session storage');
           }
           

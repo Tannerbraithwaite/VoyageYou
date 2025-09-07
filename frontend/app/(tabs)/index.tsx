@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { formatDateForChat, calculateTripDuration } from '@/utils';
 import exportService from '@/services/export';
 import { API_BASE_URL } from '@/config/api';
+import { safeSessionStorage, safeLocalStorage } from '@/utils/storage';
 
 
 interface Activity {
@@ -305,7 +306,7 @@ export default function HomeScreen() {
   const [activityRatings, setActivityRatings] = useState<Record<string, number>>(() => {
     if (typeof window !== 'undefined') {
       try {
-        return JSON.parse(localStorage.getItem('activityRatings') || '{}');
+        return JSON.parse(safeLocalStorage.getItem('activityRatings') || '{}');
       } catch {}
     }
     return {};
@@ -367,7 +368,7 @@ export default function HomeScreen() {
     if (typeof window !== 'undefined') {
       const options = { includeFlights, includeHotel, includeActivities };
       try {
-        sessionStorage.setItem('purchaseOptions', JSON.stringify(options));
+        safeSessionStorage.setItem('purchaseOptions', JSON.stringify(options));
       } catch (e) {
         // ignore
       }
@@ -483,10 +484,10 @@ export default function HomeScreen() {
     testBackendConnection();
   }, []);
 
-  // Load itinerary data from sessionStorage on component mount
+  // Load itinerary data from safeSessionStorage on component mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedItinerary = sessionStorage.getItem('currentItinerary');
+      const storedItinerary = safeSessionStorage.getItem('currentItinerary');
       if (storedItinerary) {
         try {
           const itinerary = JSON.parse(storedItinerary);
@@ -534,7 +535,7 @@ export default function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       if (typeof window !== 'undefined') {
-        const storedItinerary = sessionStorage.getItem('currentItinerary');
+        const storedItinerary = safeSessionStorage.getItem('currentItinerary');
         if (storedItinerary) {
           try {
             const itinerary = JSON.parse(storedItinerary);
@@ -550,11 +551,11 @@ export default function HomeScreen() {
     }, [])
   );
 
-  // Load saved schedules from localStorage on component mount
+  // Load saved schedules from safeLocalStorage on component mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const storedSchedules = localStorage.getItem('savedSchedules');
+        const storedSchedules = safeLocalStorage.getItem('savedSchedules');
         if (storedSchedules) {
           const schedules = JSON.parse(storedSchedules);
           setSavedSchedules(schedules);
@@ -745,7 +746,7 @@ export default function HomeScreen() {
         
         // Store in session storage for persistence
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem('currentItinerary', JSON.stringify(result));
+          safeSessionStorage.setItem('currentItinerary', JSON.stringify(result));
         }
       } else {
         // LangChain endpoint failed, falling back to enhanced endpoint
@@ -886,9 +887,9 @@ export default function HomeScreen() {
   };
 
   const handleCheckout = () => {
-    // Store the current itinerary in sessionStorage for checkout
+    // Store the current itinerary in safeSessionStorage for checkout
     if (typeof window !== 'undefined' && currentItinerary) {
-      sessionStorage.setItem('selectedItinerary', JSON.stringify(currentItinerary));
+      safeSessionStorage.setItem('selectedItinerary', JSON.stringify(currentItinerary));
     }
     router.push('/checkout');
   };
@@ -928,7 +929,7 @@ export default function HomeScreen() {
     setActivityRatings(prev => {
       const updated = { ...prev, [key]: rating };
       if (typeof window !== 'undefined') {
-        try { localStorage.setItem('activityRatings', JSON.stringify(updated)); } catch {}
+        try { safeLocalStorage.setItem('activityRatings', JSON.stringify(updated)); } catch {}
       }
       return updated;
     });
@@ -1226,11 +1227,11 @@ export default function HomeScreen() {
       // Add to local state
       setSavedSchedules(prev => [...prev, newSchedule]);
 
-      // Save to localStorage
+      // Save to safeLocalStorage
       if (typeof window !== 'undefined') {
-        const existingSchedules = JSON.parse(localStorage.getItem('savedSchedules') || '[]');
+        const existingSchedules = JSON.parse(safeLocalStorage.getItem('savedSchedules') || '[]');
         const updatedSchedules = [...existingSchedules, newSchedule];
-        localStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+        safeLocalStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
         
 
         Alert.alert('Success', `Schedule "${scheduleName.trim()}" has been saved!`);
