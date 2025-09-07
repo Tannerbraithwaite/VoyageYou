@@ -148,17 +148,33 @@ export default function ScheduleScreen() {
     if (typeof window !== 'undefined') {
       try {
         const stored = safeLocalStorage.getItem('savedSchedules');
+        console.log('🔍 Raw stored schedules:', stored);
+        
         if (stored) {
           const schedules = JSON.parse(stored);
+          console.log('📋 Parsed schedules:', schedules);
+          console.log('📊 Number of schedules found:', schedules.length);
           
           // Filter out invalid schedules that don't have the required structure
           const validSchedules = schedules.filter((schedule: any) => {
-            // Check if schedule has basic required properties
-            return schedule && 
+            const isValid = schedule && 
                    schedule.id && 
                    schedule.name && 
                    schedule.destination &&
                    (schedule.schedule || schedule.itinerary); // Must have either schedule or itinerary
+            
+            if (!isValid) {
+              console.log('❌ Invalid schedule found:', {
+                hasSchedule: !!schedule,
+                hasId: !!schedule?.id,
+                hasName: !!schedule?.name,
+                hasDestination: !!schedule?.destination,
+                hasScheduleOrItinerary: !!(schedule?.schedule || schedule?.itinerary),
+                schedule: schedule
+              });
+            }
+            
+            return isValid;
           });
           
           // Apply automatic status assignment to valid schedules
@@ -167,13 +183,19 @@ export default function ScheduleScreen() {
             status: determineTripStatus(schedule)
           }));
           
+          console.log('✅ Valid schedules:', validSchedules.length);
+          console.log('📋 Setting saved schedules state:', updatedSchedules);
           setSavedSchedules(updatedSchedules);
           
           // If we filtered out any invalid schedules, update safeLocalStorage
           if (validSchedules.length !== schedules.length) {
             safeLocalStorage.setItem('savedSchedules', JSON.stringify(validSchedules));
-            console.log(`Filtered out ${schedules.length - validSchedules.length} invalid schedules`);
+            console.log(`❌ Filtered out ${schedules.length - validSchedules.length} invalid schedules`);
+          } else {
+            console.log('✅ All schedules are valid');
           }
+        } else {
+          console.log('📭 No saved schedules found in localStorage');
         }
       } catch (error) {
         console.error('Error loading saved schedules:', error);

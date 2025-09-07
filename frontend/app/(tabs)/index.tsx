@@ -1229,10 +1229,22 @@ export default function HomeScreen() {
 
       // Save to safeLocalStorage
       if (typeof window !== 'undefined') {
-        const existingSchedules = JSON.parse(safeLocalStorage.getItem('savedSchedules') || '[]');
-        const updatedSchedules = [...existingSchedules, newSchedule];
-        safeLocalStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+        console.log('💾 Saving new schedule:', newSchedule);
+        console.log('💾 Schedule validation check:', {
+          hasId: !!newSchedule.id,
+          hasName: !!newSchedule.name,
+          hasDestination: !!newSchedule.destination,
+          hasScheduleOrItinerary: !!(newSchedule.schedule || newSchedule.itinerary)
+        });
         
+        const existingSchedules = JSON.parse(safeLocalStorage.getItem('savedSchedules') || '[]');
+        console.log('💾 Existing schedules count:', existingSchedules.length);
+        
+        const updatedSchedules = [...existingSchedules, newSchedule];
+        console.log('💾 Updated schedules count:', updatedSchedules.length);
+        
+        safeLocalStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+        console.log('✅ Schedule saved to localStorage');
 
         Alert.alert('Success', `Schedule "${scheduleName.trim()}" has been saved!`);
       }
