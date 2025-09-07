@@ -220,18 +220,23 @@ export default function ProfileScreen() {
   };
 
   const handleSaveProfile = async () => {
+    console.log('🔄 Starting profile save...');
+    setIsSaving(true);
+    
     // First check if user is authenticated
     const currentUser = await authService.getCurrentUser();
+    console.log('🔍 Current user check result:', currentUser);
+    
     if (!currentUser) {
+      console.log('❌ No current user found - authentication required');
       Alert.alert('Authentication Required', 'Please log in to save your profile.', [
         { text: 'Login', onPress: () => router.push('/auth/login') }
       ]);
       setIsSaving(false);
       return;
     }
-    console.log('Current user:', currentUser);
+    console.log('✅ User authenticated:', currentUser.id, currentUser.email);
     console.log('=== SAVE PROFILE STARTED ===');
-    setIsSaving(true);
     setSaveStatus('');
 
     try {
@@ -243,30 +248,53 @@ export default function ProfileScreen() {
       
       console.log('Making profile update request...');
       // Update user profile
+      const profilePayload = {
+        name,
+        phone,
+        birthdate: birthdate ? new Date(birthdate).toISOString().split('T')[0] : null,
+        gender,
+        nationality,
+        passport_number: passportNumber,
+        emergency_contact: emergencyContact,
+        location,
+        travel_style: travelStyle,
+        budget_range: budget,
+        additional_info: additionalInfo
+      };
+      
+      console.log('📤 Sending profile update to:', `${API_BASE_URL}/users/${userId}`);
+      console.log('📦 Profile payload:', profilePayload);
+      
       const profileResponse = await fetch(`${API_BASE_URL}/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name,
-          phone,
-          birthdate: birthdate ? new Date(birthdate).toISOString().split('T')[0] : null,
-          gender,
-          nationality,
-          passport_number: passportNumber,
-          emergency_contact: emergencyContact,
-          location,
-          travel_style: travelStyle,
-          budget_range: budget,
-          additional_info: additionalInfo
-        }),
+        body: JSON.stringify(profilePayload),
         credentials: 'include'
       });
 
-      console.log('Profile response status:', profileResponse.status);
+      console.log('📥 Profile response status:', profileResponse.status);
+      console.log('📥 Profile response headers:', Object.fromEntries(profileResponse.headers.entries()));
+      
       const profileData = await profileResponse.json();
-      console.log('Profile response data:', profileData);
+      console.log('📥 Profile response data:', profileData);
+
+      if (!profileResponse.ok) {
+        console.error('❌ Profile update failed:', profileResponse.status, profileData);
+        if (profileResponse.status === 401) {
+          Alert.alert('Authentication Error', 'Please log in again to save your profile.', [
+            { text: 'Login', onPress: () => router.push('/auth/login') }
+          ]);
+          return;
+        } else if (profileResponse.status === 403) {
+          Alert.alert('Permission Error', 'You do not have permission to update this profile.');
+          return;
+        } else {
+          Alert.alert('Error', `Profile update failed: ${profileData.detail || 'Unknown error'}`);
+          return;
+        }
+      }
 
       console.log('Making interests update request...');
       // Update user interests
