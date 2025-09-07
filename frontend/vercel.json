@@ -4,5 +4,35 @@
   "buildCommand": "npm install && npx expo export --platform web",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "framework": null
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/auth/verify-email",
+      "destination": "/auth/verify-email.html"
+    },
+    {
+      "source": "/auth/login",
+      "destination": "/auth/login.html"
+    },
+    {
+      "source": "/auth/signup",
+      "destination": "/auth/signup.html"
+    },
+    {
+      "source": "/auth/forgot-password",
+      "destination": "/auth/forgot-password.html"
+    },
+    {
+      "source": "/auth/reset-password",
+      "destination": "/auth/reset-password.html"
+    },
+    {
+      "source": "/auth/terms",
+      "destination": "/auth/terms.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
