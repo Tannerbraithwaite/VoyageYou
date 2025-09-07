@@ -9,6 +9,7 @@ import { TripDates } from '@/types';
 import authService from '@/services/auth';
 import { VoyageYouHeader } from '@/components';
 import { safeSessionStorage, safeLocalStorage } from '@/utils/storage';
+import { API_BASE_URL } from '@/config/api';
 
 export default function SuggestionsScreen() {
   const { settings, update } = useTripSettings();
