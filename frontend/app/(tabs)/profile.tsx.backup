@@ -6,7 +6,7 @@ import authService from '@/services/auth';
 import { VoyageYouHeader } from '@/components';
 
 export default function ProfileScreen() {
-  const [name, setName] = useState('');
+  const [name, setName] = useState('Sarah Johnson');
 
   const [phone, setPhone] = useState('');
   const [birthdate, setBirthdate] = useState('');
@@ -17,10 +17,10 @@ export default function ProfileScreen() {
   const [emergencyContact, setEmergencyContact] = useState('');
   const [location, setLocation] = useState('');
   const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
-  const [travelStyle, setTravelStyle] = useState('');
-  const [budget, setBudget] = useState('');
-  const [interests, setInterests] = useState([]);
-  const [additionalInfo, setAdditionalInfo] = useState('');
+  const [travelStyle, setTravelStyle] = useState('solo');
+  const [budget, setBudget] = useState('moderate');
+  const [interests, setInterests] = useState(['art', 'food', 'culture', 'photography', 'architecture']);
+  const [additionalInfo, setAdditionalInfo] = useState('I prefer boutique hotels over chains, love trying local street food, and always pack light. I am comfortable with public transportation and enjoy getting lost in new cities.');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(''); // 'success', 'error', or ''
   const [isLoading, setIsLoading] = useState(true);
@@ -65,7 +65,7 @@ export default function ProfileScreen() {
         console.log('Loaded profile data:', profileData);
         
         // Update state with loaded data
-        setName(profileData.name || '');
+        setName(profileData.name || 'Sarah Johnson');
         setPhone(profileData.phone || '');
         setBirthdate(profileData.birthdate || '');
         setAge(profileData.birthdate ? calculateAge(profileData.birthdate) : null);
@@ -74,8 +74,8 @@ export default function ProfileScreen() {
         setPassportNumber(profileData.passport_number || '');
         setEmergencyContact(profileData.emergency_contact || '');
         setLocation(profileData.location || '');
-        setTravelStyle(profileData.travel_style || '');
-        setBudget(profileData.budget_range || '');
+        setTravelStyle(profileData.travel_style || 'solo');
+        setBudget(profileData.budget_range || 'moderate');
         setAdditionalInfo(profileData.additional_info || '');
         
         // Load user interests
@@ -90,10 +90,10 @@ export default function ProfileScreen() {
           
           // Extract interest IDs from the response
           const loadedInterests = interestsData.map((interest: any) => interest.interest || interest.interest_name);
-          setInterests(loadedInterests.length > 0 ? loadedInterests : []);
+          setInterests(loadedInterests.length > 0 ? loadedInterests : ['art', 'food', 'culture', 'photography', 'architecture']);
         } else {
           console.log('Failed to load interests, using defaults');
-          setInterests([]);
+          setInterests(['art', 'food', 'culture', 'photography', 'architecture']);
         }
       } else {
         console.log('Failed to load profile, using defaults');
