@@ -6,10 +6,10 @@ const RAILWAY_BACKEND_URL = 'https://voyageyou-production.up.railway.app';
 
 // Determine the base URL based on platform and environment
 export const getBaseURL = () => {
-  // For web development, use localhost
+  // For web development, use Railway backend (same as mobile)
   if (Platform.OS === 'web') {
-    console.log('🌐 Using localhost for web platform');
-    return 'http://localhost:8000';
+    console.log('🌐 Using Railway backend for web platform:', RAILWAY_BACKEND_URL);
+    return RAILWAY_BACKEND_URL;
   }
   
   // For mobile development, use Railway backend
