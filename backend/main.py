@@ -1918,9 +1918,8 @@ async def export_itinerary(
             email_sent = await email_service.send_itinerary_pdf_email(
                 current_user.email,
                 current_user.name or "Traveler",
-                pdf_bytes,
-                filename,
-                destination
+                export_request.itinerary_data,
+                pdf_bytes
             )
             
             if email_sent:

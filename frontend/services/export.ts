@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { API_BASE_URL } from '../config/api';
 
 export interface ExportRequest {
   itinerary_data: any;
