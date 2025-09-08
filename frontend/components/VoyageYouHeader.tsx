@@ -22,7 +22,7 @@ export default function VoyageYouHeader({ style }: VoyageYouHeaderProps) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 50,
+    top: 10,
     right: 20,
     zIndex: 1, // Lower z-index so it doesn't block interactive elements
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert, Modal, Platform, ActivityIndicator, PermissionsAndroid } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert, Modal, Platform, ActivityIndicator, PermissionsAndroid, SafeAreaView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import GlassCard from '@/components/ui/GlassCard';
@@ -1298,7 +1298,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <VoyageYouHeader />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -2110,7 +2110,7 @@ export default function HomeScreen() {
       data={detailsData}
     />
 
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -2164,6 +2164,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 10,
   },
   chatSection: {
     marginBottom: 30,

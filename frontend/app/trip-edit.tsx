@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { safeSessionStorage } from '@/utils/storage';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Alert, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Alert, TextInput, SafeAreaView } from 'react-native';
 import GlassCard from '@/components/ui/GlassCard';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -206,29 +206,29 @@ export default function TripEditScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading trip details...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!trip || !policies) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Unable to load trip details</Text>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <GlassCard style={styles.header}>
@@ -468,7 +468,7 @@ export default function TripEditScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 

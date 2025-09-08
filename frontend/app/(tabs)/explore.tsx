@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Alert, SafeAreaView } from 'react-native';
 import GlassCard from '@/components/ui/GlassCard';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
@@ -345,7 +345,7 @@ export default function ScheduleScreen() {
 
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <VoyageYouHeader />
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
@@ -711,7 +711,7 @@ export default function ScheduleScreen() {
         type={detailsType}
         data={detailsData}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

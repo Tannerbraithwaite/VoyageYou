@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, Platform, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, Platform, Alert, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { createTripPrompt, TripRecommendation } from '@/utils';
 import { useTripSettings } from '@/components/TripSettingsContext';
@@ -1033,7 +1033,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <VoyageYouHeader />
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
@@ -1256,7 +1256,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
         </View>
       </Modal>
       {/* DatePicker handles its own modal */}
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@/config/api';
 import { safeSessionStorage } from '@/utils/storage';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Modal, Switch } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Modal, Switch, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
   EnhancedItinerary, 
@@ -851,7 +851,7 @@ export default function CheckoutScreen() {
 
   if (!itinerary) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.push('/')}>
             <Text style={styles.backButton}>← Back</Text>
@@ -862,13 +862,13 @@ export default function CheckoutScreen() {
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading itinerary...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
     <>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.push('/')}>
             <Text style={styles.backButton}>← Back</Text>
@@ -917,7 +917,7 @@ export default function CheckoutScreen() {
             )}
           </View>
         </View>
-      </View>
+      </SafeAreaView>
 
       {/* Date Picker Modal */}
       <Modal

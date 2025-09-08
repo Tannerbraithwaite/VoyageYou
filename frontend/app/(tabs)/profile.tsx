@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, SafeAreaView } from 'react-native';
 import GlassCard from '@/components/ui/GlassCard';
 import { router } from 'expo-router';
 import authService from '@/services/auth';
@@ -353,7 +353,7 @@ export default function ProfileScreen() {
   console.log('Budget levels:', budgetLevels);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <VoyageYouHeader />
       <ScrollView 
         style={styles.scrollView}
@@ -657,7 +657,7 @@ export default function ProfileScreen() {
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
