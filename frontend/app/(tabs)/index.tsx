@@ -100,6 +100,20 @@ export default function HomeScreen() {
   const [userLocation, setUserLocation] = useState<string>('');
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
+
+  // Helper function to generate date range from start to end date
+  const generateDateRange = (startDate: Date, endDate: Date): string[] => {
+    const dates: string[] = [];
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      dates.push(currentDate.toISOString().split('T')[0]); // Format as YYYY-MM-DD
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return dates;
+  };
+
   // Function to show details modal with enhanced data
   const showDetails = async (type: 'flight' | 'hotel', data: any) => {
     setIsLoadingDetails(true);
@@ -1160,41 +1174,34 @@ export default function HomeScreen() {
 
   const handleSaveScheduleConfirm = () => {
     if (scheduleName && scheduleName.trim()) {
-      // Extract and format trip dates properly
+      // Use the actual user-selected dates from tripDates state
       let tripStartDate = new Date().toISOString();
       let tripEndDate = new Date().toISOString();
       
-      if (schedule.length > 0) {
-        try {
-          // Try to parse the first and last day dates
-          if (schedule[0]?.date) {
-  
-            // If it's already a date string, use it; otherwise create a future date
-            if (schedule[0].date.includes(',')) {
-              // Human readable format like "July 15, 2024" - create a future date
-              const futureDate = new Date();
-              futureDate.setDate(futureDate.getDate() + 30); // 30 days from now
-              tripStartDate = futureDate.toISOString();
-            } else {
-              tripStartDate = new Date(schedule[0].date).toISOString();
-            }
-          }
-          
-          if (schedule[schedule.length - 1]?.date) {
-
-            // If it's already a date string, use it; otherwise create a future date
-            if (schedule[schedule.length - 1].date.includes(',')) {
-              // Human readable format like "July 15, 2024" - create a future date
-              const futureDate = new Date();
-              futureDate.setDate(futureDate.getDate() + 30 + schedule.length); // 30+ days from now
-              tripEndDate = futureDate.toISOString();
-            } else {
-              tripEndDate = new Date(schedule[schedule.length - 1].date).toISOString();
-            }
-          }
-        } catch (error) {
-          // Error parsing dates, using fallback dates
-        }
+      // Use user-selected dates if available, otherwise use fallback dates
+      if (tripDates.startDate) {
+        tripStartDate = tripDates.startDate.toISOString();
+      } else {
+        // Fallback: create a future date if no user date selected
+        const futureDate = new Date();
+        futureDate.setDate(futureDate.getDate() + 30); // 30 days from now
+        tripStartDate = futureDate.toISOString();
+      }
+      
+      if (tripDates.endDate) {
+        tripEndDate = tripDates.endDate.toISOString();
+      } else if (tripDates.startDate) {
+        // If only start date is selected, calculate end date based on duration
+        const duration = currentItinerary?.duration || '3 days';
+        const durationDays = parseInt(duration.split(' ')[0]) || 3;
+        const endDate = new Date(tripDates.startDate);
+        endDate.setDate(endDate.getDate() + durationDays - 1);
+        tripEndDate = endDate.toISOString();
+      } else {
+        // Fallback: create a future date if no user date selected
+        const futureDate = new Date();
+        futureDate.setDate(futureDate.getDate() + 30 + (parseInt(currentItinerary?.duration?.split(' ')[0]) || 3)); // 30+ days from now
+        tripEndDate = futureDate.toISOString();
       }
       
 
@@ -1222,7 +1229,9 @@ export default function HomeScreen() {
             ? [(currentItinerary as SingleCityItinerary).hotel]
             : [],
         activities: currentItinerary?.schedule?.flatMap(day => day.activities) || [],
-        dates: currentItinerary?.schedule?.map(day => day.date) || [],
+        dates: tripDates.startDate && tripDates.endDate ? 
+          generateDateRange(tripDates.startDate, tripDates.endDate) : 
+          currentItinerary?.schedule?.map(day => day.date) || [],
         costBreakdown: {
           total: currentItinerary?.total_cost || 0,
           bookable: currentItinerary?.bookable_cost || 0,
