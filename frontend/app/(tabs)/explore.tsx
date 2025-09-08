@@ -156,8 +156,13 @@ export default function ScheduleScreen() {
         
         // Filter out invalid schedules that don't have the required structure
         const validSchedules = schedules.filter((schedule: any) => {
-          const isValid = schedule && 
-                 schedule.id && 
+          // First check if schedule is not null/undefined
+          if (!schedule) {
+            console.log('❌ Null/undefined schedule found');
+            return false;
+          }
+          
+          const isValid = schedule.id && 
                  schedule.name && 
                  schedule.destination &&
                  (schedule.schedule || schedule.itinerary); // Must have either schedule or itinerary
@@ -215,10 +220,12 @@ export default function ScheduleScreen() {
   // Refresh status when component focuses to detect new bookings
   const refreshScheduleStatus = () => {
     if (savedSchedules.length > 0) {
-      const updatedSchedules = savedSchedules.map(schedule => ({
-        ...schedule,
-        status: determineTripStatus(schedule)
-      }));
+      const updatedSchedules = savedSchedules
+        .filter(schedule => schedule && schedule.id && schedule.name) // Filter out null/undefined schedules
+        .map(schedule => ({
+          ...schedule,
+          status: determineTripStatus(schedule)
+        }));
       setSavedSchedules(updatedSchedules);
       
       if (typeof window !== 'undefined') {
@@ -371,7 +378,9 @@ export default function ScheduleScreen() {
               </TouchableOpacity>
             </GlassCard>
           ) : (
-            savedSchedules.map((schedule) => (
+            savedSchedules
+              .filter(schedule => schedule && schedule.id && schedule.name) // Filter out null/undefined schedules
+              .map((schedule) => (
               <TouchableOpacity
                 key={schedule.id}
                 style={styles.scheduleCard}
