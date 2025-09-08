@@ -553,9 +553,9 @@ export default function HomeScreen() {
 
   // Load saved schedules from safeLocalStorage on component mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    const loadSchedules = async () => {
       try {
-        const storedSchedules = safeLocalStorage.getItem('savedSchedules');
+        const storedSchedules = await safeLocalStorage.getItem('savedSchedules');
         if (storedSchedules) {
           const schedules = JSON.parse(storedSchedules);
           setSavedSchedules(schedules);
@@ -563,7 +563,9 @@ export default function HomeScreen() {
       } catch (error) {
         // Error loading saved schedules - silent handling
       }
-    }
+    };
+    
+    loadSchedules();
   }, []);
 
   // Interactive schedule editing - no modal needed
@@ -1228,26 +1230,34 @@ export default function HomeScreen() {
       setSavedSchedules(prev => [...prev, newSchedule]);
 
       // Save to safeLocalStorage
-      if (typeof window !== 'undefined') {
-        console.log('💾 Saving new schedule:', newSchedule);
-        console.log('💾 Schedule validation check:', {
-          hasId: !!newSchedule.id,
-          hasName: !!newSchedule.name,
-          hasDestination: !!newSchedule.destination,
-          hasScheduleOrItinerary: !!(newSchedule.schedule || newSchedule.itinerary)
-        });
-        
-        const existingSchedules = JSON.parse(safeLocalStorage.getItem('savedSchedules') || '[]');
-        console.log('💾 Existing schedules count:', existingSchedules.length);
-        
-        const updatedSchedules = [...existingSchedules, newSchedule];
-        console.log('💾 Updated schedules count:', updatedSchedules.length);
-        
-        safeLocalStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
-        console.log('✅ Schedule saved to localStorage');
+      const saveSchedule = async () => {
+        try {
+          console.log('💾 Saving new schedule:', newSchedule);
+          console.log('💾 Schedule validation check:', {
+            hasId: !!newSchedule.id,
+            hasName: !!newSchedule.name,
+            hasDestination: !!newSchedule.destination,
+            hasScheduleOrItinerary: !!(newSchedule.schedule || newSchedule.itinerary)
+          });
+          
+          const existingSchedulesData = await safeLocalStorage.getItem('savedSchedules');
+          const existingSchedules = existingSchedulesData ? JSON.parse(existingSchedulesData) : [];
+          console.log('💾 Existing schedules count:', existingSchedules.length);
+          
+          const updatedSchedules = [...existingSchedules, newSchedule];
+          console.log('💾 Updated schedules count:', updatedSchedules.length);
+          
+          await safeLocalStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+          console.log('✅ Schedule saved to storage');
 
-        Alert.alert('Success', `Schedule "${scheduleName.trim()}" has been saved!`);
-      }
+          Alert.alert('Success', `Schedule "${scheduleName.trim()}" has been saved!`);
+        } catch (error) {
+          console.error('Error saving schedule:', error);
+          Alert.alert('Error', 'Failed to save schedule. Please try again.');
+        }
+      };
+      
+      saveSchedule();
 
       // Close modal and reset
       setShowSaveModal(false);

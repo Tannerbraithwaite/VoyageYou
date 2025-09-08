@@ -39,26 +39,22 @@ export default function SuggestionsScreen() {
   }, []);
 
   // Load saved travel profile and recommendations from safeLocalStorage
-  const loadSavedData = () => {
+  const loadSavedData = async () => {
     try {
-      if (typeof window !== 'undefined') {
-        // Load saved travel profile
-        const savedProfile = safeLocalStorage.getItem('userTravelProfile');
-        if (savedProfile) {
-          const profileData = JSON.parse(savedProfile);
-          setUserInsights(profileData.insights);
-          setHasGeneratedProfile(true);
+      // Load saved travel profile
+      const savedProfile = await safeLocalStorage.getItem('userTravelProfile');
+      if (savedProfile) {
+        const profileData = JSON.parse(savedProfile);
+        setUserInsights(profileData.insights);
+        setHasGeneratedProfile(true);
+      }
 
-        }
-
-        // Load saved recommendations
-        const savedRecommendations = safeLocalStorage.getItem('userTripRecommendations');
-        if (savedRecommendations) {
-          const recommendationsData = JSON.parse(savedRecommendations);
-          setPersonalizedRecommendations(recommendationsData.recommendations);
-          setHasGeneratedRecommendations(true);
-
-        }
+      // Load saved recommendations
+      const savedRecommendations = await safeLocalStorage.getItem('userTripRecommendations');
+      if (savedRecommendations) {
+        const recommendationsData = JSON.parse(savedRecommendations);
+        setPersonalizedRecommendations(recommendationsData.recommendations);
+        setHasGeneratedRecommendations(true);
       }
     } catch (error) {
       console.error('Error loading saved data:', error);
@@ -66,32 +62,26 @@ export default function SuggestionsScreen() {
   };
 
   // Save travel profile to safeLocalStorage
-  const saveTravelProfile = (insights: string[]) => {
+  const saveTravelProfile = async (insights: string[]) => {
     try {
-      if (typeof window !== 'undefined') {
-        const profileData = {
-          insights,
-          generatedAt: new Date().toISOString()
-        };
-        safeLocalStorage.setItem('userTravelProfile', JSON.stringify(profileData));
-
-      }
+      const profileData = {
+        insights,
+        generatedAt: new Date().toISOString()
+      };
+      await safeLocalStorage.setItem('userTravelProfile', JSON.stringify(profileData));
     } catch (error) {
       console.error('Error saving travel profile:', error);
     }
   };
 
   // Save trip recommendations to safeLocalStorage
-  const saveTripRecommendations = (recommendations: any[]) => {
+  const saveTripRecommendations = async (recommendations: any[]) => {
     try {
-      if (typeof window !== 'undefined') {
-        const recommendationsData = {
-          recommendations,
-          generatedAt: new Date().toISOString()
-        };
-        safeLocalStorage.setItem('userTripRecommendations', JSON.stringify(recommendationsData));
-
-      }
+      const recommendationsData = {
+        recommendations,
+        generatedAt: new Date().toISOString()
+      };
+      await safeLocalStorage.setItem('userTripRecommendations', JSON.stringify(recommendationsData));
     } catch (error) {
       console.error('Error saving trip recommendations:', error);
     }
