@@ -1299,8 +1299,6 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <VoyageYouHeader />
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Chat Section */}
         <GlassCard style={styles.chatSection}>
@@ -2165,6 +2163,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 10,
+    paddingBottom: 100, // Add padding for tab bar
   },
   chatSection: {
     marginBottom: 30,

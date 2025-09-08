@@ -1034,7 +1034,6 @@ Make the insights specific, data-driven, and actionable for future trip planning
 
   return (
     <SafeAreaView style={styles.container}>
-      <VoyageYouHeader />
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text style={styles.title}>Your Next Adventure</Text>
@@ -1268,6 +1267,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    paddingBottom: 100, // Add padding for tab bar
   },
   header: {
     padding: 24,

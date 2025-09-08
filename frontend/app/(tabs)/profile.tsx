@@ -354,7 +354,6 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <VoyageYouHeader />
       <ScrollView 
         style={styles.scrollView}
         onScrollBeginDrag={() => setShowNationalityDropdown(false)}
@@ -670,6 +669,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     padding: 20,
+    paddingBottom: 120, // Add extra padding for tab bar
   },
   header: {
     alignItems: 'center',

@@ -346,7 +346,6 @@ export default function ScheduleScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <VoyageYouHeader />
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <GlassCard style={styles.header}>
@@ -723,6 +722,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingBottom: 100, // Add padding for tab bar
   },
   header: {
     padding: 24,

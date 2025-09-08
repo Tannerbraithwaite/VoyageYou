@@ -479,6 +479,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingBottom: 100, // Add padding for tab bar
   },
   loadingContainer: {
     flex: 1,

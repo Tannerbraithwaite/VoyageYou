@@ -1058,6 +1058,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+    paddingBottom: 100, // Add padding for tab bar
   },
   section: {
     marginBottom: 30,
