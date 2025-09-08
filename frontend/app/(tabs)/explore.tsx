@@ -67,7 +67,7 @@ export default function ScheduleScreen() {
     if (status === 'booked') return 'Already booked';
     if (status === 'past') {
       // Check if this past trip was actually booked
-      if (schedule.checkoutDate || 
+      if ((schedule && schedule.checkoutDate) || 
           (typeof window !== 'undefined' && safeSessionStorage.getItem('lastBookingConfirmation'))) {
         return 'Trip completed (was booked)';
       }
@@ -257,17 +257,29 @@ export default function ScheduleScreen() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return 'Unknown Date';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
   };
 
   const handleScheduleClick = (schedule: SavedSchedule) => {
+    // Safety check to ensure schedule is valid
+    if (!schedule || !schedule.id || !schedule.name) {
+      console.error('Invalid schedule clicked:', schedule);
+      return;
+    }
     setSelectedSchedule(schedule);
     setShowScheduleDetails(true);
   };
@@ -379,41 +391,48 @@ export default function ScheduleScreen() {
             </GlassCard>
           ) : (
             savedSchedules
-              .filter(schedule => schedule && schedule.id && schedule.name) // Filter out null/undefined schedules
-              .map((schedule) => (
-              <TouchableOpacity
-                key={schedule.id}
-                style={styles.scheduleCard}
-                onPress={() => handleScheduleClick(schedule)}
-              >
-                <View style={styles.scheduleHeader}>
-                  <View style={styles.scheduleInfo}>
-                    <Text style={styles.scheduleName}>{schedule.name}</Text>
-                    <Text style={styles.scheduleDestination}>{schedule.destination}</Text>
-                    <Text style={styles.scheduleDuration}>{schedule.duration}</Text>
-                    <Text style={styles.scheduleDate}>Saved: {formatDate(schedule.savedAt)}</Text>
-                  </View>
-                  <View style={styles.scheduleStatus}>
-                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(schedule.status) }]}>
-                      <Text style={styles.statusIcon}>{getStatusIcon(schedule.status)}</Text>
-                      <Text style={styles.statusText}>{schedule.status}</Text>
+              .filter(schedule => schedule && schedule.id && schedule.name && schedule.destination) // Filter out null/undefined schedules
+              .map((schedule) => {
+                // Additional safety check
+                if (!schedule || !schedule.id || !schedule.name) {
+                  return null;
+                }
+                
+                return (
+                  <TouchableOpacity
+                    key={schedule.id}
+                    style={styles.scheduleCard}
+                    onPress={() => handleScheduleClick(schedule)}
+                  >
+                    <View style={styles.scheduleHeader}>
+                      <View style={styles.scheduleInfo}>
+                        <Text style={styles.scheduleName}>{schedule.name || 'Unnamed Schedule'}</Text>
+                        <Text style={styles.scheduleDestination}>{schedule.destination || 'Unknown Destination'}</Text>
+                        <Text style={styles.scheduleDuration}>{schedule.duration || 'Unknown Duration'}</Text>
+                        <Text style={styles.scheduleDate}>Saved: {schedule.savedAt ? formatDate(schedule.savedAt) : 'Unknown Date'}</Text>
+                      </View>
+                      <View style={styles.scheduleStatus}>
+                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(schedule.status) }]}>
+                          <Text style={styles.statusIcon}>{getStatusIcon(schedule.status)}</Text>
+                          <Text style={styles.statusText}>{schedule.status}</Text>
+                        </View>
+                        {/* Status description */}
+                        <Text style={styles.statusDescription}>
+                          {getStatusDescription(schedule, schedule.status)}
+                        </Text>
+                      </View>
                     </View>
-                    {/* Status description */}
-                    <Text style={styles.statusDescription}>
-                      {getStatusDescription(schedule, schedule.status)}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.scheduleActions}>
-                  {/* Status is automatically determined - no manual editing */}
-                  <View style={styles.statusInfo}>
-                    <Text style={styles.statusInfoText}>
-                      {getStatusDescription(schedule, schedule.status)}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
+                    <View style={styles.scheduleActions}>
+                      {/* Status is automatically determined - no manual editing */}
+                      <View style={styles.statusInfo}>
+                        <Text style={styles.statusInfoText}>
+                          {getStatusDescription(schedule, schedule.status)}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
           )}
         </View>
       </ScrollView>
