@@ -577,12 +577,12 @@ export default function HomeScreen() {
 
   }, []);
 
-    const handleSendMessage = async () => {
-    if (!message.trim()) {
+    const sendMessage = async (messageText: string) => {
+    if (!messageText.trim()) {
       return;
     }
 
-    const userMessage = message.trim();
+    const userMessage = messageText.trim();
     setMessage('');
     setIsLoading(true);
     
@@ -783,6 +783,10 @@ export default function HomeScreen() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSendMessage = async () => {
+    await sendMessage(message);
   };
 
   const updateScheduleFromItinerary = (itinerary: EnhancedItinerary) => {
@@ -1463,7 +1467,17 @@ export default function HomeScreen() {
               placeholderTextColor="#666"
               value={message}
               onChangeText={(text) => {
-                setMessage(text);
+                // Check if the last character is a newline (Enter key)
+                if (text.endsWith('\n') && text.length > 1) {
+                  // Remove the newline and send the message
+                  const messageToSend = text.slice(0, -1).trim();
+                  if (messageToSend) {
+                    setMessage('');
+                    sendMessage(messageToSend);
+                  }
+                } else {
+                  setMessage(text);
+                }
               }}
               multiline
               maxLength={500}
@@ -1471,6 +1485,7 @@ export default function HomeScreen() {
               onSubmitEditing={handleSendMessage}
               blurOnSubmit={false}
               enablesReturnKeyAutomatically={true}
+              textAlignVertical="top"
             />
             <TouchableOpacity 
               style={[styles.sendButton, isLoading && styles.sendButtonDisabled]}
