@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert, Modal, Platform, ActivityIndicator, PermissionsAndroid, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Alert, Modal, Platform, ActivityIndicator, PermissionsAndroid, SafeAreaView, KeyboardAvoidingView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import GlassCard from '@/components/ui/GlassCard';
@@ -1309,7 +1309,12 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Chat Section */}
         <GlassCard style={styles.chatSection}>
           <Text style={styles.sectionTitle}>Chat with Neel</Text>
@@ -1458,13 +1463,14 @@ export default function HomeScreen() {
               placeholderTextColor="#666"
               value={message}
               onChangeText={(text) => {
-
                 setMessage(text);
               }}
               multiline
               maxLength={500}
               returnKeyType="send"
               onSubmitEditing={handleSendMessage}
+              blurOnSubmit={false}
+              enablesReturnKeyAutomatically={true}
             />
             <TouchableOpacity 
               style={[styles.sendButton, isLoading && styles.sendButtonDisabled]}
@@ -1992,6 +1998,7 @@ export default function HomeScreen() {
           </GlassCard>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
     {/* Alternatives Modal */}
     <Modal visible={showAlternatives} transparent={true} animationType="slide">
@@ -2169,11 +2176,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 100, // Add padding for tab bar
+    paddingTop: 20,
+    paddingBottom: 120, // Add extra padding for tab bar and safe area
   },
   chatSection: {
     marginBottom: 30,
@@ -2405,26 +2415,31 @@ const styles = StyleSheet.create({
     padding: 5,
     borderWidth: 1,
     borderColor: '#333',
+    alignItems: 'flex-end',
+    minHeight: 50,
   },
   input: {
     flex: 1,
     backgroundColor: 'transparent',
     borderRadius: 20,
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 12,
     color: '#ffffff',
     fontSize: 16,
     marginRight: 10,
     minHeight: 44,
+    maxHeight: 120,
+    textAlignVertical: 'top',
   },
   sendButton: {
     backgroundColor: '#6366f1',
     borderRadius: 20,
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 12,
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 60,
+    height: 44,
   },
   sendButtonDisabled: {
     backgroundColor: '#666',

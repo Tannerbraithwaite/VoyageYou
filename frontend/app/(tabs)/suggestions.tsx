@@ -1257,7 +1257,8 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingBottom: 100, // Add padding for tab bar
+    paddingTop: 20,
+    paddingBottom: 120, // Add extra padding for tab bar and safe area
   },
   header: {
     padding: 24,
