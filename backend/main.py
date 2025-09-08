@@ -245,7 +245,7 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid or expired verification token")
     
     # Check if token is expired
-    if user.verification_expires < datetime.utcnow():
+    if user.verification_expires and user.verification_expires < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Verification token has expired")
     
     # Mark user as verified
