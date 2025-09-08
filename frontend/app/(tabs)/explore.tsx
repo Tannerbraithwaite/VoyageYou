@@ -308,8 +308,14 @@ export default function ScheduleScreen() {
 
   // Inject the selected schedule back into the Home tab for editing (for unbooked trips)
   const handleEditSchedule = (schedule: SavedSchedule) => {
-    // Persist itinerary so the Home screen can pick it up
-    if (typeof window !== 'undefined') {
+    // Safety check to ensure schedule is valid
+    if (!schedule || !schedule.id || !schedule.name) {
+      console.error('Invalid schedule for editing:', schedule);
+      return;
+    }
+
+    // Persist itinerary so the Home screen can pick it up (only if itinerary exists)
+    if (typeof window !== 'undefined' && schedule.itinerary) {
       safeSessionStorage.setItem('currentItinerary', JSON.stringify(schedule.itinerary));
     }
 
@@ -449,7 +455,7 @@ export default function ScheduleScreen() {
             {selectedSchedule && (
               <>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>{selectedSchedule.name}</Text>
+                  <Text style={styles.modalTitle}>{selectedSchedule?.name || 'Unnamed Schedule'}</Text>
                   <TouchableOpacity 
                     style={styles.closeButton}
                     onPress={() => setShowScheduleDetails(false)}
@@ -461,88 +467,94 @@ export default function ScheduleScreen() {
                   {/* Schedule Info */}
                   <GlassCard style={styles.detailSection}>
                     <Text style={styles.detailTitle}>📋 Schedule Information</Text>
-                    <Text style={styles.detailText}>Destination: {selectedSchedule.destination}</Text>
-                    <Text style={styles.detailText}>Duration: {selectedSchedule.duration}</Text>
-                    <Text style={styles.detailText}>Status: {selectedSchedule.status}</Text>
-                    <Text style={styles.detailText}>Saved: {formatDate(selectedSchedule.savedAt)}</Text>
+                    <Text style={styles.detailText}>Destination: {selectedSchedule?.destination || 'Unknown Destination'}</Text>
+                    <Text style={styles.detailText}>Duration: {selectedSchedule?.duration || 'Unknown Duration'}</Text>
+                    <Text style={styles.detailText}>Status: {selectedSchedule?.status || 'Unknown'}</Text>
+                    <Text style={styles.detailText}>Saved: {selectedSchedule?.savedAt ? formatDate(selectedSchedule.savedAt) : 'Unknown Date'}</Text>
                   </GlassCard>
 
                   {/* Enhanced Information Sections */}
                   {/* Flights */}
-                  {selectedSchedule.flights && selectedSchedule.flights.length > 0 && (
+                  {selectedSchedule?.flights && Array.isArray(selectedSchedule.flights) && selectedSchedule.flights.length > 0 && (
                     <GlassCard style={styles.detailSection}>
                       <Text style={styles.detailTitle}>✈️ Flight Information</Text>
-                      {selectedSchedule.flights.map((flight, index) => (
-                        <View key={index} style={styles.infoItem}>
-                          <View style={styles.infoHeader}>
-                            <Text style={styles.infoLabel}>{flight.type === 'outbound' ? 'Departure' : 'Return'}</Text>
-                            <TouchableOpacity
-                              style={styles.detailButton}
-                              onPress={() => showDetails('flight', flight)}
-                            >
-                              <Ionicons name="information-circle" size={20} color="#007AFF" />
-                              <Text style={styles.detailButtonText}>View Details</Text>
-                            </TouchableOpacity>
+                      {selectedSchedule.flights.map((flight, index) => {
+                        if (!flight) return null;
+                        return (
+                          <View key={index} style={styles.infoItem}>
+                            <View style={styles.infoHeader}>
+                              <Text style={styles.infoLabel}>{flight.type === 'outbound' ? 'Departure' : 'Return'}</Text>
+                              <TouchableOpacity
+                                style={styles.detailButton}
+                                onPress={() => showDetails('flight', flight)}
+                              >
+                                <Ionicons name="information-circle" size={20} color="#007AFF" />
+                                <Text style={styles.detailButtonText}>View Details</Text>
+                              </TouchableOpacity>
+                            </View>
+                            <Text style={styles.infoText}>{flight.airline || 'Unknown Airline'} {flight.flight || 'N/A'}</Text>
+                            <Text style={styles.infoSubtext}>{flight.departure || 'Unknown'} at {flight.time || 'Unknown'}</Text>
+                            <Text style={styles.infoPrice}>${flight.price || 0}</Text>
                           </View>
-                          <Text style={styles.infoText}>{flight.airline} {flight.flight}</Text>
-                          <Text style={styles.infoSubtext}>{flight.departure} at {flight.time}</Text>
-                          <Text style={styles.infoPrice}>${flight.price}</Text>
-                        </View>
-                      ))}
+                        );
+                      })}
                     </GlassCard>
                   )}
 
                   {/* Hotels */}
-                  {selectedSchedule.hotels && selectedSchedule.hotels.length > 0 && (
+                  {selectedSchedule?.hotels && Array.isArray(selectedSchedule.hotels) && selectedSchedule.hotels.length > 0 && (
                     <GlassCard style={styles.detailSection}>
                       <Text style={styles.detailTitle}>🏨 Hotel Information</Text>
-                      {selectedSchedule.hotels.map((hotel, index) => (
-                        <View key={index} style={styles.infoItem}>
-                          <View style={styles.infoHeader}>
-                            <Text style={styles.infoText}>{hotel.name}</Text>
-                            <TouchableOpacity
-                              style={styles.detailButton}
-                              onPress={() => showDetails('hotel', hotel)}
-                            >
-                              <Ionicons name="information-circle" size={20} color="#007AFF" />
-                              <Text style={styles.detailButtonText}>View Details</Text>
-                            </TouchableOpacity>
+                      {selectedSchedule.hotels.map((hotel, index) => {
+                        if (!hotel) return null;
+                        return (
+                          <View key={index} style={styles.infoItem}>
+                            <View style={styles.infoHeader}>
+                              <Text style={styles.infoText}>{hotel.name || 'Unknown Hotel'}</Text>
+                              <TouchableOpacity
+                                style={styles.detailButton}
+                                onPress={() => showDetails('hotel', hotel)}
+                              >
+                                <Ionicons name="information-circle" size={20} color="#007AFF" />
+                                <Text style={styles.detailButtonText}>View Details</Text>
+                              </TouchableOpacity>
+                            </View>
+                            <Text style={styles.infoSubtext}>{hotel.address || 'Unknown Address'}</Text>
+                            <Text style={styles.infoSubtext}>Check-in: {hotel.check_in || 'Unknown'} | Check-out: {hotel.check_out || 'Unknown'}</Text>
+                            <Text style={styles.infoSubtext}>Room: {hotel.room_type || 'Unknown'} | Nights: {hotel.total_nights || 'Unknown'}</Text>
+                            <Text style={styles.infoPrice}>${hotel.price || 0}/night</Text>
                           </View>
-                          <Text style={styles.infoSubtext}>{hotel.address}</Text>
-                          <Text style={styles.infoSubtext}>Check-in: {hotel.check_in} | Check-out: {hotel.check_out}</Text>
-                          <Text style={styles.infoSubtext}>Room: {hotel.room_type} | Nights: {hotel.total_nights}</Text>
-                          <Text style={styles.infoPrice}>${hotel.price}/night</Text>
-                        </View>
-                      ))}
+                        );
+                      })}
                     </GlassCard>
                   )}
 
                   {/* Cost Breakdown */}
-                  {selectedSchedule.costBreakdown && (
+                  {selectedSchedule?.costBreakdown && (
                     <GlassCard style={styles.detailSection}>
                       <Text style={styles.detailTitle}>💰 Cost Breakdown</Text>
                       <View style={styles.costRow}>
                         <Text style={styles.costLabel}>Total Cost:</Text>
-                        <Text style={styles.costTotal}>${selectedSchedule.costBreakdown.total}</Text>
+                        <Text style={styles.costTotal}>${selectedSchedule.costBreakdown?.total || 0}</Text>
                       </View>
                       <View style={styles.costRow}>
                         <Text style={styles.costLabel}>Bookable Activities:</Text>
-                        <Text style={styles.costAmount}>${selectedSchedule.costBreakdown.bookable}</Text>
+                        <Text style={styles.costAmount}>${selectedSchedule.costBreakdown?.bookable || 0}</Text>
                       </View>
                       <View style={styles.costRow}>
                         <Text style={styles.costLabel}>Estimated Activities:</Text>
-                        <Text style={styles.costAmount}>${selectedSchedule.costBreakdown.estimated}</Text>
+                        <Text style={styles.costAmount}>${selectedSchedule.costBreakdown?.estimated || 0}</Text>
                       </View>
                     </GlassCard>
                   )}
 
                   {/* Trip Dates */}
-                  {selectedSchedule.dates && selectedSchedule.dates.length > 0 && (
+                  {selectedSchedule?.dates && Array.isArray(selectedSchedule.dates) && selectedSchedule.dates.length > 0 && (
                     <GlassCard style={styles.detailSection}>
                       <Text style={styles.detailTitle}>📅 Trip Dates</Text>
                       {selectedSchedule.dates.map((date, index) => (
                         <Text key={index} style={styles.dateText}>
-                          Day {index + 1}: {date}
+                          Day {index + 1}: {date || 'Unknown Date'}
                         </Text>
                       ))}
                     </GlassCard>
@@ -551,7 +563,7 @@ export default function ScheduleScreen() {
                   {/* Daily Schedule */}
                   <GlassCard style={styles.detailSection}>
                     <Text style={styles.detailTitle}>📅 Daily Schedule</Text>
-                    {selectedSchedule.schedule && Array.isArray(selectedSchedule.schedule) ? (
+                    {selectedSchedule?.schedule && Array.isArray(selectedSchedule.schedule) ? (
                       selectedSchedule.schedule.map((day, dayIndex) => {
                         // Safely check if day and day.activities exist
                         if (!day || !day.activities || !Array.isArray(day.activities)) {
@@ -642,7 +654,7 @@ export default function ScheduleScreen() {
                   <View style={styles.secondaryActions}>
                     
                     {/* Edit button - different behavior for booked vs unbooked trips */}
-                    {selectedSchedule.status === 'unbooked' && (
+                    {selectedSchedule?.status === 'unbooked' && (
                       <TouchableOpacity 
                         style={styles.editButton}
                         onPress={() => {
@@ -653,7 +665,7 @@ export default function ScheduleScreen() {
                       </TouchableOpacity>
                     )}
 
-                    {selectedSchedule.status === 'booked' && (
+                    {selectedSchedule?.status === 'booked' && (
                       <TouchableOpacity 
                         style={styles.editButton}
                         onPress={() => {
@@ -665,7 +677,7 @@ export default function ScheduleScreen() {
                     )}
                     
                     {/* Delete button - only for unbooked trips */}
-                    {selectedSchedule.status === 'unbooked' && (
+                    {selectedSchedule?.status === 'unbooked' && selectedSchedule?.id && (
                       <TouchableOpacity 
                         style={styles.deleteButton}
                         onPress={() => {
@@ -693,7 +705,7 @@ export default function ScheduleScreen() {
                   {/* Primary Action */}
                   <View style={styles.primaryAction}>
                     {/* Checkout button - only for unbooked trips */}
-                    {selectedSchedule.status === 'unbooked' && (
+                    {selectedSchedule?.status === 'unbooked' && (
                       <TouchableOpacity 
                         style={styles.checkoutButton}
                         onPress={() => {
@@ -705,7 +717,7 @@ export default function ScheduleScreen() {
                     )}
                     
                     {/* Manage Trip button for booked trips */}
-                    {selectedSchedule.status === 'booked' && (
+                    {selectedSchedule?.status === 'booked' && (
                       <TouchableOpacity 
                         style={[styles.checkoutButton, { backgroundColor: '#8b5cf6' }]}
                         onPress={() => {
@@ -716,7 +728,7 @@ export default function ScheduleScreen() {
                       </TouchableOpacity>
                     )}
                     
-                    {selectedSchedule.status === 'past' && (
+                    {selectedSchedule?.status === 'past' && (
                       <View style={[styles.checkoutButton, { backgroundColor: '#6b7280' }]}>
                         <Text style={styles.checkoutButtonText}>📅 {getStatusDescription(selectedSchedule, 'past')}</Text>
                       </View>
