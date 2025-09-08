@@ -403,6 +403,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView 
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
         onScrollBeginDrag={() => setShowNationalityDropdown(false)}
       >
       <Text style={styles.title}>Your Profile</Text>
@@ -715,6 +716,8 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollViewContent: {
     padding: 20,
     paddingTop: 30,
     paddingBottom: 100, // Increased padding to ensure content is visible above navigation bar

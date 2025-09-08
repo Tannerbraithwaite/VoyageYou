@@ -344,7 +344,7 @@ export default function ScheduleScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <GlassCard style={styles.header}>
           <Text style={styles.headerTitle}>📅 My Saved Schedules</Text>
@@ -718,8 +718,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a0a0a',
     position: 'relative',
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  content: {
     paddingTop: 20,
     paddingBottom: 100, // Increased padding to ensure content is visible above navigation bar
   },

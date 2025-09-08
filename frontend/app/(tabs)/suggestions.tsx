@@ -1024,7 +1024,7 @@ Make the insights specific, data-driven, and actionable for future trip planning
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         <View style={styles.header}>
           <Text style={styles.title}>Your Next Adventure</Text>
           <Text style={styles.subtitle}>AI-powered recommendations based on your preferences</Text>
@@ -1257,6 +1257,8 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollViewContent: {
     paddingTop: 20,
     paddingBottom: 100, // Increased padding to ensure content is visible above navigation bar
   },

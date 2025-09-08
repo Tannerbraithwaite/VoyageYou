@@ -1314,7 +1314,7 @@ export default function HomeScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Chat Section */}
         <GlassCard style={styles.chatSection}>
           <Text style={styles.sectionTitle}>Chat with Neel</Text>
@@ -2179,11 +2179,13 @@ const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  content: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 100, // Increased padding to ensure content is visible above navigation bar // Minimal padding - navigation bar doesn't need extra space
+    paddingBottom: 100, // Increased padding to ensure content is visible above navigation bar
   },
   chatSection: {
     marginBottom: 30,
