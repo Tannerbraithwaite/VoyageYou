@@ -201,9 +201,29 @@ class AuthService {
     }
 
     try {
+      // Try to load stored tokens first
+      const storedAccessToken = await AsyncStorage.getItem('access_token');
+      const storedRefreshToken = await AsyncStorage.getItem('refresh_token');
+      const storedUser = await AsyncStorage.getItem('user');
+
+      if (storedAccessToken && storedRefreshToken) {
+        this.accessToken = storedAccessToken;
+        this.refreshToken = storedRefreshToken;
+        
+        if (storedUser) {
+          this.currentUser = JSON.parse(storedUser);
+        }
+      }
+
+      const headers: Record<string, string> = {};
+      if (this.accessToken) {
+        headers['Authorization'] = `Bearer ${this.accessToken}`;
+      }
+
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
         method: 'GET',
-        credentials: 'include', // Use cookies instead of Authorization header
+        headers,
+        credentials: 'include', // Use both tokens and cookies for better compatibility
       });
 
       if (response.ok) {
@@ -226,9 +246,15 @@ class AuthService {
 
   async refreshAccessToken(): Promise<boolean> {
     try {
+      const headers: Record<string, string> = {};
+      if (this.refreshToken) {
+        headers['Authorization'] = `Bearer ${this.refreshToken}`;
+      }
+
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
-        credentials: 'include', // Use cookies instead of body
+        headers,
+        credentials: 'include', // Use both tokens and cookies for better compatibility
       });
 
       if (response.ok) {

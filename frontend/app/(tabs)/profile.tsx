@@ -56,7 +56,15 @@ export default function ProfileScreen() {
       }
       
       // Load user profile
+      const accessToken = authService.getAccessToken();
+      const headers: Record<string, string> = {};
+      
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       const profileResponse = await fetch(`${API_BASE_URL}/users/${effectiveUserId}`, {
+        headers,
         credentials: 'include'
       });
       console.log('Profile load response status:', profileResponse.status);
@@ -81,6 +89,7 @@ export default function ProfileScreen() {
         
         // Load user interests
         const interestsResponse = await fetch(`${API_BASE_URL}/users/${effectiveUserId}/interests/`, {
+          headers,
           credentials: 'include'
         });
         console.log('Interests load response status:', interestsResponse.status);
@@ -115,7 +124,15 @@ export default function ProfileScreen() {
       }
       
       // Load user profile to get location
+      const accessToken = authService.getAccessToken();
+      const headers: Record<string, string> = {};
+      
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       const profileResponse = await fetch(`${API_BASE_URL}/users/${effectiveUserId}`, {
+        headers,
         credentials: 'include'
       });
       
@@ -265,11 +282,19 @@ export default function ProfileScreen() {
       console.log('📤 Sending profile update to:', `${API_BASE_URL}/users/${userId}`);
       console.log('📦 Profile payload:', profilePayload);
       
+      // Get access token for authentication
+      const accessToken = authService.getAccessToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       const profileResponse = await fetch(`${API_BASE_URL}/users/${userId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(profilePayload),
         credentials: 'include'
       });
@@ -300,9 +325,7 @@ export default function ProfileScreen() {
       // Update user interests
       const interestsResponse = await fetch(`${API_BASE_URL}/users/${userId}/interests/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(interests),
         credentials: 'include'
       });
