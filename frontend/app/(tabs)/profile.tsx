@@ -284,12 +284,18 @@ export default function ProfileScreen() {
       
       // Get access token for authentication
       const accessToken = authService.getAccessToken();
+      console.log('🔑 Access token retrieved:', accessToken ? 'Present' : 'Missing');
+      console.log('🔑 Token value:', accessToken);
+      
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
+        console.log('🔑 Authorization header set:', headers['Authorization']);
+      } else {
+        console.log('❌ No access token available for authentication');
       }
 
       const profileResponse = await fetch(`${API_BASE_URL}/users/${userId}`, {

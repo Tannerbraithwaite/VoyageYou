@@ -76,11 +76,9 @@ class AuthService {
       this.refreshToken = data.refresh_token;
       this.currentUser = data.user;
 
-      // Store in AsyncStorage if remember me is checked
-      if (rememberMe) {
-        await this.storeTokens(data.access_token, data.refresh_token);
-        await this.storeUser(data.user);
-      }
+      // Always store tokens in AsyncStorage for mobile devices
+      await this.storeTokens(data.access_token, data.refresh_token);
+      await this.storeUser(data.user);
 
       return data;
     } catch (error) {
@@ -119,11 +117,9 @@ class AuthService {
       this.refreshToken = data.refresh_token;
       this.currentUser = data.user;
 
-      // Store in AsyncStorage if remember me is checked
-      if (rememberMe) {
-        await this.storeTokens(data.access_token, data.refresh_token);
-        await this.storeUser(data.user);
-      }
+      // Always store tokens in AsyncStorage for mobile devices
+      await this.storeTokens(data.access_token, data.refresh_token);
+      await this.storeUser(data.user);
 
       return data;
     } catch (error) {
@@ -206,6 +202,11 @@ class AuthService {
       const storedRefreshToken = await AsyncStorage.getItem('refresh_token');
       const storedUser = await AsyncStorage.getItem('user');
 
+      console.log('🔍 Loading stored tokens from AsyncStorage:');
+      console.log('🔍 Access token:', storedAccessToken ? 'Present' : 'Missing');
+      console.log('🔍 Refresh token:', storedRefreshToken ? 'Present' : 'Missing');
+      console.log('🔍 User data:', storedUser ? 'Present' : 'Missing');
+
       if (storedAccessToken && storedRefreshToken) {
         this.accessToken = storedAccessToken;
         this.refreshToken = storedRefreshToken;
@@ -213,6 +214,9 @@ class AuthService {
         if (storedUser) {
           this.currentUser = JSON.parse(storedUser);
         }
+        console.log('✅ Tokens loaded from AsyncStorage');
+      } else {
+        console.log('❌ No stored tokens found in AsyncStorage');
       }
 
       const headers: Record<string, string> = {};
