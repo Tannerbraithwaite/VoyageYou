@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingTop: 20,
-    paddingBottom: 20, // Minimal padding - navigation bar doesn't need extra space
+    paddingBottom: 100, // Increased padding to ensure content is visible above navigation bar
   },
   header: {
     padding: 24,

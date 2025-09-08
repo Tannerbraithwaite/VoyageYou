@@ -44,22 +44,25 @@ export default function LoginScreen() {
     console.log('Attempting login with:', { email: email.trim() });
     
     try {
+      console.log('🔐 Attempting login with email:', email.trim());
       const data = await authService.login(email.trim(), password, rememberMe);
-      console.log('Login successful:', data);
+      console.log('✅ Login successful:', data);
       
       // Navigate to main app
       try {
+        console.log('🧭 Navigating to main app...');
         router.push('/(tabs)');
       } catch (error) {
-        console.error('Navigation error:', error);
+        console.error('❌ Navigation error:', error);
         // Fallback navigation
         router.push('/(tabs)');
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       let errorMessage = 'Login failed. Please try again.';
       
       if (error instanceof Error) {
+        console.log('❌ Error message:', error.message);
         if (error.message.includes('Invalid credentials') || error.message.includes('incorrect')) {
           errorMessage = 'Incorrect password. Please try again.';
         } else if (error.message.includes('User not found') || error.message.includes('not found')) {
@@ -69,6 +72,7 @@ export default function LoginScreen() {
         }
       }
       
+      console.log('❌ Showing error alert:', errorMessage);
       Alert.alert('Login Failed', errorMessage);
     } finally {
       setIsLoading(false);

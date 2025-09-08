@@ -2141,7 +2141,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 100, // Increased padding to ensure content is visible above navigation bar
     backgroundColor: '#1a1a1a',
   },
   headerButtons: {
@@ -2183,7 +2183,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 20, // Minimal padding - navigation bar doesn't need extra space
+    paddingBottom: 100, // Increased padding to ensure content is visible above navigation bar // Minimal padding - navigation bar doesn't need extra space
   },
   chatSection: {
     marginBottom: 30,

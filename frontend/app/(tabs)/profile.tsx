@@ -31,15 +31,33 @@ export default function ProfileScreen() {
   useEffect(() => {
     const init = async () => {
       try {
-        const user = await authService.getCurrentUser();
-        if (!user) {
+        console.log('🔍 Profile page: Checking authentication...');
+        
+        // First check if we have tokens in memory
+        const isAuth = authService.isAuthenticated();
+        console.log('🔍 Profile page: Is authenticated:', isAuth);
+        
+        if (!isAuth) {
+          console.log('❌ Profile page: Not authenticated, redirecting to login');
           router.replace('/auth/login');
           return;
         }
+        
+        const user = await authService.getCurrentUser();
+        console.log('🔍 Profile page: User from getCurrentUser:', user ? 'Found' : 'Not found');
+        
+        if (!user) {
+          console.log('❌ Profile page: No user found, redirecting to login');
+          router.replace('/auth/login');
+          return;
+        }
+        
+        console.log('✅ Profile page: User authenticated, loading profile data');
         setUserId(user.id);
         await loadUserProfile(user.id);
         await loadUserLocation(user.id);
       } catch (e) {
+        console.error('❌ Profile page: Error during init:', e);
         router.replace('/auth/login');
       }
     };
@@ -699,7 +717,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     paddingTop: 30,
-    paddingBottom: 20, // Minimal padding - navigation bar doesn't need extra space
+    paddingBottom: 100, // Increased padding to ensure content is visible above navigation bar
   },
   header: {
     alignItems: 'center',
