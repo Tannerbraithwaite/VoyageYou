@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     paddingTop: 30,
-    paddingBottom: 140, // Add extra padding for tab bar and safe area
+    paddingBottom: 20, // Minimal padding - navigation bar doesn't need extra space
   },
   header: {
     alignItems: 'center',

@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingBottom: 100, // Add padding for tab bar
+    paddingBottom: 20, // Minimal padding - navigation bar doesn't need extra space
   },
   loadingContainer: {
     flex: 1,
