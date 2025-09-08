@@ -241,8 +241,15 @@ IMPORTANT NOTES:
                 
         except Exception as e:
             print(f"❌ SimpleLangChain error: {e}")
+            print(f"🔍 Error type: {type(e).__name__}")
+            print(f"🔍 User input: '{user_input}'")
+            print(f"🔍 User profile: {user_profile}")
             import traceback
             traceback.print_exc()
+            
+            # Log the specific error for debugging
+            print(f"🚨 LangChain service failed for user input: '{user_input}'")
+            print(f"🚨 Falling back to basic itinerary generation")
             
             # Return a structured fallback response
             return self._create_fallback_response(user_input, user_profile)
@@ -463,6 +470,7 @@ Please create a personalized itinerary based on this request and profile."""
         # Try to extract basic info from user input
         input_lower = user_input.lower()
         
+        # More comprehensive destination detection
         if 'vancouver' in input_lower and 'victoria' in input_lower:
             destination = "Victoria, BC, Canada"
             trip_type = "single_city"
@@ -470,9 +478,44 @@ Please create a personalized itinerary based on this request and profile."""
             destinations = ["Naples, Italy", "Rome, Italy"]
             trip_type = "multi_city"
             destination = None
-        else:
+        elif 'victoria' in input_lower:
+            destination = "Victoria, BC, Canada"
+            trip_type = "single_city"
+        elif 'vancouver' in input_lower:
+            destination = "Vancouver, BC, Canada"
+            trip_type = "single_city"
+        elif 'naples' in input_lower:
+            destination = "Naples, Italy"
+            trip_type = "single_city"
+        elif 'rome' in input_lower:
+            destination = "Rome, Italy"
+            trip_type = "single_city"
+        elif 'paris' in input_lower:
             destination = "Paris, France"
             trip_type = "single_city"
+        elif 'london' in input_lower:
+            destination = "London, UK"
+            trip_type = "single_city"
+        elif 'new york' in input_lower or 'nyc' in input_lower:
+            destination = "New York, NY, USA"
+            trip_type = "single_city"
+        elif 'tokyo' in input_lower:
+            destination = "Tokyo, Japan"
+            trip_type = "single_city"
+        elif 'sydney' in input_lower:
+            destination = "Sydney, Australia"
+            trip_type = "single_city"
+        else:
+            # Try to extract any city name from the input
+            import re
+            city_match = re.search(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b', user_input)
+            if city_match:
+                city_name = city_match.group(1)
+                destination = f"{city_name}"
+                trip_type = "single_city"
+            else:
+                destination = "Paris, France"
+                trip_type = "single_city"
         
         # Determine duration
         if 'weekend' in input_lower or 'saturday and sunday' in input_lower:
@@ -497,19 +540,61 @@ Please create a personalized itinerary based on this request and profile."""
                 current_city = None
                 city_name = destination.split(',')[0] if destination else "Paris"
             
+            # Create more specific activities based on the destination
+            if city_name.lower() in ['victoria', 'vancouver']:
+                activity_name = f"Explore {city_name} Waterfront"
+                activity_desc = f"Discover the scenic waterfront and historic sites of {city_name}"
+                alt_name = f"{city_name} Historic District Walk"
+                alt_desc = f"Walking tour through {city_name}'s historic downtown"
+            elif city_name.lower() in ['naples', 'rome']:
+                activity_name = f"Explore {city_name} Historic Center"
+                activity_desc = f"Discover ancient history and culture in {city_name}"
+                alt_name = f"{city_name} Food Tour"
+                alt_desc = f"Taste authentic local cuisine in {city_name}"
+            elif city_name.lower() == 'paris':
+                activity_name = f"Explore {city_name} Historic Center"
+                activity_desc = f"Discover the art, culture, and history of {city_name}"
+                alt_name = f"{city_name} Seine River Walk"
+                alt_desc = f"Scenic walk along the Seine River in {city_name}"
+            elif city_name.lower() == 'london':
+                activity_name = f"Explore {city_name} Royal Quarter"
+                activity_desc = f"Visit historic landmarks and royal sites in {city_name}"
+                alt_name = f"{city_name} Thames Walk"
+                alt_desc = f"Walk along the Thames River in {city_name}"
+            elif city_name.lower() in ['new york', 'nyc']:
+                activity_name = f"Explore {city_name} Manhattan"
+                activity_desc = f"Discover the iconic sights and energy of {city_name}"
+                alt_name = f"{city_name} Central Park Walk"
+                alt_desc = f"Explore the famous Central Park in {city_name}"
+            elif city_name.lower() == 'tokyo':
+                activity_name = f"Explore {city_name} Traditional Districts"
+                activity_desc = f"Experience traditional culture and modern innovation in {city_name}"
+                alt_name = f"{city_name} Temple Tour"
+                alt_desc = f"Visit historic temples and shrines in {city_name}"
+            elif city_name.lower() == 'sydney':
+                activity_name = f"Explore {city_name} Harbor"
+                activity_desc = f"Discover the iconic harbor and waterfront of {city_name}"
+                alt_name = f"{city_name} Opera House Tour"
+                alt_desc = f"Visit the famous Opera House in {city_name}"
+            else:
+                activity_name = f"Explore {city_name} City Center"
+                activity_desc = f"Discover the highlights and culture of {city_name}"
+                alt_name = f"{city_name} Walking Tour"
+                alt_desc = f"Guided walking tour of {city_name}"
+            
             activity = {
-                "name": f"Explore {city_name}",
+                "name": activity_name,
                 "time": "10:00 AM",
                 "price": 25,
                 "type": "estimated",
-                "description": f"Discover the highlights of {city_name}",
+                "description": activity_desc,
                 "alternatives": [
                     {
-                        "name": f"{city_name} Walking Tour",
+                        "name": alt_name,
                         "time": "10:00 AM",
                         "price": 20,
                         "type": "estimated",
-                        "description": f"Guided walking tour of {city_name}",
+                        "description": alt_desc,
                         "alternatives": []
                     }
                 ]
