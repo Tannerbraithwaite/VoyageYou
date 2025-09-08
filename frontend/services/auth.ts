@@ -135,21 +135,16 @@ class AuthService {
         method: 'POST',
         credentials: 'include',
       });
-
-      // Clear local storage
-      await this.clearStoredData();
-      
-      // Clear memory
-      this.currentUser = null;
-      this.accessToken = null;
-      this.refreshToken = null;
     } catch (error) {
-      console.error('Logout error:', error);
-      // Still clear local data even if server call fails
+      console.error('Logout server call error:', error);
+      // Continue with local cleanup even if server call fails
+    } finally {
+      // Always clear local data
       await this.clearStoredData();
       this.currentUser = null;
       this.accessToken = null;
       this.refreshToken = null;
+      console.log('✅ Logout completed - all data cleared');
     }
   }
 
@@ -240,10 +235,20 @@ class AuthService {
         if (refreshed) {
           return await this.getCurrentUser();
         }
+        // If refresh fails, clear all stored data and return null
+        await this.clearStoredData();
+        this.currentUser = null;
+        this.accessToken = null;
+        this.refreshToken = null;
         return null;
       }
     } catch (error) {
       console.error('Get current user error:', error);
+      // Clear all data on error
+      await this.clearStoredData();
+      this.currentUser = null;
+      this.accessToken = null;
+      this.refreshToken = null;
       return null;
     }
   }
