@@ -4,11 +4,15 @@ from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 import os
 
-# Database URL
-DATABASE_URL = "sqlite:///./travel_app.db"
+# Database URL - use environment variable for Railway, fallback to SQLite for local
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./travel_app.db")
 
-# Create engine
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Create engine with appropriate connection args
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    # For PostgreSQL and other databases
+    engine = create_engine(DATABASE_URL)
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
