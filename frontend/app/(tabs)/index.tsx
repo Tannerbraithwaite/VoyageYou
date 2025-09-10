@@ -906,12 +906,21 @@ export default function HomeScreen() {
     });
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     // Store the current itinerary in safeSessionStorage for checkout
     if (typeof window !== 'undefined' && currentItinerary) {
-      safeSessionStorage.setItem('selectedItinerary', JSON.stringify(currentItinerary));
+      try {
+        await safeSessionStorage.setItem('selectedItinerary', JSON.stringify(currentItinerary));
+        console.log('✅ Itinerary stored for checkout:', currentItinerary);
+        router.push('/checkout');
+      } catch (error) {
+        console.error('❌ Error storing itinerary for checkout:', error);
+        Alert.alert('Error', 'Failed to prepare checkout. Please try again.');
+      }
+    } else {
+      console.warn('⚠️ No itinerary available for checkout');
+      Alert.alert('No Itinerary', 'Please generate an itinerary first before checking out.');
     }
-    router.push('/checkout');
   };
 
   const handleChangeActivity = (activity: ItineraryActivity) => {

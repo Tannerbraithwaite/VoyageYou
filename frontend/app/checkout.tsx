@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@/config/api';
 import { safeSessionStorage } from '@/utils/storage';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Modal, Switch, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Modal, Switch, SafeAreaView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
   EnhancedItinerary, 
@@ -170,24 +170,45 @@ export default function CheckoutScreen() {
   }, []);
 
   useEffect(() => {
-    loadItinerary();
-  }, []);
-
-  useEffect(() => {
     calculateTotalCost();
   }, [itinerary, selectedFlightUpgrades, selectedHotelUpgrades]);
 
-  const loadItinerary = () => {
+  const loadItinerary = async () => {
+    setIsLoading(true);
     try {
-      const storedItinerary = safeSessionStorage.getItem('selectedItinerary');
+      const storedItinerary = await safeSessionStorage.getItem('selectedItinerary');
       if (storedItinerary) {
         const parsed = JSON.parse(storedItinerary);
+        console.log('📋 Loaded itinerary for checkout:', parsed);
         setItinerary(parsed);
         setTotalCost(parsed.total_cost || 0);
+      } else {
+        console.warn('⚠️ No itinerary found in session storage');
+        Alert.alert(
+          'No Itinerary Found', 
+          'Please go back and select an itinerary to checkout.',
+          [
+            {
+              text: 'Go Back',
+              onPress: () => router.push('/')
+            }
+          ]
+        );
       }
     } catch (error) {
       console.error('Error loading itinerary:', error);
-      Alert.alert('Error', 'Failed to load itinerary data');
+      Alert.alert(
+        'Error', 
+        'Failed to load itinerary data. Please try again.',
+        [
+          {
+            text: 'Go Back',
+            onPress: () => router.push('/')
+          }
+        ]
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -849,7 +870,7 @@ export default function CheckoutScreen() {
     setShowNationalityPicker(false);
   };
 
-  if (!itinerary) {
+  if (isLoading || !itinerary) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -860,7 +881,10 @@ export default function CheckoutScreen() {
           <View style={{ width: 50 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading itinerary...</Text>
+          <ActivityIndicator size="large" color="#6366f1" />
+          <Text style={styles.loadingText}>
+            {isLoading ? 'Loading itinerary...' : 'No itinerary found'}
+          </Text>
         </View>
       </SafeAreaView>
     );
