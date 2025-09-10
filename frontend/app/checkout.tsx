@@ -118,6 +118,7 @@ const mockHotelUpgrades: HotelRoomOption[] = [
 
 export default function CheckoutScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [itinerary, setItinerary] = useState<EnhancedItinerary | null>(null);
   const [activeStep, setActiveStep] = useState(1);
   const [totalCost, setTotalCost] = useState(0);
@@ -184,7 +185,6 @@ export default function CheckoutScreen() {
         setTotalCost(parsed.total_cost || 0);
       } else {
         // Try to get itinerary from route params as fallback
-        const params = useLocalSearchParams();
         if (params.itinerary) {
           try {
             const itineraryData = JSON.parse(params.itinerary as string);
