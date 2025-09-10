@@ -179,8 +179,20 @@ export default function CheckoutScreen() {
     try {
       const storedItinerary = await safeSessionStorage.getItem('selectedItinerary');
       
+      console.log('🔍 Checkout: Loading itinerary:', {
+        hasStoredItinerary: !!storedItinerary,
+        storedItineraryLength: storedItinerary?.length || 0,
+        hasParamsItinerary: !!params.itinerary
+      });
+      
       if (storedItinerary) {
         const parsed = JSON.parse(storedItinerary);
+        console.log('🔍 Checkout: Parsed itinerary:', {
+          hasItinerary: !!parsed,
+          itineraryType: typeof parsed,
+          itineraryKeys: parsed ? Object.keys(parsed) : 'null',
+          hasTotalCost: !!parsed?.total_cost
+        });
         setItinerary(parsed);
         setTotalCost(parsed.total_cost || 0);
       } else {

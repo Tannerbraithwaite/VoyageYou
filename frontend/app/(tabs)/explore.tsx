@@ -287,6 +287,11 @@ export default function ScheduleScreen() {
   const handleCheckout = (schedule: SavedSchedule) => {
     // Store the selected schedule in safeSessionStorage for checkout
     if (typeof window !== 'undefined') {
+      console.log('🔍 Explore: Storing itinerary for checkout:', {
+        hasItinerary: !!schedule.itinerary,
+        itineraryType: typeof schedule.itinerary,
+        itineraryKeys: schedule.itinerary ? Object.keys(schedule.itinerary) : 'null'
+      });
       safeSessionStorage.setItem('selectedItinerary', JSON.stringify(schedule.itinerary));
     }
     router.push('/checkout');
