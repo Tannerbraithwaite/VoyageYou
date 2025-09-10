@@ -907,31 +907,25 @@ export default function HomeScreen() {
   };
 
   const handleCheckout = async () => {
-    console.log('🛒 Checkout button clicked');
-    console.log('📊 Current state:', {
-      currentItinerary: !!currentItinerary,
-      currentItineraryType: currentItinerary?.trip_type,
-      isUndecidedDates,
-      windowAvailable: typeof window !== 'undefined'
-    });
-    
-    // Store the current itinerary in safeSessionStorage for checkout
-    if (typeof window !== 'undefined' && currentItinerary) {
+    if (currentItinerary) {
       try {
-        await safeSessionStorage.setItem('selectedItinerary', JSON.stringify(currentItinerary));
-        console.log('✅ Itinerary stored for checkout:', currentItinerary);
-        router.push('/checkout');
+        // Store in session storage
+        if (typeof window !== 'undefined') {
+          await safeSessionStorage.setItem('selectedItinerary', JSON.stringify(currentItinerary));
+        }
+        
+        // Also pass as route parameter as backup
+        router.push({
+          pathname: '/checkout',
+          params: {
+            itinerary: JSON.stringify(currentItinerary)
+          }
+        });
       } catch (error) {
-        console.error('❌ Error storing itinerary for checkout:', error);
+        console.error('Error preparing checkout:', error);
         Alert.alert('Error', 'Failed to prepare checkout. Please try again.');
       }
     } else {
-      console.warn('⚠️ No itinerary available for checkout');
-      console.log('🔍 Debug info:', {
-        windowAvailable: typeof window !== 'undefined',
-        currentItinerary: currentItinerary,
-        currentItineraryKeys: currentItinerary ? Object.keys(currentItinerary) : 'null'
-      });
       Alert.alert('No Itinerary', 'Please generate an itinerary first before checking out.');
     }
   };

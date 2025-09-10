@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@/config/api';
 import { safeSessionStorage } from '@/utils/storage';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Modal, Switch, SafeAreaView, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { 
   EnhancedItinerary, 
   FlightUpgrade, 
@@ -174,53 +174,49 @@ export default function CheckoutScreen() {
   }, [itinerary, selectedFlightUpgrades, selectedHotelUpgrades]);
 
   const loadItinerary = async () => {
-    console.log('🔄 Loading itinerary for checkout...');
     setIsLoading(true);
     try {
       const storedItinerary = await safeSessionStorage.getItem('selectedItinerary');
-      console.log('📦 Raw stored itinerary:', storedItinerary);
       
       if (storedItinerary) {
         const parsed = JSON.parse(storedItinerary);
-        console.log('📋 Parsed itinerary for checkout:', parsed);
-        console.log('📊 Itinerary details:', {
-          trip_type: parsed.trip_type,
-          destination: parsed.destination,
-          hasFlights: !!parsed.flights,
-          hasHotel: !!parsed.hotel,
-          total_cost: parsed.total_cost
-        });
         setItinerary(parsed);
         setTotalCost(parsed.total_cost || 0);
       } else {
-        console.warn('⚠️ No itinerary found in session storage');
-        console.log('🔍 Session storage keys:', await safeSessionStorage.getAllKeys?.() || 'getAllKeys not available');
-        Alert.alert(
-          'No Itinerary Found', 
-          'Please go back and select an itinerary to checkout.',
-          [
-            {
-              text: 'Go Back',
-              onPress: () => router.push('/')
-            }
-          ]
-        );
+        // Try to get itinerary from route params as fallback
+        const params = useLocalSearchParams();
+        if (params.itinerary) {
+          try {
+            const itineraryData = JSON.parse(params.itinerary as string);
+            setItinerary(itineraryData);
+            setTotalCost(itineraryData.total_cost || 0);
+          } catch (e) {
+            console.error('Error parsing itinerary from params:', e);
+            showNoItineraryAlert();
+          }
+        } else {
+          showNoItineraryAlert();
+        }
       }
     } catch (error) {
       console.error('Error loading itinerary:', error);
-      Alert.alert(
-        'Error', 
-        'Failed to load itinerary data. Please try again.',
-        [
-          {
-            text: 'Go Back',
-            onPress: () => router.push('/')
-          }
-        ]
-      );
+      showNoItineraryAlert();
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const showNoItineraryAlert = () => {
+    Alert.alert(
+      'No Itinerary Found', 
+      'Please go back and select an itinerary to checkout.',
+      [
+        {
+          text: 'Go Back',
+          onPress: () => router.push('/')
+        }
+      ]
+    );
   };
 
   const calculateTotalCost = () => {
