@@ -174,16 +174,27 @@ export default function CheckoutScreen() {
   }, [itinerary, selectedFlightUpgrades, selectedHotelUpgrades]);
 
   const loadItinerary = async () => {
+    console.log('🔄 Loading itinerary for checkout...');
     setIsLoading(true);
     try {
       const storedItinerary = await safeSessionStorage.getItem('selectedItinerary');
+      console.log('📦 Raw stored itinerary:', storedItinerary);
+      
       if (storedItinerary) {
         const parsed = JSON.parse(storedItinerary);
-        console.log('📋 Loaded itinerary for checkout:', parsed);
+        console.log('📋 Parsed itinerary for checkout:', parsed);
+        console.log('📊 Itinerary details:', {
+          trip_type: parsed.trip_type,
+          destination: parsed.destination,
+          hasFlights: !!parsed.flights,
+          hasHotel: !!parsed.hotel,
+          total_cost: parsed.total_cost
+        });
         setItinerary(parsed);
         setTotalCost(parsed.total_cost || 0);
       } else {
         console.warn('⚠️ No itinerary found in session storage');
+        console.log('🔍 Session storage keys:', await safeSessionStorage.getAllKeys?.() || 'getAllKeys not available');
         Alert.alert(
           'No Itinerary Found', 
           'Please go back and select an itinerary to checkout.',

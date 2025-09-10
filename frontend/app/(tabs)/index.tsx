@@ -907,6 +907,14 @@ export default function HomeScreen() {
   };
 
   const handleCheckout = async () => {
+    console.log('🛒 Checkout button clicked');
+    console.log('📊 Current state:', {
+      currentItinerary: !!currentItinerary,
+      currentItineraryType: currentItinerary?.trip_type,
+      isUndecidedDates,
+      windowAvailable: typeof window !== 'undefined'
+    });
+    
     // Store the current itinerary in safeSessionStorage for checkout
     if (typeof window !== 'undefined' && currentItinerary) {
       try {
@@ -919,6 +927,11 @@ export default function HomeScreen() {
       }
     } else {
       console.warn('⚠️ No itinerary available for checkout');
+      console.log('🔍 Debug info:', {
+        windowAvailable: typeof window !== 'undefined',
+        currentItinerary: currentItinerary,
+        currentItineraryKeys: currentItinerary ? Object.keys(currentItinerary) : 'null'
+      });
       Alert.alert('No Itinerary', 'Please generate an itinerary first before checking out.');
     }
   };
