@@ -388,6 +388,48 @@ export default function ScheduleScreen() {
     }
   };
 
+  const handleMarkAsPast = async (schedule: SavedSchedule) => {
+    try {
+      // Update the schedule status to 'past'
+      const updatedSchedule = {
+        ...schedule,
+        status: 'past' as const
+      };
+
+      // Update the schedules array
+      const updatedSchedules = savedSchedules.map(s => 
+        s.id === schedule.id ? updatedSchedule : s
+      );
+      
+      setSavedSchedules(updatedSchedules);
+      
+      // Update local storage
+      if (typeof window !== 'undefined') {
+        await safeLocalStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+      }
+      
+      // Update the selected schedule if it's the one being modified
+      if (selectedSchedule?.id === schedule.id) {
+        setSelectedSchedule(updatedSchedule);
+      }
+      
+      // Show success message
+      Alert.alert(
+        'Trip Marked as Past! 📅',
+        'This trip has been marked as completed. You can now rate your experiences and provide feedback!',
+        [{ text: 'OK' }]
+      );
+      
+    } catch (error) {
+      console.error('Error marking trip as past:', error);
+      Alert.alert(
+        'Error',
+        'Failed to mark trip as past. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
 
 
   const setRating = (key: string, rating: number) => {
@@ -785,6 +827,18 @@ export default function ScheduleScreen() {
                         }}
                       >
                         <Text style={styles.checkoutButtonText}>🔧 Manage Trip</Text>
+                      </TouchableOpacity>
+                    )}
+                    
+                    {/* Mark as Past button for booked trips */}
+                    {selectedSchedule?.status === 'booked' && (
+                      <TouchableOpacity 
+                        style={[styles.checkoutButton, { backgroundColor: '#f59e0b', marginTop: 10 }]}
+                        onPress={() => {
+                          handleMarkAsPast(selectedSchedule);
+                        }}
+                      >
+                        <Text style={styles.checkoutButtonText}>📅 Mark as Past</Text>
                       </TouchableOpacity>
                     )}
                     
