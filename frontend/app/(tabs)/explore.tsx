@@ -345,6 +345,49 @@ export default function ScheduleScreen() {
     }
   };
 
+  const handleMarkAsBooked = async (schedule: SavedSchedule) => {
+    try {
+      // Update the schedule status to 'booked' and add checkout date
+      const updatedSchedule = {
+        ...schedule,
+        status: 'booked' as const,
+        checkoutDate: new Date().toISOString()
+      };
+
+      // Update the schedules array
+      const updatedSchedules = savedSchedules.map(s => 
+        s.id === schedule.id ? updatedSchedule : s
+      );
+      
+      setSavedSchedules(updatedSchedules);
+      
+      // Update local storage
+      if (typeof window !== 'undefined') {
+        await safeLocalStorage.setItem('savedSchedules', JSON.stringify(updatedSchedules));
+      }
+      
+      // Update the selected schedule if it's the one being modified
+      if (selectedSchedule?.id === schedule.id) {
+        setSelectedSchedule(updatedSchedule);
+      }
+      
+      // Show success message
+      Alert.alert(
+        'Trip Marked as Booked! 🎉',
+        'This trip has been marked as booked. You can now manage it from the trip management section.',
+        [{ text: 'OK' }]
+      );
+      
+    } catch (error) {
+      console.error('Error marking trip as booked:', error);
+      Alert.alert(
+        'Error',
+        'Failed to mark trip as booked. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
 
 
   const setRating = (key: string, rating: number) => {
@@ -718,6 +761,18 @@ export default function ScheduleScreen() {
                         }}
                       >
                         <Text style={styles.checkoutButtonText}>💳 Checkout</Text>
+                      </TouchableOpacity>
+                    )}
+                    
+                    {/* Temporary Mark as Booked button - only for unbooked trips */}
+                    {selectedSchedule?.status === 'unbooked' && (
+                      <TouchableOpacity 
+                        style={[styles.checkoutButton, { backgroundColor: '#10b981', marginTop: 10 }]}
+                        onPress={() => {
+                          handleMarkAsBooked(selectedSchedule);
+                        }}
+                      >
+                        <Text style={styles.checkoutButtonText}>✅ Mark as Booked</Text>
                       </TouchableOpacity>
                     )}
                     
