@@ -191,7 +191,13 @@ export default function CheckoutScreen() {
           hasItinerary: !!parsed,
           itineraryType: typeof parsed,
           itineraryKeys: parsed ? Object.keys(parsed) : 'null',
-          hasTotalCost: !!parsed?.total_cost
+          hasTotalCost: !!parsed?.total_cost,
+          flightsType: typeof parsed?.flights,
+          flightsIsArray: Array.isArray(parsed?.flights),
+          flightsLength: parsed?.flights?.length || 'not array',
+          hotelsType: typeof parsed?.hotels,
+          hotelsIsArray: Array.isArray(parsed?.hotels),
+          hotelsLength: parsed?.hotels?.length || 'not array'
         });
         setItinerary(parsed);
         setTotalCost(parsed.total_cost || 0);
@@ -554,7 +560,7 @@ export default function CheckoutScreen() {
       <Text style={styles.stepTitle}>Flight Upgrades & Add-ons</Text>
       <Text style={styles.stepSubtitle}>Enhance your flight experience with premium options</Text>
       
-      {itinerary?.flights?.map((flight, flightIndex) => (
+      {itinerary?.flights && Array.isArray(itinerary.flights) && itinerary.flights.map((flight, flightIndex) => (
         <View key={flightIndex} style={styles.flightCard}>
           <View style={styles.flightHeader}>
             <Text style={styles.flightRoute}>
@@ -653,7 +659,7 @@ export default function CheckoutScreen() {
         </View>
       ) : (
         <View style={styles.multiHotelSection}>
-          {itinerary?.hotels?.map((hotel, hotelIndex) => (
+          {itinerary?.hotels && Array.isArray(itinerary.hotels) && itinerary.hotels.map((hotel, hotelIndex) => (
             <View key={hotelIndex} style={styles.hotelCard}>
               <View style={styles.hotelHeader}>
                 <Text style={styles.hotelName}>{hotel.name}</Text>
