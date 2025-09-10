@@ -519,16 +519,11 @@ export default function HomeScreen() {
     }
   }, []);
   
-  // Load user's location from profile and auto-detect if needed
+  // Load user's location from profile (without auto-detection)
   useEffect(() => {
     const loadUserLocation = async () => {
-      // Prevent multiple location detection attempts
-      if (hasShownLocationAlert || userLocation) {
-        return;
-      }
-      
       try {
-        // First try to get location from user profile
+        // Only try to get location from user profile
         const response = await fetch(`${API_BASE_URL}/users/${userId}/profile`, {
           credentials: 'include'
         });
@@ -537,23 +532,17 @@ export default function HomeScreen() {
           const profileData = await response.json();
           if (profileData.user && profileData.user.location) {
             setUserLocation(profileData.user.location);
-            return; // User already has location set
+            console.log('✅ Loaded location from profile:', profileData.user.location);
           }
         }
-        
-        // If no location in profile, automatically try to detect it
-        console.log('No location in profile, attempting automatic detection...');
-        await detectUserLocation();
       } catch (error) {
-        console.error('Error loading user location:', error);
-        // If profile loading fails, still try to auto-detect
-        console.log('Profile loading failed, attempting automatic detection...');
-        await detectUserLocation();
+        console.error('Error loading user location from profile:', error);
+        // Don't auto-detect location on profile load error
       }
     };
     
     loadUserLocation();
-  }, [userId, hasShownLocationAlert, userLocation]);
+  }, [userId]);
 
   // Reload the itinerary every time the Home tab gains focus (e.g., after selecting "Edit" from the Schedule tab)
   useFocusEffect(
@@ -612,6 +601,12 @@ export default function HomeScreen() {
     
     // Add user message to chat history
     setChatHistory(prev => [...prev, { message: userMessage, isBot: false }]);
+    
+    // Auto-detect location when user starts planning a trip (if not already detected)
+    if (!userLocation && !hasShownLocationAlert) {
+      console.log('📍 No location detected, attempting location detection for trip planning...');
+      await detectUserLocation();
+    }
     
     // Prepare the message with trip dates context
     let enhancedMessage = userMessage;
