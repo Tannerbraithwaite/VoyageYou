@@ -100,6 +100,7 @@ export default function HomeScreen() {
   const [userLocation, setUserLocation] = useState<string>('');
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
+  const [hasShownLocationAlert, setHasShownLocationAlert] = useState(false);
 
   // Helper function to generate date range from start to end date
   const generateDateRange = (startDate: Date, endDate: Date): string[] => {
@@ -283,11 +284,15 @@ export default function HomeScreen() {
           console.error('Error updating location in profile:', error);
         }
         
-        Alert.alert(
-          'Location Detected!',
-          `We've detected you're in ${locationString}. This will be used for flight planning.`,
-          [{ text: 'Great!' }]
-        );
+        // Only show alert once per session
+        if (!hasShownLocationAlert) {
+          setHasShownLocationAlert(true);
+          Alert.alert(
+            'Location Detected!',
+            `We've detected you're in ${locationString}. This will be used for flight planning.`,
+            [{ text: 'Great!' }]
+          );
+        }
       }
     } catch (error) {
       console.error('Error detecting location:', error);
@@ -517,6 +522,11 @@ export default function HomeScreen() {
   // Load user's location from profile and auto-detect if needed
   useEffect(() => {
     const loadUserLocation = async () => {
+      // Prevent multiple location detection attempts
+      if (hasShownLocationAlert || userLocation) {
+        return;
+      }
+      
       try {
         // First try to get location from user profile
         const response = await fetch(`${API_BASE_URL}/users/${userId}/profile`, {
@@ -543,7 +553,7 @@ export default function HomeScreen() {
     };
     
     loadUserLocation();
-  }, [userId]);
+  }, [userId, hasShownLocationAlert, userLocation]);
 
   // Reload the itinerary every time the Home tab gains focus (e.g., after selecting "Edit" from the Schedule tab)
   useFocusEffect(
