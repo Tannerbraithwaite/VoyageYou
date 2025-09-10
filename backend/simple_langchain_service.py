@@ -409,15 +409,48 @@ Please create a personalized itinerary based on this request and profile."""
                     
                     # Map cities to IATA codes
                     city_to_iata = {
-                        'victoria': 'YYJ', 'vancouver': 'YVR', 'paris': 'CDG',
-                        'london': 'LHR', 'rome': 'FCO', 'naples': 'NAP'
+                        'victoria': 'YYJ', 'vancouver': 'YVR', 'calgary': 'YYC', 'toronto': 'YYZ',
+                        'montreal': 'YUL', 'edmonton': 'YEG', 'winnipeg': 'YWG', 'ottawa': 'YOW',
+                        'paris': 'CDG', 'london': 'LHR', 'rome': 'FCO', 'naples': 'NAP',
+                        'new york': 'JFK', 'nyc': 'JFK', 'los angeles': 'LAX', 'chicago': 'ORD',
+                        'miami': 'MIA', 'boston': 'BOS', 'seattle': 'SEA', 'san francisco': 'SFO'
                     }
                     
-                    city_lower = city.lower()
-                    dest_code = city_to_iata.get(city_lower, city[:3].upper())
+                    # Extract origin and destination from user input
+                    origin_code = "JFK"  # Default fallback
+                    dest_code = city[:3].upper()  # Default fallback
+                    
+                    # Try to detect origin city from user input
+                    user_input_lower = user_input.lower()
+                    for city_name, iata_code in city_to_iata.items():
+                        if city_name in user_input_lower:
+                            if 'from' in user_input_lower and user_input_lower.find(city_name) < user_input_lower.find('from'):
+                                # City appears before "from", likely destination
+                                dest_code = iata_code
+                            elif 'to' in user_input_lower and user_input_lower.find(city_name) > user_input_lower.find('to'):
+                                # City appears after "to", likely destination
+                                dest_code = iata_code
+                            elif 'from' in user_input_lower and user_input_lower.find(city_name) > user_input_lower.find('from'):
+                                # City appears after "from", likely origin
+                                origin_code = iata_code
+                            else:
+                                # No clear indicator, assume destination
+                                dest_code = iata_code
+                    
+                    # If we found a destination but no origin, try to detect origin
+                    if dest_code == city[:3].upper() and 'from' in user_input_lower:
+                        # Look for origin city after "from"
+                        from_index = user_input_lower.find('from')
+                        after_from = user_input_lower[from_index + 4:].strip()
+                        for city_name, iata_code in city_to_iata.items():
+                            if city_name in after_from:
+                                origin_code = iata_code
+                                break
+                    
+                    print(f"🛫 Detected origin: {origin_code}, destination: {dest_code}")
                     
                     flight_data = await duffel_service.search_flights(
-                        "JFK", dest_code, start_date, end_date
+                        origin_code, dest_code, start_date, end_date
                     )
                     
                     if flight_data.get('flights'):
@@ -478,6 +511,15 @@ Please create a personalized itinerary based on this request and profile."""
             destinations = ["Naples, Italy", "Rome, Italy"]
             trip_type = "multi_city"
             destination = None
+        elif 'calgary' in input_lower:
+            destination = "Calgary, AB, Canada"
+            trip_type = "single_city"
+        elif 'toronto' in input_lower:
+            destination = "Toronto, ON, Canada"
+            trip_type = "single_city"
+        elif 'montreal' in input_lower:
+            destination = "Montreal, QC, Canada"
+            trip_type = "single_city"
         elif 'victoria' in input_lower:
             destination = "Victoria, BC, Canada"
             trip_type = "single_city"
